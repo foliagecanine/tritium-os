@@ -5,10 +5,22 @@ buildable: YES
 ##Introduction
 TritiumOS is an open-source operating system, successor to an unpublished, expiremental test OS named Rogue2OS
 
-## How to build this?
+## How do you build this?
+Before you start I will warn you: this will take a LOT of space (~4-5GB)  
+If you don't neccesarily want to build this, you can see the "What if I just want to use the ISO..." section below.
+
+### Prereqisites
 First you will need to build a compiler.  
 See [https://wiki.osdev.org/Building_GCC] for info on how to do that.  
 You will need an i686-elf or x86_64-elf GCC compiler to build this project.
+
+Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu, etc.) by running this command:
+`sudo apt-get install qemu`
+
+### Building/testing the iso
+Then type `./iso.sh` to create the iso file  
+OR  
+Type `./qemu.sh` to build then immediately test it.
 
 ### What are the rpi-* shell scripts?
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
@@ -16,6 +28,17 @@ These are for building on a Raspberry Pi system. However, this is not recommende
 1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
 2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
 3)You have to make a few scripts (I guess I made them for you though)  
+
+### How about that add-o-file.sh script?
+That is an easy way of editing the make.config file.  
+You can use it to add a .o file to the list of files to be included in the build.
+
+To use it type:  
+`./add-o-file \[filename\]`  
+The filename is the name of the c/asm/S file to include without the extension. For example, type:  
+`./add-o-file mynewfile`  
+To add mynewfile.c (or mynewfile.S or mynewfile.asm) to the make.config  
+Note there is no extension in the filename.
 
 ## When will it be done?
 Never. I will continue adding to it and editing it until I get bored or just stop for some reason.
