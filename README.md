@@ -36,7 +36,7 @@ Here's the checklist:
 - [ ] Interrupts
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
-##DISCLAIMERS
+## DISCLAIMERS
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
