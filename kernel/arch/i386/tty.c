@@ -65,3 +65,12 @@ void terminal_writestring(const char* data) {
 void disable_cursor() {
 	//We'll do this once we have the outb function
 }
+
+void terminal_backup() {
+	if (terminal_column>0) {
+		terminal_column--;
+	} else {
+		terminal_row--;
+		terminal_column = VGA_WIDTH-1;
+	}
+}

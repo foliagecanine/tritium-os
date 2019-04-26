@@ -34,9 +34,9 @@ That is an easy way of editing the make.config file.
 You can use it to add a .o file to the list of files to be included in the build.
 
 To use it type:  
-`./add-o-file \[filename\]`  
+`./add-o-file.sh \[filename\]`  
 The filename is the name of the c/asm/S file to include without the extension. For example, type:  
-`./add-o-file mynewfile`  
+`./add-o-file.sh mynewfile`  
 To add mynewfile.c (or mynewfile.S or mynewfile.asm) to the make.config  
 Note there is no extension in the filename.
 
@@ -55,8 +55,9 @@ SEE BOTTOM FOR DISCLAIMERS
 Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
-- [ ] Memory Management
-- [ ] Interrupts
+- [x] Memory Management
+- [x] Interrupts
+- [ ] Keyboard
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS

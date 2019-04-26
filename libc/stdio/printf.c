@@ -63,14 +63,14 @@ int printf(const char* restrict format, ...) {
 			written += len;
 		} else if (*format == '#') {
 			format++;
-			const long num = (long)va_arg(parameters, int);
+			const unsigned long long num = (unsigned long long)va_arg(parameters, unsigned long long);
 			if (num==0) {
 				if (!print("0",1))
 					return -1;
 				written++;
 			} else {
-				long tnum = num; //Count number of digits to make a new array
-				long dig;
+				unsigned long long tnum = num; //Count number of digits to make a new array
+				unsigned long long dig;
 				int count = 0;
 				while (tnum>0) {
 					tnum = tnum / 16;
