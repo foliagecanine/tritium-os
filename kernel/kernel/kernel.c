@@ -22,7 +22,7 @@ void kernel_main(void) {
 	init();
 	printf("Extra info: %d\n", 0);
 	kerror("Kernel has reached end of kernel_main. Is this intentional?");
-	for(;;) {
+	for (;;) {
 		char c = getchar();
 		if (c) {
 			printf("%c",c);
@@ -31,7 +31,7 @@ void kernel_main(void) {
 			putchar(' ');
 			terminal_backup();
 		}
-		//int c = getscancode();
+		//int c = getkey();
 		//if (c) {
 		//	printf("%d ",c);
 		//}
