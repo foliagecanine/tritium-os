@@ -36,3 +36,15 @@ void outl(uint16_t port, uint32_t value)
 {
 	asm volatile("outl %%eax, %%dx": :"d" (port), "a" (value));
 }
+
+void insb(unsigned short port, unsigned char * data, unsigned long size) {
+	asm volatile ("rep insb" : "+D" (data), "+c" (size) : "d" (port) : "memory");
+}
+
+void insw(unsigned short port, unsigned char * data, unsigned long size) {
+	asm volatile ("rep insw" : "+D" (data), "+c" (size) : "d" (port) : "memory");
+}
+
+void insl(unsigned short port, unsigned char * data, unsigned long size) {
+	asm volatile ("rep insl" : "+D" (data), "+c" (size) : "d" (port) : "memory");
+}

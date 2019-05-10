@@ -21,6 +21,7 @@ Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu
 Then type `./iso.sh` to create the iso file  
 OR  
 Type `./qemu.sh` to build then immediately test it.
+You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
 
 ### What are the rpi-* shell scripts?
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
