@@ -16,19 +16,29 @@ You will need an i686-elf or x86_64-elf GCC compiler to build this project.
 
 Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu, etc.) by running this command:
 `sudo apt-get install qemu`
+or for other distributions
+`sudo [Package Manager Install Command] qemu`
 
 ### Building/testing the iso
-Then type `./iso.sh` to create the iso file  
+Then type `./iso.sh` to create the iso file 
 OR  
 Type `./qemu.sh` to build then immediately test it.
 You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
+You can use this to add virtual hard disks to the OS.
+
+A FAT12 formatted "floppy" is included (named floppy2.flp) and can be used as a hard disk as below
+`./qemu.sh "-hda floppy2.flp" "-boot d"`
+Or a floppy disk (no controller implemented yet) like so
+`./qemu.sh "-fda floppy2.flp" "-boot d"`
 
 ### What are the rpi-* shell scripts?
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
 
 1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
-3)You have to make a few scripts (I guess I made them for you though)  
+2)You ALSO have to build GRUB on the RPI which is another forever of waiting
+3)You have to make a few scripts (I guess I made them for you though) 
+
+The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
 
 ### How about that add-o-file.sh script?
 That is an easy way of editing the make.config file.  

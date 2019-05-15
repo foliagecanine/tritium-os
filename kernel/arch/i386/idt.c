@@ -127,75 +127,109 @@ void init_idt() {
 	load_idt(idt_ptr);
 }
 
+_Bool irq_finished[15];
+
+_Bool has_irq_finished(uint8_t irq) {
+	if (irq_finished[irq]) {
+		irq_finished[irq] = false;
+		return true;
+	}
+	return false;
+}
+
+void clear_irq_status(uint8_t irq) {
+	irq_finished[irq] = false;
+}
+
+void set_irq_finish_state(uint8_t irq, _Bool state) {
+	irq_finished[irq] = state;
+}
+
 void irq0_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[0] = true;
 }
  
 void irq1_handler(void) {
 	kbd_handler();
 	outb(0x20, 0x20); //EOI
+	irq_finished[1] = true;
 }
  
 void irq2_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[2] = true;
 }
  
 void irq3_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[3] = true;
 }
  
 void irq4_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[4] = true;
 }
  
 void irq5_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[5] = true;
 }
  
 void irq6_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[6] = true;
 }
  
 void irq7_handler(void) {
 	outb(0x20, 0x20); //EOI
+	irq_finished[7] = true;
 }
  
 void irq8_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI          
+	irq_finished[8] = true;
 }
  
 void irq9_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[9] = true;
 }
  
 void irq10_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[10] = true;
 }
  
 void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[11] = true;
 }
  
 void irq12_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[12] = true;
 }
  
 void irq13_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[13] = true;
 }
  
 void irq14_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[14] = true;
 }
  
 void irq15_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	irq_finished[15] = true;
 }

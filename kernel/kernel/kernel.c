@@ -16,22 +16,37 @@ void init() {
 	init_ata();
 }
 
+void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
+	if (!drive_exists(disk))
+		return;
+	uint8_t read[512];
+	read_sector_lba(disk,sector,read);
+	printf("Data: ");
+	for (int i = 0; i<amt; i++) {
+		if (read[i]<16) {
+			printf("0");
+		}
+		printf("%# ", (uint64_t)(read[i]));
+	}
+	printf("\n");
+}
+
 void kernel_main(void) {
 	
 	terminal_initialize();
 	disable_cursor();
 	printf("Hello Kernel World!\n");
 	init();
-	uint8_t disk[512];
-	printf("Status: %d\n", (uint64_t)read_sectors_lba(0,0,1,disk));
-	printf("Data: ");
-	for (int i = 0; i<256; i++) {
-		if (disk[i]<16) {
-			printf("0");
-		}
-		printf("%# ", (uint64_t)(disk[i]));
+	if (drive_exists(0))
+		printf("First 32 bytes of drive 0:\n");
+	else
+		printf("No drive in drive 0, so not printing\n");
+	display_sector_data(0,0,32);
+	if (detect_fat12(0)) {
+		printf("Drive 0 is formatted FAT12\n");
+	} else {
+		printf("Drive 0 is NOT formatted FAT12\n");
 	}
-	printf("\n");
 	printf("Extra info: %d\n", 0);
 	kerror("Kernel has reached end of kernel_main. Is this intentional?");
 	for (;;) {
