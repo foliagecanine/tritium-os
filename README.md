@@ -68,7 +68,10 @@ Here's the checklist:
 - [x] GDT
 - [x] Memory Management
 - [x] Interrupts
-- [ ] Keyboard
+- [x] Keyboard
+- [x] Disk IO
+- [ ] FAT12 Filesystem Driver <In Progress>
+- [ ] file management <In Progress>
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS

@@ -4,7 +4,8 @@
 #include <kernel/init.h>
 #include <kernel/mmu.h>
 #include <kernel/idt.h>
-#include <kernel/fs.h> //Temporary, replace with file.h later (once fat12 & files implemented)
+#include <fs/fs.h>
+#include <fs/disk.h>
 
 extern uint32_t krnend;
 

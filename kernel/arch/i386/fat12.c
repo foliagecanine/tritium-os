@@ -1,4 +1,4 @@
-#include <kernel/fs.h>
+#include <fs/fat12.h>
 
 //Thanks to https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html for the fat12 details
 //along with http://www.brokenthorn.com/Resources/OSDev22.html for when I get stuck
@@ -24,9 +24,37 @@ typedef struct {
 typedef struct {
 	uint8_t StartCode[3];
 	BPB BiosParameterBlock;
-	uint8_t Bootstrap[480]; //Funny thing is brokenthorn has anther BPB and reduces the size of the bootstrap... No clue, but I'll follow the win.tue.nl one.
+	uint8_t Bootstrap[480]; //Funny thing is brokenthorn has another BPB and reduces the size of the bootstrap... No clue, but I'll follow the win.tue.nl one.
 	uint16_t Signature;
 } __attribute__ ((packed)) BOOTSECT, *PBOOTSECT;
+
+//These next two structs are very similar to those from brokenthorn
+
+typedef struct {
+	uint32_t NumTotalSectors;
+	uint32_t FATOffset;
+	uint32_t NumRootDirectoryEntries;
+	uint32_t FATEntrySize;
+	uint32_t RootDirectoryOffset;
+	uint32_t RootDirectorySize;
+	uint32_t FATSize;
+} FAT12_MOUNT;
+
+typedef struct {
+	uint8_t Filename[8]; //8.3 = Filename.Extension
+	uint8_t Extension[3];
+	uint8_t FileAttributes;
+	uint8_t Reserved;
+	uint8_t TimeCreatedMs;
+	uint16_t TimeCreated;
+	uint16_t DateCreated;
+	uint16_t DateLastAccessed;
+	uint16_t FirstClusterHi;
+	uint16_t LastModificationTime;
+	uint16_t LastModificationDate;
+	uint16_t FirstClusterLocation;
+	uint32_t FileSize;
+} __attribute__ ((packed)) FAT12DIR, *PFAT12DIR;
 
 void print_fat12_values(uint8_t drive_num) {
 	if (!drive_exists(drive_num))
@@ -44,7 +72,7 @@ void print_fat12_values(uint8_t drive_num) {
 	//Print OEM Name
 	char OEMName[9];
 	memcpy(OEMName,bpb.OEMName,8);
-	OEMName[8]="\0";
+	OEMName[8]=0;
 	printf("OEMName: %s\n", OEMName);
 	
 	//Other stuff
@@ -85,4 +113,94 @@ _Bool detect_fat12(uint8_t drive_num) {
 	
 	//This is probably enough. If it is just a random string of digits, we'll probably have broken it by now.
 	return true;
+}
+
+
+
+void LongToShortFilename(char * longfn, char * shortfn) {
+	// Longfilename.extension -> LONGFI~6EXT, textfile.txt -> TEXTFILETXT, short.txt -> SHORT   TXT
+	int locOfDot = findCharInArray(longfn,'.');
+	if (locOfDot>8) {
+		memcpy(longfn,shortfn,6);
+		shortfn[6]='~';
+		if ((locOfDot-6)>9) {
+			shortfn[7]='~';
+		} else {
+			shortfn[7]=intToChar(locOfDot-6);
+		}
+	} else {
+		if (locOfDot!=-1) //If there is no dot then just copy the whole thing (up to 8).
+			memcpy(longfn,shortfn,locOfDot);
+		else if (strlen(longfn)<9)
+			memcpy(longfn,shortfn,strlen(longfn));
+		else {
+			memcpy(longfn,shortfn,6);
+			shortfn[6]='~';
+			if ((strlen(longfn)-6)>9) {
+			shortfn[7]='~';
+			} else {
+				shortfn[7]=intToChar(strlen(longfn)-6);
+			}
+		}
+	}
+	//Check for extension
+	if (locOfDot!=-1) {
+		//Yes extension. Copy up to the first 3 letters. If more than 3 do this: extens -> e~5
+		int extLen = strlen(longfn)-locOfDot-1;
+		
+		if (extLen>0) 
+			shortfn[8]=longfn[locOfDot+1];
+		
+		if (extLen>1&&extLen<4) 
+			shortfn[9]=longfn[locOfDot+2];
+		
+		if (extLen>2&&extLen<4)
+			shortfn[10]=longfn[locOfDot+3];
+		
+		if (extLen>=4) {
+			shortfn[9]='~';
+			if ((extLen-1)>9) {
+			shortfn[10]='~';
+			} else {
+				shortfn[10]=intToChar(extLen-1);
+			}
+		}
+	} else {
+		//No extension. Just put 3 spaces.
+		shortfn[8]=' ';
+		shortfn[9]=' ';
+		shortfn[10] = ' ';
+	}
+}
+
+FSMOUNT MountFAT12(uint8_t drive_num) {
+	//Get neccesary details. We don't need to check whether this is FAT12 because it is already done in file.c.
+	uint8_t read[512];
+	read_sector_lba(drive_num);
+	PBOOTSECT bootsect = (PBOOTSECT *)read;
+	BPB bpb = bootsect->BiosParameterBlock;
+	
+	//Setup basic things
+	FSMOUNT fat12fs;
+	strcpy("FAT12",fat12fs.type);
+	fat12fs.drive = drive_num;
+	
+	//Set the mount part of FSMOUNT to our FAT12_MOUNT
+	FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)malloc(sizeof(FAT12_MOUNT));
+	
+	fat12mount->NumTotalSectors = bpb.NumTotalSectors;
+	fat12mount->FATOffset = 1;
+	fat12mount->NumRootDirectoryEntries = bpb.NumRootDirectoryEntries;
+	fat12mount->FATEntrySize = 8;
+	fat12mount->RootDirectoryOffset = (bpb.NumFATs * bpb.NumSectorsPerFAT) + 1;
+	fat12mount->RootDirectorySize = (bpb.NumRootDirectoryEntries * 32) / bpb.BytesPerSector;
+	fat12mount->FATSize = bpb.NumSectorsPerFAT;
+	
+	//Store mount info
+	fat12fs.mount = fat12mount;
+	
+	//Enable mount
+	fat12fs.mountEnabled = true;
+	
+	return fat12fs;
 }

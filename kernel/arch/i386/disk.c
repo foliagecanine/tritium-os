@@ -1,4 +1,4 @@
-#include <kernel/fs.h>
+#include <fs/disk.h>
 
 /*Error codes:
  *0=Success
