@@ -71,7 +71,7 @@ Here's the checklist:
 - [x] Keyboard
 - [x] Disk IO
 - [ ] FAT12 Filesystem Driver <In Progress>
-- [ ] fileman (short for file management) <In Progress>
+- [ ] fileman (short for file management) <In Progress>  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS
