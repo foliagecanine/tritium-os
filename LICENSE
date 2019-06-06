@@ -23,5 +23,14 @@ END OF LICENSE
 
 ######################################################################
 
+Portions of this code came from https://wiki.osdev.org/Meaty_Skeleton which is
+under a PUBLIC DOMAIN LICENSE (specifically CC0: https://bit.ly/1RAfqDf) due to
+the license statement in https://wiki.osdev.org/OSDev_Wiki:License (article created
+in 2014, so it is under the CC0 license)
+
+This is just a thanks to the authors of the wiki article.
+
+######################################################################
+
 IF YOU SEE SOMETHING THAT IS VIOLATING A COPYRIGHT PLEASE CONTACT ME (make a new issue).
 Also, if you see a problem with this license then contact me.
