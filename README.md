@@ -45,7 +45,7 @@ That is an easy way of editing the make.config file.
 You can use it to add a .o file to the list of files to be included in the build.
 
 To use it type:  
-`./add-o-file.sh \[filename\]`  
+`./add-o-file.sh [filename]`  
 The filename is the name of the c/asm/S file to include without the extension. For example, type:  
 `./add-o-file.sh mynewfile`  
 To add mynewfile.c (or mynewfile.S or mynewfile.asm) to the make.config  
