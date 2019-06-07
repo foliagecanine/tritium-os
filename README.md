@@ -9,7 +9,7 @@ TritiumOS is an open-source operating system, successor to an unpublished, expir
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
 If you don't neccesarily want to build this, you can see the "What if I just want to use the ISO..." section below.
 
-### Prereqisites
+### Prerequisites
 First you will need to build a compiler.  
 See [https://wiki.osdev.org/Building_GCC] for info on how to do that.  
 You will need an i686-elf or x86_64-elf GCC compiler to build this project.
