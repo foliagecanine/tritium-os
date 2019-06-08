@@ -47,10 +47,6 @@ _Bool numlck = false;
 _Bool scrlck = false;
 _Bool capslck = false;
 
-void init_kbd() {
-	
-}
-
 int getkey() {
 	if (!special_read) {
 		special_read = true;

@@ -3,6 +3,7 @@
 #define SUCCESS 					0
 #define INCORRECT_FS_TYPE 1
 #define DRIVE_IN_USE 			2
+#define UNKNOWN_ERROR		3
 
 //One per disk for now
 FSMOUNT mounts[8];
@@ -12,14 +13,53 @@ uint8_t unmountDrive(uint8_t drive) {
 		free(mounts[drive].mount);
 	}
 	FSMOUNT newMount;
+	newMount.mountEnabled = false;
 	mounts[drive] = newMount;
+	return 0;
 }
 
-uint8_t mountAsFAT12(uint8_t drive) {
+uint8_t mountDrive(uint8_t drive) {
 	if (detect_fat12(drive)) {
-		mounts[drive] = MountFAT12(drive);
-		return SUCCESS;
+		FSMOUNT newMount = MountFAT12(drive);
+		if (strcmp(newMount.type,"FAT12")) {
+			mounts[drive] = newMount;
+			return SUCCESS;
+		} else {
+			return UNKNOWN_ERROR;
+		}
 	} else {
 		return INCORRECT_FS_TYPE;
 	}
+}
+
+//Similar to brokenthorn (see urls in fat12.c)
+FILE fopen(const char *filename) {
+	//Check if filename is present (we can't open nothing)
+	if (filename) {
+		uint8_t device;
+		//Validate and convert to drive number
+		if (filename[1]==':'&&filename[2]=='/') {
+			device = tolower(filename[0])-'a';
+			//Filename without drive prefix
+			char* flongname = (char*) filename+3;
+			if (flongname&&device<9) {
+				if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(device)) {
+					FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
+					uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
+					uint32_t NRDE = mnt->NumRootDirectoryEntries;
+					FAT12_fopen(RDO, NRDE, flongname,device,0);
+				}
+			}
+		} else {
+			
+		}
+	}
+	//If we receive an error then just return an invalid file
+	FILE noFile;
+	noFile.valid = false;
+	return noFile;
+}
+
+FSMOUNT getDiskMount(uint8_t drive) {
+	return mounts[drive];
 }

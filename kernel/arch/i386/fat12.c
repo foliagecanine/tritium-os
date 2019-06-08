@@ -1,7 +1,7 @@
 #include <fs/fat12.h>
 
-//Thanks to https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html for the fat12 details
-//along with http://www.brokenthorn.com/Resources/OSDev22.html for when I get stuck
+//Thanks to https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html ("win.tue.nl") for the fat12 details
+//along with http://www.brokenthorn.com/Resources/OSDev22.html ("brokenthorn") for when I get stuck
 //However, I wrote this wholly myself
 
 typedef struct {
@@ -30,15 +30,7 @@ typedef struct {
 
 //These next two structs are very similar to those from brokenthorn
 
-typedef struct {
-	uint32_t NumTotalSectors;
-	uint32_t FATOffset;
-	uint32_t NumRootDirectoryEntries;
-	uint32_t FATEntrySize;
-	uint32_t RootDirectoryOffset;
-	uint32_t RootDirectorySize;
-	uint32_t FATSize;
-} FAT12_MOUNT;
+//FAT12_MOUNT relocated to fat12.h
 
 typedef struct {
 	uint8_t Filename[8]; //8.3 = Filename.Extension
@@ -115,13 +107,14 @@ _Bool detect_fat12(uint8_t drive_num) {
 	return true;
 }
 
-
-
+/*
+ * This function should probably be optimized!
+ */
 void LongToShortFilename(char * longfn, char * shortfn) {
 	// Longfilename.extension -> LONGFI~6EXT, textfile.txt -> TEXTFILETXT, short.txt -> SHORT   TXT
 	int locOfDot = findCharInArray(longfn,'.');
 	if (locOfDot>8) {
-		memcpy(longfn,shortfn,6);
+		memcpy(shortfn,longfn,6);
 		shortfn[6]='~';
 		if ((locOfDot-6)>9) {
 			shortfn[7]='~';
@@ -129,20 +122,24 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 			shortfn[7]=intToChar(locOfDot-6);
 		}
 	} else {
-		if (locOfDot!=-1) //If there is no dot then just copy the whole thing (up to 8).
-			memcpy(longfn,shortfn,locOfDot);
-		else if (strlen(longfn)<9)
-			memcpy(longfn,shortfn,strlen(longfn));
-		else {
-			memcpy(longfn,shortfn,6);
+		if (locOfDot!=-1) { //If there is no dot then just copy the whole thing (up to 8).
+			memcpy(shortfn,longfn,locOfDot);
+			for (uint8_t i = strlen(longfn)-4; i < 9; i++) {
+				shortfn[i]=' ';
+			}
+		} else if (strlen(longfn)<9) {
+			memcpy(shortfn,longfn,strlen(longfn));
+		} else {
+			memcpy(shortfn,longfn,6);
 			shortfn[6]='~';
 			if ((strlen(longfn)-6)>9) {
-			shortfn[7]='~';
+				shortfn[7]='~';
 			} else {
 				shortfn[7]=intToChar(strlen(longfn)-6);
 			}
 		}
 	}
+	
 	//Check for extension
 	if (locOfDot!=-1) {
 		//Yes extension. Copy up to the first 3 letters. If more than 3 do this: extens -> e~5
@@ -165,29 +162,38 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 				shortfn[10]=intToChar(extLen-1);
 			}
 		}
+		
+		shortfn[11] = 0; //End string
 	} else {
 		//No extension. Just put 3 spaces.
-		shortfn[8]=' ';
-		shortfn[9]=' ';
-		shortfn[10] = ' ';
+		shortfn[8]=' '; shortfn[9]=' '; shortfn[10] = ' ';
+		shortfn[11] = 0; //End string
+	}
+	
+	//Uppercase our name. 8.3 only stores uppercase (not counting LFN; not going to do LFN for a while)
+	for (uint8_t i = 0; i < 12; i++) {
+		shortfn[i] = toupper(shortfn[i]);
 	}
 }
 
 FSMOUNT MountFAT12(uint8_t drive_num) {
 	//Get neccesary details. We don't need to check whether this is FAT12 because it is already done in file.c.
 	uint8_t read[512];
-	read_sector_lba(drive_num);
+	read_sector_lba(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT *)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
 	//Setup basic things
 	FSMOUNT fat12fs;
-	strcpy("FAT12",fat12fs.type);
+	strcpy(fat12fs.type,"FAT12");
+	fat12fs.type[5]=0;
 	fat12fs.drive = drive_num;
 	
 	//Set the mount part of FSMOUNT to our FAT12_MOUNT
 	FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)malloc(sizeof(FAT12_MOUNT));
 	
+	//Populate the values as shown in brokenthorn (see url at top)
+	fat12mount->MntSig = 0xAABBCCDD;
 	fat12mount->NumTotalSectors = bpb.NumTotalSectors;
 	fat12mount->FATOffset = 1;
 	fat12mount->NumRootDirectoryEntries = bpb.NumRootDirectoryEntries;
@@ -203,4 +209,46 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	fat12fs.mountEnabled = true;
 	
 	return fat12fs;
+}
+
+//This function is recursive! It will continue opening files until error or success
+FILE FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint8_t drive_num, uint8_t mode) {
+	FILE retFile;
+	char *searchpath = filename+1;
+	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
+	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
+	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
+	
+	char shortfn[12];
+	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for
+	
+	uint8_t read[numEntries*32];
+	read_sectors_lba(drive_num, (prevLocation-1)/512, (numEntries*32)/512, read);
+	
+	char drivename[13];
+	memcpy(drivename,read,8);
+	if (read[9]!=' ') {
+		drivename[8]='.';
+		memcpy(drivename+9,read+8,3);
+	}
+	drivename[13] = 0;
+	uint8_t *reading = (uint8_t *)read;
+	printf("Listing files/folders in drive %s:\n", drivename);
+	for (unsigned int i = 0; i < numEntries; i++) {
+		if (!(reading[11]&0x08||reading[11]&0x02||reading[0]==0)) {
+			for (uint8_t j = 0; j < 11; j++) {
+				if (j==8&&reading[j]!=' ')
+					printf(".");
+				if (reading[j]!=0x20)
+					printf("%c",reading[j]);
+				if (reading[11]&0x10&&j==10)
+					printf("/");
+			}
+			printf("\n");
+		}
+		reading+=32;
+	}
+	printf("--End of directory----------------------\n");
+	retFile.valid = false;
+	return retFile;
 }

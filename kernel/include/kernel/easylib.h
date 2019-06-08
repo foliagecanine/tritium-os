@@ -3,4 +3,7 @@
 
 #include <kernel/stdio.h>
 
+int findCharInArray(char * array, char c);
+char intToChar(uint8_t num);
+
 #endif

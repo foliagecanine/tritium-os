@@ -9,6 +9,9 @@ typedef struct {
 	uint8_t scanCode;
 } kbdin;
 
+void kbd_handler();
 kbdin getInKey(_Bool shift);
+char getchar();
+int getkey();
 
 #endif

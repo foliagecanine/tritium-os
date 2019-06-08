@@ -6,8 +6,10 @@
 
 typedef struct {
 	uint64_t location;
-	uint8_t device;
+	uint8_t mountNumber;
 	_Bool writelock;
+	_Bool valid;
+	_Bool directory;
 } FILE, *PFILE;
 
 typedef struct {

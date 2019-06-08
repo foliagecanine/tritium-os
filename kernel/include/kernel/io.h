@@ -11,4 +11,8 @@ uint8_t inb(uint16_t port);
 uint16_t inw(uint16_t port);
 uint32_t inl(uint16_t port);
 
+void insb(unsigned short port, unsigned char * data, unsigned long size);
+void insw(unsigned short port, unsigned char * data, unsigned long size);
+void insl(unsigned short port, unsigned char * data, unsigned long size);
+
 #endif

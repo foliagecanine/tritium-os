@@ -4,7 +4,7 @@
  * but because of a lack of a license, I wrote one myself
  * My functions are a lot more efficient:
  *
- * During allocation, the one above had the space reallocated as so (A = Alloc_entry, U = Used, F = Free, brackets are the memory ACTUALL in use)-
+ * During allocation, the one above had the space reallocated as so (A = Alloc_entry, U = Used, F = Free, brackets are the memory ACTUAL in use)-
  * AAAA[UUUUUUUUUUUUUUUU] -> AAAAFFFFFFFFFFFFFFFF -> AAAA[UUUU]UUUUUUUUUUUU
  * It marks all of it as used even though it isn't. Eventually this overflows and gives an "Out of Memory" error.
  *
@@ -16,13 +16,6 @@
  * AAAAFFFFAAAA[UUUU]AAAAFFFF -> AAAAFFFFAAAAFFFFAAAAFFFF -> AAAAFFFFFFFFFFFFFFFFFFFF
  */
 
-char *strcpy(char *dest, const char *src)
-{
-   char *ptr = dest;
-   while(*dest++ = *src++);
-   return ptr;
-}
-
 typedef struct {
 	_Bool status;
 	uint32_t size;
@@ -31,13 +24,13 @@ typedef struct {
 uint32_t last_alloc_loc, heap_end, heap_start, pheap_start, pheap_end, memory_used = 0;
 uint8_t *pheap_descr = 0;
 
-void* memset (void * ptr, int value, size_t num )
+/*void* memset (void * ptr, int value, size_t num )
 {
 	unsigned char* p=ptr;
 	while(num--)
 		*p++ = (unsigned char)value;
 	return ptr;
-}
+}*/
 
 void* malloc(size_t size);
 
@@ -113,9 +106,10 @@ void* malloc(size_t size) {
 	}
 	}
 	
-	if (last_alloc_loc+size+sizeof(alloc_t)>= heap_end)
+	if (last_alloc_loc+size+sizeof(alloc_t)>= heap_end) {
 		kerror("Error: Out of Memory!");
-	else {
+		return 0;
+	} else {
 		if (!allocate_failed) {
 			//Create a new alloc at the end (we've got enough memory)
 			alloc_t *alloc = (alloc_t *)last_alloc_loc;
@@ -128,6 +122,7 @@ void* malloc(size_t size) {
 			return (char *)((uint32_t)alloc + sizeof(alloc_t));
 		} else {
 			kerror("Unknown memory allocation error.");
+			return 0;
 		}
 	}
 }

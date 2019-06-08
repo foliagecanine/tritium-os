@@ -12,7 +12,7 @@ struct IDT_entry_t {
 
 struct IDT_entry_t IDT[256];
 
-extern int idt_load();
+extern int load_idt();
 extern int irq0();
 extern int irq1();
 extern int irq2();
@@ -127,7 +127,7 @@ void init_idt() {
 	load_idt(idt_ptr);
 }
 
-_Bool irq_finished[15];
+_Bool irq_finished[16];
 
 _Bool has_irq_finished(uint8_t irq) {
 	if (irq_finished[irq]) {

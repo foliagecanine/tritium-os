@@ -5,7 +5,7 @@
 uint32_t pagedir[1024] __attribute__((aligned(4096)));
 uint32_t page_table_1[1024] __attribute__((aligned(4096)));
 
-extern void loadPageDirectory(unsigned int*);
+extern void load_pagedir(unsigned int*);
 extern void enablePaging();
 
 void init_mmu_paging() {

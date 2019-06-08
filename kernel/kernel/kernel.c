@@ -6,6 +6,8 @@
 #include <kernel/idt.h>
 #include <fs/fs.h>
 #include <fs/disk.h>
+#include <fs/fat12.h>
+#include <fs/file.h>
 
 extern uint32_t krnend;
 
@@ -13,7 +15,6 @@ void init() {
 	initialize_gdt();
 	mmu_init(&krnend);
 	init_idt();
-	init_kbd();
 	init_ata();
 }
 
@@ -38,16 +39,28 @@ void kernel_main(void) {
 	disable_cursor();
 	printf("Hello Kernel World!\n");
 	init();
-	if (drive_exists(0))
-		printf("First 32 bytes of drive 0:\n");
-	else
-		printf("No drive in drive 0, so not printing\n");
-	display_sector_data(0,0,32);
+	if (!drive_exists(0))
+		printf("No drive in drive 0.\n");
+	
 	if (detect_fat12(0)) {
 		printf("Drive 0 is formatted FAT12\n");
 	} else {
 		printf("Drive 0 is NOT formatted FAT12\n");
 	}
+	
+	printf("Attempting to mount drive 0.\n");
+	uint8_t mntErr = mountDrive(0);
+	if (!mntErr) {
+		printf("Success!\n");
+	} else {
+		printf("Mount error %d\n",(uint64_t)mntErr);
+	}
+	
+	char fame[12];
+	strcpy(fame,"A:/test.txt");
+	fopen(fame);
+	
+	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);
 	kerror("Kernel has reached end of kernel_main. Is this intentional?");
 	for (;;) {

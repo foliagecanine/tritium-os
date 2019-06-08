@@ -6,9 +6,11 @@
 #include <stdint.h> // int8_t, uint32_t, etc.
 #include <stddef.h> //size_t, possibly sizeof, etc.
 #include <string.h> // memcpy, strlen, etc.
+#include <stdlib.h>
 #include <kernel/kprint.h> //kprint, kerror, etc.
 #include <kernel/io.h> //outb, inl, etc.
 #include <kernel/kbd.h> //getInKey
+#include <kernel/mmu.h>
 
 //There is no predefined values for true or false, so we'll do it here
 #define false 0
