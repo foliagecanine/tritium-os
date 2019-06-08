@@ -41,7 +41,6 @@ void kernel_main(void) {
 	init();
 	if (!drive_exists(0))
 		printf("No drive in drive 0.\n");
-	
 	if (detect_fat12(0)) {
 		printf("Drive 0 is formatted FAT12\n");
 	} else {
@@ -51,14 +50,15 @@ void kernel_main(void) {
 	printf("Attempting to mount drive 0.\n");
 	uint8_t mntErr = mountDrive(0);
 	if (!mntErr) {
-		printf("Success!\n");
+		printf("Successfully mounted drive!\n");
 	} else {
 		printf("Mount error %d\n",(uint64_t)mntErr);
 	}
 	
 	char fame[12];
-	strcpy(fame,"A:/test.txt");
-	fopen(fame);
+	strcpy(fame,"A:/testfldr");
+	FILE myfile = fopen(fame);
+	printf("Size of A:/testfldr is %d\n",myfile.size);
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);

@@ -2,6 +2,7 @@
 
 //Thanks to https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html ("win.tue.nl") for the fat12 details
 //along with http://www.brokenthorn.com/Resources/OSDev22.html ("brokenthorn") for when I get stuck
+//Also thanks to https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system for the Logical Sector Number formula
 //However, I wrote this wholly myself
 
 typedef struct {
@@ -201,6 +202,8 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	fat12mount->RootDirectoryOffset = (bpb.NumFATs * bpb.NumSectorsPerFAT) + 1;
 	fat12mount->RootDirectorySize = (bpb.NumRootDirectoryEntries * 32) / bpb.BytesPerSector;
 	fat12mount->FATSize = bpb.NumSectorsPerFAT;
+	fat12mount->SectorsPerCluster = bpb.SectorsPerCluster;
+	fat12mount->SystemAreaSize = bpb.NumReservedSectors + (bpb.NumFATs*bpb.NumSectorsPerFAT+((32*bpb.NumRootDirectoryEntries)/bpb.BytesPerSector));
 	
 	//Store mount info
 	fat12fs.mount = fat12mount;
@@ -211,27 +214,24 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	return fat12fs;
 }
 
-//This function is recursive! It will continue opening files until error or success
-FILE FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint8_t drive_num, uint8_t mode) {
-	FILE retFile;
-	char *searchpath = filename+1;
-	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
-	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
-	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
-	
-	char shortfn[12];
-	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for
-	
+void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
 	uint8_t read[numEntries*32];
-	read_sectors_lba(drive_num, (prevLocation-1)/512, (numEntries*32)/512, read);
 	
-	char drivename[13];
+	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
+		uint8_t derr = read_sector_lba(drive_num, (location-1)/512+i, read+(i*512));
+		if (derr) {
+			printf("Drive error!");
+			return;
+		}
+	}
+	
+	char drivename[12];
 	memcpy(drivename,read,8);
 	if (read[9]!=' ') {
 		drivename[8]='.';
 		memcpy(drivename+9,read+8,3);
 	}
-	drivename[13] = 0;
+	drivename[11] = 0;
 	uint8_t *reading = (uint8_t *)read;
 	printf("Listing files/folders in drive %s:\n", drivename);
 	for (unsigned int i = 0; i < numEntries; i++) {
@@ -249,6 +249,81 @@ FILE FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uin
 		reading+=32;
 	}
 	printf("--End of directory----------------------\n");
-	retFile.valid = false;
-	return retFile;
+}
+
+/* 
+ * A quick note on modes:
+ *
+ * Bit 0 = read
+ * Bit 1 = write
+ */
+
+//This function is recursive! It will continue opening files & folders until error or success
+FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t drive_num, FAT12_MOUNT fm, uint8_t mode) {
+	FILE retFile;
+	char *searchpath = filename+1;
+	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
+	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
+	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
+	searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
+	
+	char shortfn[12];
+	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for
+	
+	uint8_t *read = malloc(numEntries*32); //See free below
+	
+	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
+		uint8_t derr = read_sector_lba(drive_num, (location-1)/512+i, read+(i*512));
+		if (derr) {
+			retFile.valid = false;
+			return retFile;
+		}
+	}
+	
+	char drivename[12];
+	memcpy(drivename,read,8);
+	if (read[9]!=' ') {
+		drivename[8]='.';
+		memcpy(drivename+9,read+8,3);
+	}
+	drivename[11] = 0;
+		
+	uint8_t *reading = (uint8_t *)read;
+	_Bool success = false;
+	for (unsigned int i = 0; i < numEntries; i++) {
+		if (!(reading[11]&0x08||reading[11]&0x02||reading[0]==0)) {
+			char testname[12];
+			memcpy(testname,reading,11);
+			testname[11] = 0;
+			if (strcmp(testname,shortfn)) {
+				success = true;
+				break;
+			}
+		}
+		reading+=32;
+	}
+	
+	if (success) {
+		if (searchpath&&reading[11]&0x10) {
+			uint16_t nextCluster = (reading[27] << 8) | reading[26];
+			free(read); //This way we don't use so much space. We aren't going to use this data any more.
+			return FAT12_fopen((fm.SystemAreaSize+((nextCluster-2)*fm.SectorsPerCluster))*512+1,16,searchpath,drive_num,fm,mode);
+		} else {
+			uint16_t nextCluster = (reading[27] << 8) | reading[26];
+			retFile.valid = true;
+			retFile.location = (uint64_t)nextCluster*512;
+			uint32_t size = (reading[31]<<24) | (reading[30]<<16) | (reading[29]<<8) | reading[28];
+			retFile.size = (uint64_t)size;
+			if (mode&1) {
+				retFile.writelock = true;
+			}
+			if (reading[11]&0x10) {
+				retFile.directory = true;
+			}
+			return retFile;
+		}
+	} else {
+		retFile.valid = false;
+		return retFile;
+	}
 }

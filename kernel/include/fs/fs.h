@@ -6,6 +6,7 @@
 
 typedef struct {
 	uint64_t location;
+	uint64_t size;
 	uint8_t mountNumber;
 	_Bool writelock;
 	_Bool valid;

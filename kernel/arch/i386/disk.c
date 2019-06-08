@@ -12,7 +12,7 @@
 #define ATA_STATUS_ERR 		0x01
 #define ATA_STATUS_BSY 		0x80
 #define ATA_STATUS_DRQ 		0x08
-#define ATA_STATUS_DRDY		0x40
+#define ATA_STATUS_DRDY	0x40
 #define ATA_STATUS_DF 		0x20
 
 typedef struct {
@@ -109,9 +109,7 @@ void detect_devices(ata_drive_t* drive) {
 		uint8_t cl = inb(drive->iobase+4);
 		uint8_t ch = inb(drive->iobase+5);
 
-		if (cl == 0x14 && ch ==0xEB)
-			drive->type = 1;
-		else if (cl == 0x69 && ch == 0x96)
+		if ((cl == 0x14 && ch ==0xEB) || (cl == 0x69 && ch == 0x96))
 			drive->type = 1;
 		else
 		   return; // unknown/broken
@@ -224,16 +222,20 @@ uint8_t read_sectors_lba(uint8_t drive_num, uint32_t lba_start, uint8_t num_sect
 	
 	outb(iobase + 7, 0x20); //Start reading
 	
-	wait_for_disk(drive_num);
-	
 	small_delay(iobase);
+	
+	wait_for_disk(drive_num);
 	
 	while ((inb(iobase + 7) & 0x80) && (!(inb(iobase+7) & ATA_STATUS_DRDY))) //Wait till its not busy and is ready
 			if ((inb(iobase+7) & ATA_STATUS_ERR) || (inb(iobase+7) & ATA_STATUS_DF)) return 5; //Check for errors
 	
 	max_read = (num_sectors * (512 / 2));
 	
-	insw(iobase,dest,max_read);
+	//insw(iobase,dest,max_read);
+	
+	for(int index = 0; index < max_read; index++){
+        *buffer++ = inw(iobase);
+    }
 	
 	return 0;
 }
@@ -266,7 +268,7 @@ uint8_t write_sectors_lba(uint8_t drive_num, uint32_t lba_start, uint8_t num_sec
     outb(iobase + 6, (uint8_t)((lba_start & 0x0F000000) >> 24) | drive); //Finally the last nibble (LBA48 means only 48 bits which is 3 1/2 bytes)
     small_delay(iobase);
 	
-	outb(iobase + 7, 0x30); //Start reading
+	outb(iobase + 7, 0x30); //Start writing
 	
 	small_delay(iobase);
 	

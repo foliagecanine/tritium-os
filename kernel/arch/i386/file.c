@@ -41,13 +41,15 @@ FILE fopen(const char *filename) {
 		if (filename[1]==':'&&filename[2]=='/') {
 			device = tolower(filename[0])-'a';
 			//Filename without drive prefix
-			char* flongname = (char*) filename+3;
+			char* flongname = (char*) filename+2;
 			if (flongname&&device<9) {
 				if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(device)) {
 					FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
 					uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
 					uint32_t NRDE = mnt->NumRootDirectoryEntries;
-					FAT12_fopen(RDO, NRDE, flongname,device,0);
+					FILE retFile = FAT12_fopen(RDO, NRDE, flongname,device,*mnt,0);
+					retFile.mountNumber = device;
+					return retFile;
 				}
 			}
 		} else {
