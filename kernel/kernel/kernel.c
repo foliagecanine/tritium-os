@@ -57,8 +57,10 @@ void kernel_main(void) {
 	
 	char fame[12];
 	strcpy(fame,"A:/testfldr");
-	FILE myfile = fopen(fame);
+	FILE myfile = fopen(fame,"r+");
 	printf("Size of A:/testfldr is %d\n",myfile.size);
+	
+	//enter_usermode();
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);

@@ -33,7 +33,7 @@ uint8_t mountDrive(uint8_t drive) {
 }
 
 //Similar to brokenthorn (see urls in fat12.c)
-FILE fopen(const char *filename) {
+FILE fopen(const char *filename, const char *mode) {
 	//Check if filename is present (we can't open nothing)
 	if (filename) {
 		uint8_t device;

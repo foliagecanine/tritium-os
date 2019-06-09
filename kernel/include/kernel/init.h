@@ -10,5 +10,6 @@
 
 //GDT
 void initialize_gdt();
+void enter_usermode();
 
 #endif

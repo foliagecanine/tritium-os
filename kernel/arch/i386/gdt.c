@@ -1,7 +1,7 @@
 #include <kernel/init.h> 
 #include <kernel/kprint.h>
 
-//A lot of this code is based on https://wiki.osdev.org/Getting_To_Ring_3
+//A lot of this code is based on https://wiki.osdev.org/Getting_to_Ring_3
 
 #define SEG_DESCTYPE(x)  ((x) << 0x04) // Descriptor type (0 for system, 1 for code/data)
 #define SEG_PRES(x)      ((x) << 0x07) // Present
@@ -108,6 +108,8 @@ uint64_t gdt_encode(uint32_t base, uint32_t limit, uint16_t flag)
 }
 
 extern void FlushGDT(uint32_t);
+extern void tss_flush();
+extern void enter_usermode_fully();
 
 //Set up GDT. We will need to set up the tss later, but oh well
 void initialize_gdt() {
@@ -131,4 +133,36 @@ void initialize_gdt() {
 
 	gdt_flush((uint32_t)&gdtPtr);
 	kprint("Set up GDT");
+}
+
+void install_tss () {
+	uint32_t base = (uint32_t) &tss;
+	memset((void*) &tss, 0, sizeof(tss_entry_t));
+	
+		asm ("cli; hlt");
+	
+	tss.ss0 = 0x10;
+	tss.esp0 = 0;
+	tss.cs = 0x0b;
+	tss.ss = 0x13;
+	tss.es = 0x13;
+	tss.ds = 0x13;
+	tss.fs = 0x13;
+	tss.gs = 0x13;
+	tss_flush();
+}
+
+int test_usermode() {
+	//What can we do here? Nothing yet. We don't have any syscalls.
+	int a = 1;
+	int b = 2;
+	b+=a;
+	return 0;
+}
+
+void enter_usermode () { //There's no going back...
+	asm ("cli; hlt");
+	install_tss();
+
+	enter_usermode_fully();
 }
