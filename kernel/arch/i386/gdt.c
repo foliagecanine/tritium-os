@@ -108,28 +108,31 @@ uint64_t gdt_encode(uint32_t base, uint32_t limit, uint16_t flag)
 }
 
 extern void FlushGDT(uint32_t);
-extern void tss_flush();
 extern void enter_usermode_fully();
+
+void tss_flush(uint16_t selector) {
+	asm("ltr %0" : : "a"(selector));
+}
 
 //Set up GDT. We will need to set up the tss later, but oh well
 void initialize_gdt() {
 	gdtPtr.limit = (sizeof(uint64_t) * NUM_GDT_ENTRIES) - 1u;
 	gdtPtr.firstEntryAddr = (uint32_t)&gdtEntries;
 
-	gdtEntries[0u] = gdt_encode(0, 0, 0);
+	gdtEntries[0] = gdt_encode(0, 0, 0);
 	
 	/*These two will be at zero otherwise the GDT goes crazy and triple faults
 	 *Besides, the kernel can have access to as much memory as it wants
 	 *Lastly, the kernel won't need as much memory as the userspace will, so we
 	 *can squeeze both the code and the data in the 4 MiB we provide.*/
-    gdtEntries[1u] = gdt_encode(0, 0x03FFFFFF, (GDT_CODE_PL0));
-    gdtEntries[2u] = gdt_encode(0, 0x03FFFFFF, (GDT_DATA_PL0)); 
+    gdtEntries[1] = gdt_encode(0, 0x03FFFFFF, (GDT_CODE_PL0));
+    gdtEntries[2] = gdt_encode(0, 0x03FFFFFF, (GDT_DATA_PL0)); 
 	
 	//Userspace will be above the kernel. This isn't the most efficient, but oh well
-    gdtEntries[3u] = gdt_encode(0x04000000, 0x03FFFFFF, (GDT_CODE_PL3));
-    gdtEntries[4u] = gdt_encode(0x08000000, 0x03FFFFFF, (GDT_DATA_PL3));
+    gdtEntries[3] = gdt_encode(0x04000000, 0x03FFFFFF, (GDT_CODE_PL3));
+    gdtEntries[4] = gdt_encode(0x08000000, 0x03FFFFFF, (GDT_DATA_PL3));
 
-	gdtEntries[5u] = gdt_encode(&tss,sizeof(tss_entry_t), 0x89); //I don't exactly understand, but I do know the tss needs a type 0x89
+	gdtEntries[5] = gdt_encode(&tss,sizeof(tss_entry_t), 0x89); //I don't exactly understand, but I do know the tss needs a type 0x89
 
 	gdt_flush((uint32_t)&gdtPtr);
 	kprint("Set up GDT");
@@ -137,9 +140,10 @@ void initialize_gdt() {
 
 void install_tss () {
 	uint32_t base = (uint32_t) &tss;
-	memset((void*) &tss, 0, sizeof(tss_entry_t));
 	
-		asm ("cli; hlt");
+	gdtEntries[5] = gdt_encode(base,base+sizeof(tss_entry_t),0b11101001);
+	
+	memset((void*) &tss, 0, sizeof(tss_entry_t));
 	
 	tss.ss0 = 0x10;
 	tss.esp0 = 0;
@@ -149,7 +153,7 @@ void install_tss () {
 	tss.ds = 0x13;
 	tss.fs = 0x13;
 	tss.gs = 0x13;
-	tss_flush();
+	tss_flush(5*sizeof(uint32_t));
 }
 
 int test_usermode() {
@@ -161,8 +165,6 @@ int test_usermode() {
 }
 
 void enter_usermode () { //There's no going back...
-	asm ("cli; hlt");
 	install_tss();
-
 	enter_usermode_fully();
 }

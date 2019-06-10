@@ -24,7 +24,12 @@ stack_top:
 .global _start
 .type _start, @function
 _start:
+	#Set up stack
 	movl $stack_top, %esp
+	
+	#Save multiboot info
+	pushw %eax
+	pushw %ebx
 
 	# Call the global constructors.
 	call _init

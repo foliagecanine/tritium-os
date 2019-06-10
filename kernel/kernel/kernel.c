@@ -3,7 +3,9 @@
 #include <kernel/tty.h>
 #include <kernel/init.h>
 #include <kernel/mmu.h>
+#include <kernel/multiboot.h>
 #include <kernel/idt.h>
+#include <kernel/exceptions.h>
 #include <fs/fs.h>
 #include <fs/disk.h>
 #include <fs/fat12.h>
@@ -33,11 +35,18 @@ void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
 	printf("\n");
 }
 
-void kernel_main(void) {
+uint32_t total_mem = 0;
+
+void kernel_main(multiboot_info_t* mbi, unsigned int magic) {
+	//Set total_mem to right value
+	if (mbi->flags & 0b01000000) {
+		total_mem = mbi->mem_upper+mbi->mem_lower;
+	}
 	
 	terminal_initialize();
 	disable_cursor();
 	printf("Hello Kernel World!\n");
+	printf("Total memory: %d | Magic: %d\n",(uint64_t)total_mem, magic);
 	init();
 	if (!drive_exists(0))
 		printf("No drive in drive 0.\n");
@@ -55,17 +64,30 @@ void kernel_main(void) {
 		printf("Mount error %d\n",(uint64_t)mntErr);
 	}
 	
+	//Test invalid opcode
+	/*int a;
+	a = 1/0;
+	printf("%d\n",a);*/
+	
+	//Test division by zero
+	/*asm volatile(	
+	"mov $0, %edx\n"
+	"mov $0, %eax\n"
+	"mov $0, %ecx\n"
+	"div %ecx"
+	);*/
+	
 	char fame[12];
 	strcpy(fame,"A:/testfldr");
 	FILE myfile = fopen(fame,"r+");
 	printf("Size of A:/testfldr is %d\n",myfile.size);
 	
-	//enter_usermode();
+	enter_usermode();
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);
 	kerror("Kernel has reached end of kernel_main. Is this intentional?");
-	for (;;) {
+	/*for (;;) {
 		char c = getchar();
 		if (c) {
 			printf("%c",c);
@@ -74,5 +96,7 @@ void kernel_main(void) {
 			putchar(' ');
 			terminal_backup();
 		}
-	}
+	}*/
+	while (1)
+		;
 }

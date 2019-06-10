@@ -13,5 +13,6 @@ void kbd_handler();
 kbdin getInKey(_Bool shift);
 char getchar();
 int getkey();
+void print_keys();
 
 #endif

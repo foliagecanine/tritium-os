@@ -20,12 +20,6 @@ gdt_flush:
 	jmp 0x08:.flush
 .flush:
   ret
-  
-	GLOBAL tss_flush
-tss_flush:
-	mov ax, 0x2B
-	ltr ax
-	ret
 	
 	GLOBAL enter_usermode_fully
 	EXTERN test_usermode

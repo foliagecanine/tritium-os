@@ -29,6 +29,7 @@ extern int irq12();
 extern int irq13();
 extern int irq14();
 extern int irq15();
+extern int default_handler();
 
 //For simplicity, as it is very repetitive in the Interrupts_tutorial
 void set_idt_values(uint8_t _idt, uint32_t irq_addr) {
@@ -37,6 +38,16 @@ void set_idt_values(uint8_t _idt, uint32_t irq_addr) {
 	IDT[_idt].zero = 0;
 	IDT[_idt].type_attr = 0x8E;
 	IDT[_idt].bits_offset_higher = (irq_addr & 0xFFFF0000) >> 16;
+}
+
+void idt_new_int(uint8_t inum, uint32_t irq_function) {
+	set_idt_values(inum,irq_function);
+}
+
+void unhandled_interrupt() {
+	asm("cli");
+	kerror("[IDT] Unhandled interupt");
+	for (;;);
 }
 
 void init_idt() {
@@ -71,6 +82,12 @@ void init_idt() {
 	outb(0xA1, 0x01);
 	outb(0x21, 0x0);
 	outb(0xA1, 0x0);
+	
+	//Initialize all interrupts with default handler
+	uint32_t default_handler_addr = (uint32_t)default_handler;
+	for (uint16_t i = 0; i < 7; i++) {
+		set_idt_values(i,default_handler_addr);
+	}
 	
 	irq0_addr = (uint32_t) irq0;
 	set_idt_values(32,irq0_addr);
@@ -120,6 +137,8 @@ void init_idt() {
 	irq15_addr = (uint32_t) irq15;
 	set_idt_values(47,irq15_addr);
 	
+	init_exceptions();
+	
 	idt_addr = (uint32_t)IDT;
 	idt_ptr[0] = (sizeof (struct IDT_entry_t) * 256) + ((idt_addr & 0xffff) << 16);
 	idt_ptr[1] = idt_addr >> 16;
@@ -154,6 +173,7 @@ void irq1_handler(void) {
 	kbd_handler();
 	outb(0x20, 0x20); //EOI
 	irq_finished[1] = true;
+	print_keys();
 }
  
 void irq2_handler(void) {
@@ -219,6 +239,7 @@ void irq12_handler(void) {
 void irq13_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	kerror("[Exception.Interrupt] FPU Error Interrupt!");
 	irq_finished[13] = true;
 }
  

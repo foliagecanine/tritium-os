@@ -69,6 +69,17 @@ char getchar() {
 	}
 }
 
+void print_keys() {
+	char c = getchar();
+	if (c) {
+		printf("%c",c);
+	} else if (getkey()==14) {
+		terminal_backup();
+		putchar(' ');
+		terminal_backup();
+	}
+ }
+
 void kbd_ack(void){
   while(!(inb(0x60)==0xfa));
 }

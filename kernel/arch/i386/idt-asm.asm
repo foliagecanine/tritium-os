@@ -14,6 +14,8 @@ global irq12
 global irq13
 global irq14
 global irq15
+
+global default_handler
  
 global load_idt
  
@@ -50,6 +52,8 @@ extern irq12_handler
 extern irq13_handler
 extern irq14_handler
 extern irq15_handler
+
+extern unhandled_interrupt
  
 irq0:
   pusha
@@ -147,6 +151,12 @@ irq15:
   popa
   iret
  
+default_handler:
+  pusha
+  call unhandled_interrupt
+  popa
+  iret
+
 load_idt:
 	mov edx, [esp + 4]
 	lidt [edx]
