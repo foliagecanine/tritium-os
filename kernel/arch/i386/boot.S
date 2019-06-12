@@ -28,8 +28,8 @@ _start:
 	movl $stack_top, %esp
 	
 	#Save multiboot info
-	pushw %eax
-	pushw %ebx
+	push %ebx
+	push %eax;
 
 	# Call the global constructors.
 	call _init

@@ -35,18 +35,46 @@ void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
 	printf("\n");
 }
 
-uint32_t total_mem = 0;
+uint32_t himem = 0;
+uint32_t lomem = 0;
 
-void kernel_main(multiboot_info_t* mbi, unsigned int magic) {
-	//Set total_mem to right value
-	if (mbi->flags & 0b01000000) {
-		total_mem = mbi->mem_upper+mbi->mem_lower;
+void kernel_main(uint32_t magic, uint32_t ebx) {
+	
+	//Check if multiboot worked
+	if (magic!=0x2BADB002) {
+		terminal_initialize();
+		disable_cursor();
+		kerror("ERROR: Multiboot info failed! Bad magic value below:");
+		printf("%#\n",(uint64_t)magic);
+		abort();
 	}
+	
+	//Retreive multiboot info
+	multiboot_info_t *mbi = (multiboot_info_t *)ebx;
 	
 	terminal_initialize();
 	disable_cursor();
-	printf("Hello Kernel World!\n");
-	printf("Total memory: %d | Magic: %d\n",(uint64_t)total_mem, magic);
+	printf("Hello World!\n");
+	
+	//Process multiboot memory
+	if (mbi->flags & MULTIBOOT_INFO_MEMORY) {
+		lomem = (uint32_t)mbi->mem_lower;
+		himem = (uint32_t)mbi->mem_upper;
+		
+		#ifdef DEBUG
+		printf("lomem = %dKB, himem = %dKB\n", lomem, himem);
+		#else
+		
+		//1048576 is amount of kibibytes in a gibibyte. Add a mebibyte because it doesn't count the first mebibyte
+		//post scriptum, kibi/mebi/gibi vs kilo/mega/giga is really annoying
+		uint64_t totalMem = ((uint64_t)lomem+(uint64_t)himem+1024);
+		
+		//Two separate printf's because inline math only works once for some reason
+		printf("Total memory: %dGB ",totalMem/1048576);
+		printf("(%dMB)\n",totalMem/1024);
+		#endif
+	}
+	
 	init();
 	if (!drive_exists(0))
 		printf("No drive in drive 0.\n");
@@ -82,7 +110,7 @@ void kernel_main(multiboot_info_t* mbi, unsigned int magic) {
 	FILE myfile = fopen(fame,"r+");
 	printf("Size of A:/testfldr is %d\n",myfile.size);
 	
-	enter_usermode();
+	//enter_usermode();
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);
