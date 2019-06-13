@@ -30,18 +30,28 @@ extern int irq13();
 extern int irq14();
 extern int irq15();
 extern int default_handler();
+extern uint64_t ticks;
 
 //For simplicity, as it is very repetitive in the Interrupts_tutorial
-void set_idt_values(uint8_t _idt, uint32_t irq_addr) {
+void idt_install_interrupt_request(uint8_t _idt, uint32_t irq_addr, uint16_t type_flags) {
 	IDT[_idt].bits_offset_lower = irq_addr & 0xFFFF;
 	IDT[_idt].sel = 0x08;
 	IDT[_idt].zero = 0;
-	IDT[_idt].type_attr = 0x8E;
+	IDT[_idt].type_attr = type_flags;
 	IDT[_idt].bits_offset_higher = (irq_addr & 0xFFFF0000) >> 16;
 }
 
+void set_idt_values(uint8_t _idt, uint32_t irq_addr) {
+	idt_install_interrupt_request(_idt, irq_addr, 0x8E);
+}
+
+//Duplicate, but other functions use this version. Fix in the future
 void idt_new_int(uint8_t inum, uint32_t irq_function) {
 	set_idt_values(inum,irq_function);
+}
+
+void idt_new_int_flags(uint8_t inum, uint32_t irq_function, uint16_t type_attrs) {
+	idt_install_interrupt_request(inum, irq_function, 0x8E | type_attrs);
 }
 
 void unhandled_interrupt() {
@@ -166,6 +176,7 @@ void set_irq_finish_state(uint8_t irq, _Bool state) {
 
 void irq0_handler(void) {
 	outb(0x20, 0x20); //EOI
+	ticks++;
 	irq_finished[0] = true;
 }
  

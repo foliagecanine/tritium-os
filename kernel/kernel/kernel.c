@@ -10,13 +10,19 @@
 #include <fs/disk.h>
 #include <fs/fat12.h>
 #include <fs/file.h>
+#include <kernel/syscalls.h>
 
 extern uint32_t krnend;
 
+uint32_t himem = 0;
+uint32_t lomem = 0;
+
 void init() {
-	initialize_gdt();
+	initialize_gdt((lomem + himem)*1024); //Total number of bytes so our GDT doesn't fail
 	mmu_init(&krnend);
 	init_idt();
+	init_pit(1000);
+	init_mmu_paging();
 	init_ata();
 }
 
@@ -34,9 +40,6 @@ void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
 	}
 	printf("\n");
 }
-
-uint32_t himem = 0;
-uint32_t lomem = 0;
 
 void kernel_main(uint32_t magic, uint32_t ebx) {
 	
@@ -110,7 +113,17 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	FILE myfile = fopen(fame,"r+");
 	printf("Size of A:/testfldr is %d\n",myfile.size);
 	
-	//enter_usermode();
+	//Install syscalls before we enter usermode
+	init_syscalls();
+	
+	kprint("Entering usermode! Hold tight!");
+	enter_usermode();
+	//We're in usermode (hopefully)! Lets see what we can do
+	
+	printf("It looks like we never left Kansas.\n");
+	//Test syscalls
+	char * teststring = "Hello Syscall World!\n";
+	asm volatile("lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((int)teststring));
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);

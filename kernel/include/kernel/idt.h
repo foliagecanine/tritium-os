@@ -4,6 +4,7 @@
 #include <kernel/stdio.h>
 #include <kernel/kbd.h>
 #include <kernel/exceptions.h>
+#include <kernel/pit.h>
 
 void init_idt();
 void clear_irq_status(uint8_t irq);

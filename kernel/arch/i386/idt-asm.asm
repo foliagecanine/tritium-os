@@ -162,3 +162,9 @@ load_idt:
 	lidt [edx]
 	sti
 	ret
+	
+	global test_int
+test_int:
+	xor eax, eax
+	int 0x80
+	ret

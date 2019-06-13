@@ -81,7 +81,7 @@ typedef struct tss_entry tss_entry_t;
 
 tss_entry_t tss; //actually put the tss into memory
 
-#define NUM_GDT_ENTRIES 5
+#define NUM_GDT_ENTRIES 6
 
 static uint64_t gdtEntries[NUM_GDT_ENTRIES];
 static struct gdt_pointer
@@ -109,28 +109,33 @@ uint64_t gdt_encode(uint32_t base, uint32_t limit, uint16_t flag)
 
 extern void FlushGDT(uint32_t);
 extern void enter_usermode_fully();
-
-void tss_flush(uint16_t selector) {
-	asm("ltr %0" : : "a"(selector));
-}
+extern void tss_flush();
 
 //Set up GDT. We will need to set up the tss later, but oh well
-void initialize_gdt() {
+void initialize_gdt(uint32_t total_mem) {
 	gdtPtr.limit = (sizeof(uint64_t) * NUM_GDT_ENTRIES) - 1u;
 	gdtPtr.firstEntryAddr = (uint32_t)&gdtEntries;
 
 	gdtEntries[0] = gdt_encode(0, 0, 0);
 	
+	/*
+	 * Welcome to the Global Descriptor Table (GDT)
+	 *
+	 * First off, we have previously calculated the total memory that we have
+	 *
+	 *
+	 */
+	
 	/*These two will be at zero otherwise the GDT goes crazy and triple faults
 	 *Besides, the kernel can have access to as much memory as it wants
 	 *Lastly, the kernel won't need as much memory as the userspace will, so we
 	 *can squeeze both the code and the data in the 4 MiB we provide.*/
-    gdtEntries[1] = gdt_encode(0, 0x03FFFFFF, (GDT_CODE_PL0));
-    gdtEntries[2] = gdt_encode(0, 0x03FFFFFF, (GDT_DATA_PL0)); 
+    gdtEntries[1] = gdt_encode(0, total_mem/2, (GDT_CODE_PL0));
+    gdtEntries[2] = gdt_encode(0, total_mem/2, (GDT_DATA_PL0)); 
 	
 	//Userspace will be above the kernel. This isn't the most efficient, but oh well
-    gdtEntries[3] = gdt_encode(0x04000000, 0x03FFFFFF, (GDT_CODE_PL3));
-    gdtEntries[4] = gdt_encode(0x08000000, 0x03FFFFFF, (GDT_DATA_PL3));
+    gdtEntries[3] = gdt_encode((total_mem/2)/2, total_mem/2, (GDT_CODE_PL3));
+    gdtEntries[4] = gdt_encode(total_mem/2, total_mem/2, (GDT_DATA_PL3));
 
 	gdtEntries[5] = gdt_encode(&tss,sizeof(tss_entry_t), 0x89); //I don't exactly understand, but I do know the tss needs a type 0x89
 
@@ -146,25 +151,37 @@ void install_tss () {
 	memset((void*) &tss, 0, sizeof(tss_entry_t));
 	
 	tss.ss0 = 0x10;
-	tss.esp0 = 0;
-	tss.cs = 0x0b;
+	tss.esp0 = 0x0;
+	
+	tss.cs = 0x0B;
 	tss.ss = 0x13;
-	tss.es = 0x13;
 	tss.ds = 0x13;
+	tss.es = 0x13;
 	tss.fs = 0x13;
-	tss.gs = 0x13;
-	tss_flush(5*sizeof(uint32_t));
+	tss.gs =0x13;
+	
+	gdt_flush((uint32_t)&gdtPtr);
+	tss_flush();
 }
 
-int test_usermode() {
+void test_usermode() {
 	//What can we do here? Nothing yet. We don't have any syscalls.
-	int a = 1;
-	int b = 2;
-	b+=a;
-	return 0;
+	//int a = 1;
+	//int b = 2;
+	//b+=a;
+	//return 0;
+}
+
+void enter_usermode_fully() {
+
 }
 
 void enter_usermode () { //There's no going back...
 	install_tss();
 	enter_usermode_fully();
+}
+
+void tss_stack_set (uint16_t ss, uint16_t esp) {
+	tss.ss0 = ss;
+	tss.esp0 = esp;
 }
