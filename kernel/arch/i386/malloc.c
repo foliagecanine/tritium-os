@@ -37,10 +37,9 @@ void* malloc(size_t size);
 #define MALLOC_MAX_PAGES 32
 
 void mmu_info() {
-	printf("Memory used: %d\n", (uint64_t)memory_used);
+	printf("Memory used: %d\n", (uint32_t)memory_used);
 	uint32_t mem_free = heap_end - heap_start - memory_used;
-	printf("Memory free: %d", (uint64_t)mem_free);
-	printf(" (approx. %d KiB)\n", (uint64_t)(mem_free/1024));
+	printf("Memory free: %d (approx. %d KiB)\n", (uint32_t)mem_free,(uint32_t)(mem_free/1024));
 }
 
 void mmu_init(uint32_t krnend) {

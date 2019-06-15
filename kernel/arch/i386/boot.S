@@ -29,7 +29,7 @@ _start:
 	
 	#Save multiboot info
 	push %ebx
-	push %eax;
+	push %eax
 
 	# Call the global constructors.
 	call _init

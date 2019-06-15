@@ -1,51 +1,23 @@
 #include <kernel/mmu.h>
 
-//based off of https://wiki.osdev.org/Setting_Up_Paging and https://wiki.osdev.org/Paging
+//Based off of http://www.brokenthorn.com/Resources/OSDev17.html "brokenthorn"
 
-uint32_t pagedir[1024] __attribute__((aligned(4096)));
-uint32_t page_table_1[1024] __attribute__((aligned(4096)));
+#define PHYSICAL_BLOCK_SIZE	4096
 
-extern void load_pagedir(unsigned int*);
-extern void enablePaging();
+static uint32_t phys_memory_size;
+static uint32_t* phys_memory_map;
+static uint32_t phys_used_blocks;
+static uint32_t phys_max_blocks;
 
-void init_mmu_paging() {
-	for(int i = 0; i < 1024; i++)
-	{
-		//Flags: S,RW
-		pagedir[i] = 0x00000002;
-	}
-	 
-	//4MiB
-	for(unsigned int i = 0; i < 1024; i++)
-	{
-		page_table_1[i] = (i * 0x1000) | 3;
-	}
-
-	//Flags: S,RW,P
-	pagedir[0] = ((unsigned int)page_table_1) | 3;
+void init_physical_memory(uint32_t total_mem) {
+	phys_memory_size = total_mem;
+	phys_memory_map = (uint32_t*) (0x400000-(32*PHYSICAL_BLOCK_SIZE)); //Start pages just after malloc
+	phys_max_blocks = phys_memory_size;
+	phys_used_blocks = phys_max_blocks;
 	
-	load_pagedir(pagedir);
-	enablePaging();
-	
-	kprint("Paging enabled.");	
+	memset(phys_memory_map,0xf,phys_used_blocks/8); //One bit per block, set all used
 }
 
-void * vaddr_to_paddr(void * vaddr) {
-	uint32_t pdi = (uint32_t)vaddr >> 22;
-    uint32_t pti = (uint32_t)vaddr >> 12 & 0x03FF;
- 
-    uint32_t * pd = (uint32_t *)0xFFFFF000;
-    uint32_t * pt = ((uint32_t *)0xFFC00000) + (0x400 * pdi);
- 
-    return (void *)((pt[pti] & ~0xFFF) + ((uint32_t)vaddr & 0xFFF));
-}
-
-void map_page(void * paddr, void * vaddr, unsigned int flags) {
-	uint32_t pdi = (uint32_t)vaddr >> 22;
-    uint32_t pti = (uint32_t)vaddr >> 12 & 0x03FF;
- 
-    uint32_t * pd = (uint32_t *)0xFFFFF000;
-    uint32_t * pt = ((uint32_t *)0xFFC00000) + (0x400 * pdi);
+void init_mmu_paging(uint32_t total_mem) {
 	
-	pt[pti] = ((uint32_t)paddr) | (flags & 0xFF) | 0x1;
 }

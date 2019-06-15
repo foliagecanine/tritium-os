@@ -143,8 +143,8 @@ void detect_devices(ata_drive_t* drive) {
 			(uint64_t)drive->iobase,									/* Base */
 			(uint64_t)drive->channel,								/* Channel */
 			(const char *[]){"ATA", "ATAPI"}[drive->type],	/* Type */
-			drive->size /1024 /2,										/* Size */
-			drive->size / 1024 / 1024 / 2,							/* Size again */
+			(uint32_t)drive->size /1024 /2,										/* Size */
+			(uint32_t)drive->size / 1024 / 1024 / 2,							/* Size again */
 			drive->model);
      }
 }
@@ -292,4 +292,19 @@ uint8_t read_sector_lba(uint8_t drive_num, uint32_t lba, uint8_t *dest) {
 
 uint8_t write_sector_lba(uint8_t drive_num, uint32_t lba_start, uint8_t *dest) {
 	return write_sectors_lba(drive_num, lba_start,1,dest);
+}
+
+void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
+	if (!drive_exists(disk))
+		return;
+	uint8_t read[512];
+	read_sector_lba(disk,sector,read);
+	printf("Data: ");
+	for (int i = 0; i<amt; i++) {
+		if (read[i]<16) {
+			printf("0");
+		}
+		printf("%# ", (uint64_t)(read[i]));
+	}
+	printf("\n");
 }

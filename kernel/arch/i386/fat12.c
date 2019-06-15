@@ -69,17 +69,17 @@ void print_fat12_values(uint8_t drive_num) {
 	printf("OEMName: %s\n", OEMName);
 	
 	//Other stuff
-	printf("Bytes Per Sector: %d\n",(uint64_t)bpb.BytesPerSector);
-	printf("Sectors Per Cluster: %d\n",(uint64_t)bpb.SectorsPerCluster);
-	printf("Number of FATs: %d\n",(uint64_t)bpb.NumFATs);
-	printf("Number of Root Directory Entries: %d\n",(uint64_t)bpb.NumRootDirectoryEntries);
-	printf("Number of Total Sectors: %d\n",(uint64_t)bpb.NumTotalSectors);
-	printf("Media Descriptor Type: %#\n",(uint64_t)bpb.MediaDescriptorType);
-	printf("Number of Sectors Per FAT: %d\n",(uint64_t)bpb.NumSectorsPerFAT);
-	printf("Number of Sectors Per Track: %d\n",(uint64_t)bpb.NumSectorsPerTrack);
-	printf("Number of Heads: %d\n",(uint64_t)bpb.NumHeads);
-	printf("Number of Hidden Sectors: %d\n",(uint64_t)bpb.NumHiddenSectors);
-	printf("Signature: %#\n",(uint64_t)bootsect->Signature);
+	printf("Bytes Per Sector: %d\n",(uint32_t)bpb.BytesPerSector);
+	printf("Sectors Per Cluster: %d\n",(uint32_t)bpb.SectorsPerCluster);
+	printf("Number of FATs: %d\n",(uint32_t)bpb.NumFATs);
+	printf("Number of Root Directory Entries: %d\n",(uint32_t)bpb.NumRootDirectoryEntries);
+	printf("Number of Total Sectors: %d\n",(uint32_t)bpb.NumTotalSectors);
+	printf("Media Descriptor Type: %#\n",(uint32_t)bpb.MediaDescriptorType);
+	printf("Number of Sectors Per FAT: %d\n",(uint32_t)bpb.NumSectorsPerFAT);
+	printf("Number of Sectors Per Track: %d\n",(uint32_t)bpb.NumSectorsPerTrack);
+	printf("Number of Heads: %d\n",(uint32_t)bpb.NumHeads);
+	printf("Number of Hidden Sectors: %d\n",(uint32_t)bpb.NumHiddenSectors);
+	printf("Signature: %#\n",(uint32_t)bootsect->Signature);
 }
 
 //Listing all the things as shown in https://forum.osdev.org/viewtopic.php?f=1&t=26639

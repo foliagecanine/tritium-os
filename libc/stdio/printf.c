@@ -63,7 +63,7 @@ int printf(const char* restrict format, ...) {
 			written += len;
 		} else if (*format == '#') {
 			format++;
-			const unsigned long long num = (unsigned long long)va_arg(parameters, unsigned long long);
+			unsigned long long num = (unsigned long long)va_arg(parameters, unsigned long long);
 			if (num==0) {
 				if (!print("0",1))
 					return -1;
@@ -96,7 +96,7 @@ int printf(const char* restrict format, ...) {
 			}
 		} else if (*format == 'd') {
 			format++;
-			const long num = (long)va_arg(parameters, int);
+			long num = (long)va_arg(parameters, int);
 			if (num==0) {
 				if (!print("0",1))
 					return -1;

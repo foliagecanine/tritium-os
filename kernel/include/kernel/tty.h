@@ -10,7 +10,7 @@ void terminal_writestring(const char* data);
 void terminal_setcolor(uint8_t color);
 uint8_t terminal_getcolor();
 void disable_cursor();
-void enable_cursor();
+void enable_cursor(uint8_t start, uint8_t end);
 void terminal_backup();
 
 #endif

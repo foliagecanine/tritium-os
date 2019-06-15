@@ -63,7 +63,23 @@ void terminal_writestring(const char* data) {
 }
 
 void disable_cursor() {
-	//We'll do this once we have the outb function
+	outb(0x3D4,0x0A);
+	outb(0x3D5,0x20);
+}
+
+void cursor_position(size_t x, size_t y) {
+	size_t index = y * VGA_WIDTH + x;
+	outb(0x3D4,0x0F);
+	outb(0x3D5, (uint8_t) (index & 0xFF));
+	outb(0x3D4,0x0E);
+	outb(0x3D5, (uint8_t) ((index>>8) & 0xFF));
+}
+
+void enable_cursor(uint8_t start, uint8_t end) {
+	outb(0x3D4, 0x0A);
+	outb(0x3D5, (inb(0x3D5) & 0xC0) | start);
+	outb(0x3D4, 0x0B);
+	outb(0x3D5, (inb(0x3D5) & 0xE0) | end);
 }
 
 void terminal_backup() {

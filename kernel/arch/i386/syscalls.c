@@ -1,6 +1,6 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	3
+#define NUM_SYSCALLS	1
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&printf
@@ -9,8 +9,6 @@ static void *syscalls[NUM_SYSCALLS] = {
 void run_syscall() {
 	static int syscall_num;
 	asm("movl %%eax,%0" : "=r"(syscall_num));
-	
-	printf("Int 0x80 received: %d\n",(uint64_t)syscall_num);
 	
 	if (syscall_num>=NUM_SYSCALLS)
 		return;
