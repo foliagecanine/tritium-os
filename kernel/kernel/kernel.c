@@ -24,15 +24,27 @@ void init() {
 	mmu_init(&krnend);
 	init_idt();
 	init_pit(1000);
-	init_mmu_paging((lomem + himem)*1024);
+	init_mmu_paging((lomem + himem)*1024,mmap);
 	init_ata();
 }
 
+const char * mem_types[] = {
+	"ERROR",
+	"Available",
+	"Reserved",
+	"ACPI Reclaimable",
+	"NVS",
+	"Bad Ram"
+};
+
 void print_memory_layout() {
 	for (uint8_t i = 0; i < 15; i++) {
+		uint32_t type = mmap[i].type;
+		if (mmap[i].type>5)
+			type = 2;
 		if (i>0&&mmap[i].addr==0)
 			break;
-		printf("%d: Start=%d\n",(uint32_t)i,(uint32_t)2);
+		printf("%d: Start=0x%#, Length=0x%# bytes, type=%d (%s)\n",(uint32_t)i,(uint64_t)mmap[i].addr,(uint64_t)mmap[i].len,(uint32_t)type,mem_types[type]);
 	}
 }
 
