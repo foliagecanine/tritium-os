@@ -1,6 +1,8 @@
 # TritiumOS
 Simple 32 bit Hobby OS  
-buildable: YES :heavy_check_mark:
+buildable: YES :heavy_check_mark:  
+
+Original Author: foliagecanine
 
 ##Introduction
 TritiumOS is an open-source operating system, successor to an unpublished, expiremental test OS named Rogue2OS

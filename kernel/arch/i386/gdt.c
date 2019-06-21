@@ -107,7 +107,7 @@ uint64_t gdt_encode(uint32_t base, uint32_t limit, uint16_t flag)
     return gdt_entry;
 }
 
-extern void FlushGDT(uint32_t);
+extern void gdt_flush(uint32_t);
 extern void enter_usermode_fully();
 extern void tss_flush();
 
@@ -162,14 +162,6 @@ void install_tss () {
 	
 	gdt_flush((uint32_t)&gdtPtr);
 	tss_flush();
-}
-
-void test_usermode() {
-	//What can we do here? Nothing yet. We don't have any syscalls.
-	//int a = 1;
-	//int b = 2;
-	//b+=a;
-	//return 0;
 }
 
 void enter_usermode_fully() {

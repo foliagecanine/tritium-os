@@ -81,9 +81,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		//post scriptum, kibi/mebi/gibi vs kilo/mega/giga is really annoying
 		uint64_t totalMem = ((uint64_t)lomem+(uint64_t)himem+1024);
 		
-		//Two separate printf's because inline math only works once for some reason
-		printf("Total memory: %dGB ",totalMem/1048576);
-		printf("(%dMB)\n",totalMem/1024);
+		printf("Total memory: %dGB (%dMB)\n",(uint32_t)totalMem/1048576,(uint32_t)totalMem/1024);
 		#endif
 	}
 	

@@ -10,4 +10,7 @@ void* malloc(size_t size);
 void free(void *__ptr);
 void init_mmu_paging();
 
+void *alloc_physical_block();
+void free_physical_block(void *ptr);
+
 #endif

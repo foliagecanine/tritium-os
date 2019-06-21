@@ -1,4 +1,5 @@
 isodir
 sysroot
+ExtraInfo
 *.d
 *.o
