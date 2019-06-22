@@ -21,6 +21,14 @@ Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu
 or for other distributions
 `sudo [Package Manager Install Command] qemu`
 
+You will also need grub-mkrescue, which is a part of the grub2 package. You can get it by running this command:
+`sudo apt-get install grub2`
+or for other distributions
+`sudo [Package Manager Install Command] grub2`
+
+You can alternatively build it from source, which you can find at ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz
+(This statement is REQUIRED by the GPL, under which grub is licensed)
+
 ### Building/testing the iso
 Then type `./iso.sh` to create the iso file 
 OR  
