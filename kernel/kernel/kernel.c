@@ -24,7 +24,11 @@ void init() {
 	mmu_init(&krnend);
 	init_idt();
 	init_pit(1000);
-	init_mmu_paging((lomem + himem)*1024,mmap);
+	init_mmu_paging((lomem + himem)*1024,mmap,&krnend);
+	
+	//uint32_t *ptr = (uint32_t*)0x9FC01;
+	//uint32_t do_page_fault = *ptr;
+	
 	init_ata();
 }
 
@@ -67,6 +71,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	terminal_initialize();
 	disable_cursor();
 	printf("Hello World!\n");
+	printf("Kernel Start: 0x%#, Kernel End: 0x%#\n", (uint64_t)0x1000, (uint64_t)&krnend);
 	
 	//Process multiboot memory
 	if (mbi->flags & MULTIBOOT_INFO_MEMORY) {
@@ -98,8 +103,9 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	
 	printf("It looks like we never left Kansas.\n");
 	//Test syscalls
-	char * teststring = "Hello Syscall World!\n";
-	asm volatile("lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring));
+	char * teststring = "Hello Syscall World! My number is %d.\n";
+	int testnum = 123;
+	asm volatile("mov %2, %%ecx; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring), "r" (testnum));
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);

@@ -38,7 +38,7 @@ typedef struct {
 	uint8_t Extension[3];
 	uint8_t FileAttributes;
 	uint8_t Reserved;
-	uint8_t TimeCreatedMs;
+	uint8_t TimeCreatedMillis;
 	uint16_t TimeCreated;
 	uint16_t DateCreated;
 	uint16_t DateLastAccessed;

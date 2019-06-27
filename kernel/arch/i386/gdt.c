@@ -108,7 +108,7 @@ uint64_t gdt_encode(uint32_t base, uint32_t limit, uint16_t flag)
 }
 
 extern void gdt_flush(uint32_t);
-extern void enter_usermode_fully();
+//extern void enter_usermode_fully();
 extern void tss_flush();
 
 //Set up GDT. We will need to set up the tss later, but oh well
@@ -164,13 +164,16 @@ void install_tss () {
 	tss_flush();
 }
 
-void enter_usermode_fully() {
-
+void test_user_function() {
+	asm("cli");
 }
 
 void enter_usermode () { //There's no going back...
 	install_tss();
-	enter_usermode_fully();
+	//enter_usermode_fully();
+	/*We've got a problem... if we try to enter usermode right now we end up with a cpu reset...
+		I'll try to fix it later...
+		*/
 }
 
 void tss_stack_set (uint16_t ss, uint16_t esp) {
