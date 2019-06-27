@@ -26,7 +26,7 @@ You will also need grub-mkrescue, which is a part of the grub2 package. You can 
 or for other distributions
 `sudo [Package Manager Install Command] grub2`
 
-You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz](ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz) 
+You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz] (https://bit.ly/2ZNmsQa)* 
 (This statement is REQUIRED by the GPL, under which grub is licensed)
 
 ### Building/testing the iso
