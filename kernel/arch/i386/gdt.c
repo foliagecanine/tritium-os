@@ -118,26 +118,12 @@ void initialize_gdt(uint32_t total_mem) {
 
 	gdtEntries[0] = gdt_encode(0, 0, 0);
 	
-	/*
-	 * Welcome to the Global Descriptor Table (GDT)
-	 *
-	 * First off, we have previously calculated the total memory that we have
-	 *
-	 *
-	 */
+	//Had to redo GDT so usermode could execute code that the kernel loaded. See old code at kernel/arch/i386/tests.c
 	
-	/*These two will be at zero otherwise the GDT goes crazy and triple faults
-	 *Besides, the kernel can have access to as much memory as it wants
-	 *Lastly, the kernel won't need as much memory as the userspace will, so we
-	 *can squeeze both the code and the data in the 4 MiB we provide.*/
-    gdtEntries[1] = gdt_encode(0, total_mem/2, (GDT_CODE_PL0));
-    gdtEntries[2] = gdt_encode(0, total_mem/2, (GDT_DATA_PL0)); 
-	
-	//Userspace will be above the kernel. This isn't the most efficient, but oh well
-    gdtEntries[3] = gdt_encode((total_mem/2)/2, total_mem/2, (GDT_CODE_PL3));
-    gdtEntries[4] = gdt_encode(total_mem/2, total_mem/2, (GDT_DATA_PL3));
-
-	gdtEntries[5] = gdt_encode(&tss,sizeof(tss_entry_t), 0x89); //I don't exactly understand, but I do know the tss needs a type 0x89
+	gdtEntries[1] = gdt_encode(0,0xFFFFFFFF,0xCF9A);
+	gdtEntries[2] = gdt_encode(0,0xFFFFFFFF,0xCF92);
+	gdtEntries[3] = gdt_encode(0,0xFFFFFFFF,0xCFFA);
+	gdtEntries[4] = gdt_encode(0,0xFFFFFFFF,0xCFF2);
 
 	gdt_flush((uint32_t)&gdtPtr);
 	kprint("Set up GDT");
@@ -146,12 +132,14 @@ void initialize_gdt(uint32_t total_mem) {
 void install_tss () {
 	uint32_t base = (uint32_t) &tss;
 	
-	gdtEntries[5] = gdt_encode(base,base+sizeof(tss_entry_t),0b11101001);
+	gdtEntries[5] = gdt_encode(base,base+sizeof(tss_entry_t),0xE9);
 	
 	memset((void*) &tss, 0, sizeof(tss_entry_t));
 	
 	tss.ss0 = 0x10;
-	tss.esp0 = 0x0;
+	uint32_t stack_ptr = 0;
+	asm("mov %%esp, %0" : "=r"(stack_ptr));
+	tss.esp0 = stack_ptr;
 	
 	tss.cs = 0x0B;
 	tss.ss = 0x13;
@@ -164,16 +152,30 @@ void install_tss () {
 	tss_flush();
 }
 
-void test_user_function() {
-	asm("cli");
+int a(int b) {
+	return b*b+b;
 }
 
 void enter_usermode () { //There's no going back...
 	install_tss();
-	//enter_usermode_fully();
-	/*We've got a problem... if we try to enter usermode right now we end up with a cpu reset...
-		I'll try to fix it later...
-		*/
+	
+	asm volatile("\
+		cli; \
+		mov $0x23, %ax; \
+		mov %ax, %ds; \
+		mov %ax, %es; \
+		mov %ax, %fs; \
+		mov %ax, %gs; \
+		push $0x23; \
+		push %esp; \
+		pushf; \
+		push $0x1B; \
+		push $1f; \
+		iret; \
+		1: \
+		pop %eax\
+	");
+	//Line 195 (cant do inline assembly comments): Fix the stack. It has an extra item.
 }
 
 void tss_stack_set (uint16_t ss, uint16_t esp) {

@@ -26,9 +26,6 @@ void init() {
 	init_pit(1000);
 	init_mmu_paging((lomem + himem)*1024,mmap,&krnend);
 	
-	//uint32_t *ptr = (uint32_t*)0x9FC01;
-	//uint32_t do_page_fault = *ptr;
-	
 	init_ata();
 }
 
@@ -101,11 +98,20 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	enter_usermode();
 	//We're in usermode (hopefully)! Lets see what we can do
 	
-	printf("It looks like we never left Kansas.\n");
 	//Test syscalls
-	char * teststring = "Hello Syscall World! My number is %d.\n";
+	char * teststring = "Hello User Mode World! Test number 123 = %d.\n";
 	int testnum = 123;
-	asm volatile("mov %2, %%ecx; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring), "r" (testnum));
+	asm volatile("mov $0, %%eax; mov %2, %%ecx; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring), "r" (testnum));
+	
+	teststring = "Don't worry about the error below. It means that usermode is working.\n";
+	asm volatile("mov $0, %%eax; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring));
+	
+	//This will cause a Page Fault if it works, otherwise it actuall prints (which is bad)
+	printf("Uh oh. Usermode isn't working!");
+		
+	while(true) {
+		;
+	}
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.
 	printf("Extra info: %d\n", 0);

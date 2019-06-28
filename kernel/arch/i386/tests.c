@@ -48,3 +48,26 @@ for (;;) {
 		terminal_backup();
 	}
 }
+
+//Old GDT Code
+
+	/*
+	 * Welcome to the Global Descriptor Table (GDT)
+	 *
+	 * First off, we have previously calculated the total memory that we have
+	 *
+	 *
+	 */
+	
+	/*These two will be at zero otherwise the GDT goes crazy and triple faults
+	 *Besides, the kernel can have access to as much memory as it wants
+	 *Lastly, the kernel won't need as much memory as the userspace will, so we
+	 *can squeeze both the code and the data in the 4 MiB we provide.*/
+    gdtEntries[1] = gdt_encode(0, total_mem/2, (GDT_CODE_PL0));
+    gdtEntries[2] = gdt_encode(0, total_mem/2, (GDT_DATA_PL0)); 
+	
+	//Userspace will be above the kernel. This isn't the most efficient, but oh well
+    gdtEntries[3] = gdt_encode((total_mem/2)/2, total_mem/2, (GDT_CODE_PL3));
+    gdtEntries[4] = gdt_encode(total_mem/2, total_mem/2, (GDT_DATA_PL3));
+
+	gdtEntries[5] = gdt_encode(&tss,sizeof(tss_entry_t), 0x0489); //I don't exactly understand, but I do know the tss needs this type

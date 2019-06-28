@@ -11,12 +11,26 @@ void run_syscall() {
 	asm("movl %%eax,%0" : "=r"(syscall_num));
 	
 	if (syscall_num>=NUM_SYSCALLS)
-		return;
+		asm("iret"); //We don't want to accidentally give them kernel mode access, do we?
 	
 	void *function = syscalls[syscall_num];
 	
 	int retVal;
-	asm volatile("push %%edi\npush %%esi\npush %%edx\npush %%ecx\npush %%ebx\ncall *%1\npop %%ebx\npop %%ebx\npop %%ebx\npop %%ebx\npop %%ebx\nsti" : "=a" (retVal) : "r"(function));
+	//Call the function
+	asm volatile("\
+	push %%edi; \
+	push %%esi; \
+	push %%edx; \
+	push %%ecx; \
+	push %%ebx; \
+	call *%1; \
+	pop %%ebx; \
+	pop %%ebx; \
+	pop %%ebx; \
+	pop %%ebx; \
+	pop %%ebx; \
+	iret;\
+	" : "=a" (retVal) : "r"(function));
 }
 
 void new_syscall(uint8_t inum, uint32_t irq_fn) {

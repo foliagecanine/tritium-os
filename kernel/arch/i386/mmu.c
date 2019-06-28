@@ -139,12 +139,14 @@ void init_mmu_paging(uint32_t total_mem, multiboot_memory_map_t *mmap, uint32_t 
 	page_table_t *identity_map = alloc_physical_blocks(1);
 	memset(identity_map,0,sizeof(page_table_t));
 	
-	for (uint32_t i  = 0; i < krnend; i+=PHYSICAL_BLOCK_SIZE) {
+	//If our kernel is bigger than 4 MiB then we have a problem
+	for (uint32_t i  = 0; i < (krnend > 0x4000000 ? krnend : 0x4000000); i+=PHYSICAL_BLOCK_SIZE) {
 		page_t new_page;
 		memset(&new_page,0,sizeof(page_t));
 		
 		new_page.present = 1;
 		new_page.frame = i>>12;
+		new_page.user = 1;
 		
 		identity_map->entries[i/PHYSICAL_BLOCK_SIZE] = new_page;
 	}
@@ -152,6 +154,7 @@ void init_mmu_paging(uint32_t total_mem, multiboot_memory_map_t *mmap, uint32_t 
 	pagedir->entries[0].present = 1;
 	pagedir->entries[0].writable = 1;
 	pagedir->entries[0].frame = (uint32_t)(uint32_t *)identity_map<<12;
+	pagedir->entries[0].user = 1;
 	
 	asm("mov %0, %%cr3; mov %%cr0, %%eax; or $0x80000000, %%eax; mov %%eax,%%cr0" : : "r"(pagedir));
 	
