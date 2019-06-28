@@ -26,7 +26,7 @@ You will also need grub-mkrescue, which is a part of the grub2 package. You can 
 or for other distributions
 `sudo [Package Manager Install Command] grub2`
 
-You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz] (https://bit.ly/2ZNmsQa)* 
+You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz](https://bit.ly/2ZNmsQa)* 
 (This statement is REQUIRED by the GPL, under which grub is licensed)
 
 \*If you hover on the link, it is a bit.ly link. This is because github does not properly hyperlink ftp:// links. If you are paranoid about bit.ly links or something, you can just copy the address into your url bar.
