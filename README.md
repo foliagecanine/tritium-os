@@ -29,6 +29,8 @@ or for other distributions
 You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz] (https://bit.ly/2ZNmsQa)* 
 (This statement is REQUIRED by the GPL, under which grub is licensed)
 
+\*If you hover on the link, it is a bit.ly link. This is because github does not properly hyperlink ftp:// links. If you are paranoid about bit.ly links or something, you can just copy the address into your url bar.
+
 ### Building/testing the iso
 Then type `./iso.sh` to create the iso file 
 OR  
