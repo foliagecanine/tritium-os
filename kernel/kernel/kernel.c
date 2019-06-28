@@ -106,7 +106,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	teststring = "Don't worry about the error below. It means that usermode is working.\n";
 	asm volatile("mov $0, %%eax; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring));
 	
-	//This will cause a Page Fault if it works, otherwise it actuall prints (which is bad)
+	//This will cause a Page Fault if it works, otherwise it actually prints (which is bad)
 	printf("Uh oh. Usermode isn't working!");
 		
 	while(true) {
