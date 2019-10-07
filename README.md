@@ -4,7 +4,7 @@ buildable: YES :heavy_check_mark:
 
 Original Author: foliagecanine
 
-##Introduction
+## Introduction
 TritiumOS is an open-source operating system, successor to an unpublished, expiremental test OS named Rogue2OS
 
 ## How do you build this?
