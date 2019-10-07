@@ -47,7 +47,7 @@ Or a floppy disk (no controller implemented yet) like so
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
 
 1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting
+2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
 3)You have to make a few scripts (I guess I made them for you though) 
 
 The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
