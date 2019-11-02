@@ -176,7 +176,7 @@ void set_irq_finish_state(uint8_t irq, _Bool state) {
 
 void irq0_handler(void) {
 	outb(0x20, 0x20); //EOI
-	ticks++;
+	pit_tick();
 	irq_finished[0] = true;
 }
  
@@ -184,7 +184,6 @@ void irq1_handler(void) {
 	kbd_handler();
 	outb(0x20, 0x20); //EOI
 	irq_finished[1] = true;
-	print_keys();
 }
  
 void irq2_handler(void) {

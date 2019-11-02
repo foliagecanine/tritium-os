@@ -35,6 +35,9 @@ uint8_t *pheap_descr = 0;
 void* malloc(size_t size);
 
 #define MALLOC_MAX_PAGES 32
+#define MALLOC_MAX_MEMORY 1024*1024 //1MiB
+
+char getMemory[MALLOC_MAX_MEMORY];
 
 void mmu_info() {
 	printf("Memory used: %d\n", (uint32_t)memory_used);
@@ -44,11 +47,11 @@ void mmu_info() {
 
 void mmu_init(uint32_t krnend) {
 	memory_used = 0;
-	last_alloc_loc = krnend + 0x1000;
+	last_alloc_loc = (uint32_t)&getMemory;
 	heap_start = last_alloc_loc;
 	pheap_end = 0x400000;
 	pheap_start = pheap_end - (MALLOC_MAX_PAGES * 4096);
-	heap_end = pheap_start;
+	heap_end = heap_start+MALLOC_MAX_MEMORY;
 	memset((char*)heap_start, 0, heap_end-heap_start);
 	pheap_descr = (uint8_t *)malloc(MALLOC_MAX_PAGES);
 	kprint("Set up memory allocation. Details listed below:");

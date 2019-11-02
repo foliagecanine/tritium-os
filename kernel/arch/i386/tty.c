@@ -104,3 +104,26 @@ void terminal_backup() {
 		terminal_column = VGA_WIDTH-1;
 	}
 }
+
+void terminal_clear_line(size_t y)   //clear given line
+{
+  for(size_t x=0; x<VGA_WIDTH; x++)
+    terminal_putentryat(' ', terminal_color, x, y);
+}
+
+void terminal_clear(void)    //clear all screen and set prompt to up left corner
+{
+  for(size_t y=0; y<VGA_HEIGHT; y++)
+	terminal_clear_line(y);
+  terminal_row = 0;
+  terminal_column = 0;
+}
+
+void terminal_refresh() {
+	for (size_t y=0; y < VGA_HEIGHT; y++) {
+		for (size_t x = 0; x < VGA_WIDTH; x++) {
+			const size_t index = y * VGA_WIDTH + x;
+			terminal_putentryat(terminal_buffer[index], terminal_color, x, y);
+		}
+	}
+}

@@ -4,7 +4,7 @@ HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 
 NASM=nasm
 
-CFLAGS?=-O2 -g -Wall -Wextra -pedantic
+CFLAGS?=-O2 -s -Wall -Wextra -pedantic
 CPPFLAGS?=
 LDFLAGS?=
 LIBS?=

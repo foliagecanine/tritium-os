@@ -19,6 +19,7 @@ char tolower(char c);
 char toupper(char c);
 char* strchr(const char *s, int c);
 char *strcpy(char *dest, const char *src);
+void strcut(char* strfrom, char* strto, int from, int to);
 
 #ifdef __cplusplus
 }

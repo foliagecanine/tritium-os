@@ -21,10 +21,14 @@ void init_pit(uint32_t freq) {
 	outb(0x40, (uint8_t)((pitfreq>>8)&0xFF));
 }
 
+void dontoptimize() {
+	printf("");
+}
+
 void sleep(uint32_t ms) {
 	uint64_t endTicks = ticks+((ms*frequency)/1000);
 	while (ticks<endTicks) {
 		//printf("Ticks left: %d\n",endTicks-ticks);
-		asm("nop"); // It doesn't like if we don't have something here
+		dontoptimize(); // It doesn't like if we don't have something here
 	}
 }

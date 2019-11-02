@@ -113,6 +113,19 @@ _Bool detect_fat12(uint8_t drive_num) {
  */
 void LongToShortFilename(char * longfn, char * shortfn) {
 	// Longfilename.extension -> LONGFI~6EXT, textfile.txt -> TEXTFILETXT, short.txt -> SHORT   TXT
+	memset(shortfn,' ',11); //Fill with spaces
+	
+	//First check for . and ..
+	if (strcmp(longfn,".")) {
+		strcpy(shortfn,".          ");
+		return;
+	}
+	if (strcmp(longfn,"..")) {
+		strcpy(shortfn,"..         ");
+		return;
+	}
+	
+	//Then do the rest
 	int locOfDot = findCharInArray(longfn,'.');
 	if (locOfDot>8) {
 		memcpy(shortfn,longfn,6);
@@ -175,6 +188,14 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 	for (uint8_t i = 0; i < 12; i++) {
 		shortfn[i] = toupper(shortfn[i]);
 	}
+	
+	//Add any neccesary padding
+	/* if (shortfn[0]!=0) {
+		for (uint8_t i = 0; i<11; i++) {
+			if (shortfn[i]==0)
+				shortfn[i] = ' ';
+		}
+	} */
 }
 
 FSMOUNT MountFAT12(uint8_t drive_num) {
@@ -217,6 +238,8 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
 	uint8_t read[numEntries*32];
 	
+	printf("Reading from %#\n",(uint64_t)location);
+	
 	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
 		uint8_t derr = read_sector_lba(drive_num, (location-1)/512+i, read+(i*512));
 		if (derr) {
@@ -226,14 +249,16 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 	}
 	
 	char drivename[12];
+	memset(&drivename,0,12);
 	memcpy(drivename,read,8);
 	if (read[9]!=' ') {
 		drivename[8]='.';
 		memcpy(drivename+9,read+8,3);
 	}
 	drivename[11] = 0;
+	
 	uint8_t *reading = (uint8_t *)read;
-	printf("Listing files/folders in drive %s:\n", drivename);
+	printf("Listing files/folders in %s:\n", drivename);
 	for (unsigned int i = 0; i < numEntries; i++) {
 		if (!(reading[11]&0x08||reading[11]&0x02||reading[0]==0)) {
 			for (uint8_t j = 0; j < 11; j++) {
@@ -244,6 +269,8 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 				if (reading[11]&0x10&&j==10)
 					printf("/");
 			}
+			int32_t nextCluster = (reading[27] << 8) | reading[26];
+			printf(" [%d]");
 			printf("\n");
 		}
 		reading+=32;
@@ -269,6 +296,15 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	
 	char shortfn[12];
 	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for
+	
+	//If we added a /, don't bother looking for NULL. Instead, return our current location.
+	if (strcmp(shortfn,"           ")) {
+		retFile.valid = true;
+		retFile.location = (uint64_t)location;
+		retFile.size = numEntries; //This is definately a directory.
+		retFile.directory = true;
+		return retFile;
+	}
 	
 	uint8_t *read = malloc(numEntries*32); //See free below
 	
@@ -309,21 +345,43 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 			free(read); //This way we don't use so much space. We aren't going to use this data any more.
 			return FAT12_fopen((fm.SystemAreaSize+((nextCluster-2)*fm.SectorsPerCluster))*512+1,16,searchpath,drive_num,fm,mode);
 		} else {
-			uint16_t nextCluster = (reading[27] << 8) | reading[26];
+			int32_t nextCluster = (reading[27] << 8) | reading[26];
 			retFile.valid = true;
-			retFile.location = (uint64_t)nextCluster*512;
+			retFile.location = (uint64_t)((nextCluster-2)*512)+(fm.NumRootDirectoryEntries*32)+(fm.RootDirectoryOffset*512);
 			uint32_t size = (reading[31]<<24) | (reading[30]<<16) | (reading[29]<<8) | reading[28];
 			retFile.size = (uint64_t)size;
 			if (mode&1) {
 				retFile.writelock = true;
+			} else {
+				retFile.writelock = false;
 			}
 			if (reading[11]&0x10) {
 				retFile.directory = true;
+			} else {
+				retFile.directory = false;
 			}
+			free(read);
 			return retFile;
 		}
 	} else {
+		free(read);
 		retFile.valid = false;
 		return retFile;
+	}
+}
+
+void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
+	if (!file)
+		return;
+	uint32_t curLen = len;
+	uint32_t curLoc = start+file->location;
+	uint16_t sectorToRead = file->location/512;
+	char read[512];
+	while(curLen>0) {
+		read_sector_lba(drive_num,sectorToRead,read);
+		uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
+		memcpy(buf+(curLoc-(start+file->location)),&read[curLoc%512],amt);
+		curLen-=amt;
+		curLoc+=amt;
 	}
 }

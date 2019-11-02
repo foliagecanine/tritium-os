@@ -43,6 +43,7 @@ string/tolower.o \
 string/toupper.o \
 string/strchr.o \
 string/strcpy.o \
+string/strcut.o \
 
 HOSTEDOBJS=\
 $(ARCH_HOSTEDOBJS) \

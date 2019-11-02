@@ -71,3 +71,22 @@ for (;;) {
     gdtEntries[4] = gdt_encode(total_mem/2, total_mem/2, (GDT_DATA_PL3));
 
 	gdtEntries[5] = gdt_encode(&tss,sizeof(tss_entry_t), 0x0489); //I don't exactly understand, but I do know the tss needs this type
+	
+//Entering usermode and tests
+	uint8_t function[2] = {0xEB, 0xFE};
+	
+	kprint("Entering usermode! Hold tight!");
+
+	enter_usermode();
+	//We're in usermode (hopefully)! Lets see what we can do
+	
+	//Test syscalls
+	char * teststring = "Hello User Mode World! Test number 123 = %d.\n";
+	int testnum = 123;
+	asm volatile("mov $0, %%eax; mov %2, %%ecx; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring), "r" (testnum));
+	
+	teststring = "Don't worry about the error below. It means that usermode is working.\n";
+	asm volatile("mov $0, %%eax; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring));
+	
+	//This will cause a Page Fault if it works, otherwise it actually prints (which is bad)
+	printf("Uh oh. Usermode isn't working!");

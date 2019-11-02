@@ -47,10 +47,13 @@ _Bool numlck = false;
 _Bool scrlck = false;
 _Bool capslck = false;
 
-int getkey() {
+unsigned int getkey() {
 	if (!special_read) {
 		special_read = true;
-		return last_scancode;
+		if (last_scancode>KEY_PRESSED)
+			return last_scancode-KEY_PRESSED;
+		else
+			return last_scancode;
 	} else {
 		return 0;
 	}
@@ -78,6 +81,10 @@ void print_keys() {
 		putchar(' ');
 		terminal_backup();
 	}
+ }
+ 
+ char scancode_to_char(unsigned int scancode) {
+	return (shift) ? kbdus_shift[scancode] : ((capslck) ? kbdus_caps[scancode] : kbdus[scancode]);
  }
 
 void kbd_ack(void){

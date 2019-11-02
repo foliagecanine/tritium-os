@@ -13,6 +13,7 @@ uint8_t unmountDrive(uint8_t drive) {
 		free(mounts[drive].mount);
 	}
 	FSMOUNT newMount;
+	memset(&newMount,0,sizeof(FSMOUNT));
 	newMount.mountEnabled = false;
 	mounts[drive] = newMount;
 	return 0;
@@ -43,7 +44,7 @@ FILE fopen(const char *filename, const char *mode) {
 			//Filename without drive prefix
 			char* flongname = (char*) filename+2;
 			if (flongname&&device<9) {
-				if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(device)) {
+				if (mounts[device].mountEnabled&&strcmp(mounts[device].type,"FAT12")&&detect_fat12(device)) {
 					FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
 					uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
 					uint32_t NRDE = mnt->NumRootDirectoryEntries;
@@ -60,6 +61,14 @@ FILE fopen(const char *filename, const char *mode) {
 	FILE noFile;
 	noFile.valid = false;
 	return noFile;
+}
+
+void fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
+	if (!file)
+		return;
+	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
+		FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
+	}
 }
 
 FSMOUNT getDiskMount(uint8_t drive) {

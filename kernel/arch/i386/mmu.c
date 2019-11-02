@@ -42,7 +42,7 @@ void init_physical_memory(uint32_t total_mem, multiboot_memory_map_t *mmap, uint
 		}
 	}
 	//Mark kernel as used
-	mark_block(0x1000,krnend-0x1000,true);
+	mark_block(0,krnend,true);
 }
 
 static _Bool out_of_memory = false;
@@ -113,7 +113,7 @@ typedef struct {
 } page_directory_t;
 
 _Bool alloc_virtual_page(page_t *page) {
-	uint32_t pageloc = alloc_physical_blocks(1);
+	uint32_t pageloc = (uint32_t)alloc_physical_blocks(1);
 	if (!pageloc)
 		return false;
 	
@@ -130,13 +130,15 @@ _Bool free_virtual_page(page_t *page) {
 	page->present = 0;
 }
 
-void table_identity_map(page_table_t * identity_map, uint32_t start, _Bool user) {
-	for (uint32_t i  = start; i < start+0x4000000; i+=PHYSICAL_BLOCK_SIZE) {
+void table_identity_map(page_table_t * identity_map, uint32_t start, _Bool writable, _Bool user) {
+	//Fill all 4 MiB entire table (0x0-0x3FFFFFF)
+	for (uint32_t i  = 0; i < 0x400000; i+=PHYSICAL_BLOCK_SIZE) {
 		page_t new_page;
 		memset(&new_page,0,sizeof(page_t));
 		
 		new_page.present = 1;
-		new_page.frame = i>>12;
+		new_page.writable = (writable ? 1 : 0);
+		new_page.frame = (i+start)>>12;
 		new_page.user = (user ? 1 : 0);
 		
 		identity_map->entries[i/PHYSICAL_BLOCK_SIZE] = new_page;
@@ -146,7 +148,7 @@ void table_identity_map(page_table_t * identity_map, uint32_t start, _Bool user)
 void init_mmu_paging(uint32_t total_mem, multiboot_memory_map_t *mmap, uint32_t krnend) {
 	init_physical_memory(total_mem,mmap,krnend);
 	
-	page_directory_t *pagedir = alloc_physical_blocks(3);
+	page_directory_t *pagedir = alloc_physical_blocks(1);
 	memset(pagedir,0,sizeof(page_directory_t));
 	
 	page_table_t *identity_map = alloc_physical_blocks(1);
@@ -155,19 +157,19 @@ void init_mmu_paging(uint32_t total_mem, multiboot_memory_map_t *mmap, uint32_t 
 	memset(user_identity_map,0,sizeof(page_table_t));
 	
 	//If our kernel is bigger than 4 MiB then we have a problem
-	table_identity_map(identity_map, 0, true);
-	table_identity_map(user_identity_map,0x4000000, true);
+	table_identity_map(identity_map, 0,false, true);
+	table_identity_map(user_identity_map,0x400000,true, true);
 	
 	pagedir->entries[0].present = 1;
-	pagedir->entries[0].writable = 1;
+	pagedir->entries[0].writable = 0;
 	pagedir->entries[0].user = 1;
-	pagedir->entries[0].frame = (uint32_t)(uint32_t *)identity_map<<12;
+	pagedir->entries[0].frame = (uint32_t)(uint32_t *)identity_map>>12;
 	
 	//Create initial user page table
 	pagedir->entries[1].present = 1;
 	pagedir->entries[1].writable = 1;
 	pagedir->entries[1].user = 1;
-	pagedir->entries[1].frame = (uint32_t)(uint32_t *)user_identity_map<<12;
+	pagedir->entries[1].frame = (uint32_t)(uint32_t *)user_identity_map>>12;
 	
 	asm("mov %0, %%cr3; mov %%cr0, %%eax; or $0x80000000, %%eax; mov %%eax,%%cr0" : : "r"(pagedir));
 	

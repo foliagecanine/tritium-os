@@ -69,7 +69,7 @@ extern void gdt_flush(uint32_t);
 extern void tss_flush();
 
 //Set up GDT. We will need to set up the tss later, but oh well
-void initialize_gdt(uint32_t total_mem) {
+void initialize_gdt() {
 	gdtPtr.limit = (sizeof(uint64_t) * NUM_GDT_ENTRIES) - 1u;
 	gdtPtr.firstEntryAddr = (uint32_t)&gdtEntries;
 

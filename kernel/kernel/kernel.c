@@ -1,16 +1,18 @@
-#include <kernel/stdio.h>
+#include <kernel/stdio.h> //Common functions: printf, getchar, etc.
 
-#include <kernel/tty.h>
-#include <kernel/init.h>
-#include <kernel/mmu.h>
-#include <kernel/multiboot.h>
-#include <kernel/idt.h>
-#include <kernel/exceptions.h>
-#include <fs/fs.h>
-#include <fs/disk.h>
-#include <fs/fat12.h>
-#include <fs/file.h>
-#include <kernel/syscalls.h>
+#include <kernel/tty.h> //Extra terminal functions: terminal_initialize, terminal_clear, etc.
+#include <kernel/init.h> //Mostly unused. Initialization functions.
+#include <kernel/debug.h> //Debug console: debug_console
+#include <kernel/mmu.h> //Memory management: malloc, init_mmu_paging, etc.
+#include <kernel/multiboot.h> //Multiboot standard header. Includes things like the memory map layout
+#include <kernel/idt.h> //Interrupt descriptor table: init_idt
+#include <kernel/exceptions.h> //Exceptions
+#include <fs/fs.h> //Filesystems: 
+#include <fs/disk.h> //ATA Driver: init_ata
+#include <fs/fat12.h> //FAT12 driver: detect_fat12
+#include <fs/file.h> //The file management driver
+#include <kernel/syscalls.h> //Syscalls: init_syscalls
+#include <kernel/pci.h> //TEMP: REMOVE LATER
 
 extern uint32_t krnend;
 
@@ -20,7 +22,7 @@ multiboot_memory_map_t *mmap;
 multiboot_info_t *mbi;
 
 void init() {
-	initialize_gdt((lomem + himem)*1024); //Total number of bytes so our GDT doesn't fail
+	initialize_gdt(); //Total number of bytes so our GDT doesn't fail
 	mmu_init(&krnend);
 	init_idt();
 	init_pit(1000);
@@ -55,7 +57,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	if (magic!=0x2BADB002) {
 		terminal_initialize();
 		disable_cursor();
-		kerror("ERROR: Multiboot info failed! Bad magic value below:");
+		kerror("ERROR: Multiboot info failed! Bad magic value below:"); 
 		printf("%#\n",(uint64_t)magic);
 		abort();
 	}
@@ -94,23 +96,45 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	//Install syscalls before we enter usermode
 	init_syscalls();
 	
-	kprint("Entering usermode! Hold tight!");
-	enter_usermode();
-	//We're in usermode (hopefully)! Lets see what we can do
+	//Try mounting the first four disks
+	for (uint8_t i = 0; i < 4; i++)
+		mountDrive(i);
 	
-	//Test syscalls
-	char * teststring = "Hello User Mode World! Test number 123 = %d.\n";
-	int testnum = 123;
-	asm volatile("mov $0, %%eax; mov %2, %%ecx; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring), "r" (testnum));
+	printf("Press the shift key to enter debug mode.\n");
+	//Give some time to read and respond
 	
-	teststring = "Don't worry about the error below. It means that usermode is working.\n";
-	asm volatile("mov $0, %%eax; lea (%1),%%ebx; int $0x80" : : "a" (0), "r" ((uint32_t)teststring));
+	for (uint16_t i = 0; i < 1000; i++) {
+		sleep(1);
+		int k = getkey();
+		
+		if (k==42||k==54||k==170||k==182) {
+			printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
+			debug_console();
+		}
+	}
 	
-	//This will cause a Page Fault if it works, otherwise it actually prints (which is bad)
-	printf("Uh oh. Usermode isn't working!");
+	printf("Loading TritiumOS.\n");
+	
+	sleep(1000);
+	
+	terminal_clear();
+
+	printf("Loading TritiumOS.\n");
+	
+	int count = 1;
+	for (uint16_t i = 0; i < 256; i++) {
+		for (uint8_t j = 0; j < 32; j++) {
+			for (uint8_t k = 0; k < 8; k++) {
+				pci_t pci = getPCIData(i,j,k);
+				if (pci.vendorID!=0xFFFF) {
+					printf("%#:%#.%d [%#:%#] (%#.%#) 0:%# 1:%# 2:%# 3:%# 4:%# 5:%#\n",(uint64_t)i,(uint64_t)j,(uint32_t)k,(uint64_t)pci.vendorID,(uint64_t)pci.deviceID,(uint64_t)pci.classCode,(uint64_t)pci.subclass,(uint64_t)pci.BAR0,(uint64_t)pci.BAR1,(uint64_t)pci.BAR2,(uint64_t)pci.BAR3,(uint64_t)pci.BAR4,(uint64_t)pci.BAR5);
+				}
+			}
+		}
+	}
 		
 	while(true) {
-		;
+		
 	}
 	
 	//End of kernel. Add any extra info you need for debugging in the line below.

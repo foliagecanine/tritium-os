@@ -18,13 +18,13 @@
 typedef struct {
 	_Bool				exists;
 	uint16_t 			iobase;
-	unsigned char 		channel;
-	unsigned char		type;
-	unsigned char		signature;
-	unsigned char		features;
-	unsigned int		cmdsets;
-	unsigned int 		size;
-	unsigned char 		model;
+	unsigned char 	channel;
+	unsigned char	type;
+	unsigned char	signature;
+	unsigned char	features;
+	uint32_t			cmdsets;
+	uint32_t 			size;
+	char  				*model;
 } ata_drive_t;
 
 ata_drive_t ata_drives[8];
@@ -120,17 +120,17 @@ void detect_devices(ata_drive_t* drive) {
 	 
 	 uint8_t buffer[2048];
 	 
-	 insl(drive->iobase,(unsigned int)buffer,128);
+	 insl(drive->iobase,(uint32_t *)buffer,128);
 	 
 	 drive->exists = 1;
-	 drive->signature = *((unsigned short *)(buffer));
-	 drive->features = *((unsigned short *)(buffer + 98));
-	 drive->cmdsets = *((unsigned short *)(buffer + 164));
+	 drive->signature = *((uint8_t *)(buffer));
+	 drive->features = *((uint8_t *)(buffer + 98));
+	 drive->cmdsets = *((uint8_t *)(buffer + 164));
 	 
 	 if (drive->cmdsets & (1 << 26))
-		drive->size   = *((unsigned int *)(buffer + 200));
+		drive->size   = *((uint32_t *)(buffer + 200));
 	 else
-		drive->size   = *((unsigned int *)(buffer + 120));
+		drive->size   = *((uint32_t *)(buffer + 120));
 
 	char *model = (char *)drive->model;
 	 for(int k = 0; k < 40; k += 2) {
@@ -142,7 +142,7 @@ void detect_devices(ata_drive_t* drive) {
         printf("%#.%#: Found %s Drive %dMB (%dGB) - %s\n",
 			(uint64_t)drive->iobase,									/* Base */
 			(uint64_t)drive->channel,								/* Channel */
-			(const char *[]){"ATA", "ATAPI"}[drive->type],	/* Type */
+			drive->type ? "ATAPI" : "ATA",	/* Type */
 			(uint32_t)drive->size /1024 /2,										/* Size */
 			(uint32_t)drive->size / 1024 / 1024 / 2,							/* Size again */
 			drive->model);
@@ -231,11 +231,13 @@ uint8_t read_sectors_lba(uint8_t drive_num, uint32_t lba_start, uint8_t num_sect
 	
 	max_read = (num_sectors * (512 / 2));
 	
-	//insw(iobase,dest,max_read);
+	insw(iobase,dest,max_read);
 	
-	for(int index = 0; index < max_read; index++){
-        *buffer++ = inw(iobase);
-    }
+	poll_ide_drive(drive_num,false);
+	
+	//for(int index = 0; index < max_read; index++){
+    //    *buffer++ = inw(iobase);
+    //}
 	
 	return 0;
 }
@@ -281,6 +283,8 @@ uint8_t write_sectors_lba(uint8_t drive_num, uint32_t lba_start, uint8_t num_sec
     }
 	
 	wait_for_disk(drive_num);
+	poll_ide_drive(drive_num,false);
+	outb(iobase + 7, 0xE7);
 	
 	return 0;
 }

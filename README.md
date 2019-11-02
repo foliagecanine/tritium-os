@@ -1,11 +1,12 @@
 # TritiumOS
 Simple 32 bit Hobby OS  
-buildable: YES :heavy_check_mark:  
+buildable: YES :heavy_check_mark:
 
 Original Author: foliagecanine
 
 ## Introduction
-TritiumOS is an open-source operating system, successor to an unpublished, expiremental test OS named Rogue2OS
+TritiumOS is an open-source operating system, successor to an 
+unpublished, expiremental test OS named Rogue2OS
 
 ## How do you build this?
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
@@ -47,7 +48,7 @@ Or a floppy disk (no controller implemented yet) like so
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
 
 1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
+2)You ALSO have to build GRUB on the RPI which is another forever of waiting
 3)You have to make a few scripts (I guess I made them for you though) 
 
 The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
@@ -83,7 +84,8 @@ Here's the checklist:
 - [x] Keyboard
 - [x] Disk IO
 - [ ] FAT12 Filesystem Driver <In Progress>
-- [ ] fileman (short for file management) <In Progress>  
+- [ ] fileman (short for file management) <In Progress>
+- [ ] Advanced Disk IO (AHCI)  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS

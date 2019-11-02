@@ -12,7 +12,8 @@ typedef struct {
 void kbd_handler();
 kbdin getInKey(_Bool shift);
 char getchar();
-int getkey();
+unsigned int getkey();
 void print_keys();
+char scancode_to_char(unsigned int scancode);
 
 #endif

@@ -12,5 +12,7 @@ uint8_t terminal_getcolor();
 void disable_cursor();
 void enable_cursor(uint8_t start, uint8_t end);
 void terminal_backup();
+void terminal_clear();
+void terminal_refresh();
 
 #endif
