@@ -45,6 +45,7 @@ void mmu_info() {
 	printf("Memory free: %d (approx. %d KiB)\n", (uint32_t)mem_free,(uint32_t)(mem_free/1024));
 }
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void mmu_init(uint32_t krnend) {
 	memory_used = 0;
 	last_alloc_loc = (uint32_t)&getMemory;
@@ -134,12 +135,12 @@ void free(void *__ptr) {
 	memory_used -= ptr_alloc->size + sizeof(alloc_t);
 	ptr_alloc->status = 0;
 
-	uint8_t *mem = heap_start;
+	uint8_t *mem = (uint8_t *)heap_start;
 	
 	//Free upwards
 	alloc_t *root_alloc = (alloc_t *)mem; 
 	//Start with the first free allocation
-	while (mem < last_alloc_loc) {
+	while ((uint32_t)mem < last_alloc_loc) {
 		if (root_alloc->status) {
 			mem+=sizeof(alloc_t)+root_alloc->size;
 			root_alloc = (alloc_t *)mem;
@@ -147,7 +148,7 @@ void free(void *__ptr) {
 			break;
 		}
 	}
-	while (mem < last_alloc_loc) {
+	while ((uint32_t)mem < last_alloc_loc) {
 		mem+=root_alloc->size+sizeof(alloc_t); //Find the next one in the list
 		alloc_t *alloc = (alloc_t *)mem;
 		
@@ -155,7 +156,7 @@ void free(void *__ptr) {
 			root_alloc->size+=alloc->size+sizeof(alloc_t); //Remember we're deleting the ENTIRE entry. This includes the alloc
 			mem+=alloc->size+sizeof(alloc_t); //Now see if we can absorb the next one
 		} else { //Otherwise the next free one after that becomes the new root_alloc
-			while(mem<last_alloc_loc) {
+			while((uint32_t)mem<last_alloc_loc) {
 				alloc = (alloc_t *)mem;
 				mem+=alloc->size+sizeof(alloc_t);
 				if (!alloc->status) { //If this one is free

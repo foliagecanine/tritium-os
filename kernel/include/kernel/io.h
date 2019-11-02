@@ -15,4 +15,6 @@ void insb(unsigned short port, unsigned char * data, unsigned long size);
 void insw(unsigned short port, unsigned char * data, unsigned long size);
 void insl(unsigned short port, unsigned char * data, unsigned long size);
 
+int cpuid_string(int code, int where[4]);
+char * cpu_string();
 #endif

@@ -39,6 +39,6 @@ void new_syscall(uint8_t inum, uint32_t irq_fn) {
 
 void init_syscalls() {
 	//Install all the syscalls we need
-	new_syscall(0x80,&run_syscall);
+	new_syscall(0x80,(uint32_t)&run_syscall);
 	kprint("Initialized Syscalls.");
 }

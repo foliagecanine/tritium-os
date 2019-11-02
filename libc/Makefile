@@ -63,22 +63,28 @@ BINARIES=libk.a
 all: $(BINARIES)
 
 libc.a: $(OBJS)
-	$(AR) rcs $@ $(OBJS)
+	@$(AR) rcs $@ $(OBJS)
+	@echo [AR] $(OBJS)
 
 libk.a: $(LIBK_OBJS)
-	$(AR) rcs $@ $(LIBK_OBJS)
-
+	@$(AR) rcs $@ $(LIBK_OBJS)
+	@echo [AR] $(LINK_OBJS)
+	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+	@$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+	@echo [CC] $<
 
 .c.S:
-	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	@$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	@echo [CC] $<
 
 .c.libk.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	@$(CC) -MD -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	@echo [CC] $<
 
 .S.libk.o:
-	$(CC) -MD -c $< -o $@ $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	@$(CC) -MD -c $< -o $@ $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	@echo [CC] $<
 
 clean:
 	rm -f $(BINARIES) *.a

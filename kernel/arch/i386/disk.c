@@ -15,18 +15,6 @@
 #define ATA_STATUS_DRDY	0x40
 #define ATA_STATUS_DF 		0x20
 
-typedef struct {
-	_Bool				exists;
-	uint16_t 			iobase;
-	unsigned char 	channel;
-	unsigned char	type;
-	unsigned char	signature;
-	unsigned char	features;
-	uint32_t			cmdsets;
-	uint32_t 			size;
-	char  				*model;
-} ata_drive_t;
-
 ata_drive_t ata_drives[8];
 
 void small_delay(uint16_t iobase) {
@@ -120,7 +108,7 @@ void detect_devices(ata_drive_t* drive) {
 	 
 	 uint8_t buffer[2048];
 	 
-	 insl(drive->iobase,(uint32_t *)buffer,128);
+	 insl(drive->iobase,(uint8_t *)buffer,128);
 	 
 	 drive->exists = 1;
 	 drive->signature = *((uint8_t *)(buffer));
@@ -191,11 +179,15 @@ _Bool drive_exists(uint8_t drive_num) {
 	return ata_drives[drive_num].exists;
 }
 
+ata_drive_t getATADrive(uint8_t drive_num) {
+	return ata_drives[drive_num];
+}
+
 //VERY based off of http://www.rohitab.com/discuss/topic/39244-read-hdd-sector-using-in-instruction/
 uint8_t read_sectors_lba(uint8_t drive_num, uint32_t lba_start, uint8_t num_sectors, uint8_t *dest) {
 	uint16_t iobase;
 	uint16_t max_read;
-	uint16_t *buffer = (uint16_t *)dest;
+	//uint16_t *buffer = (uint16_t *)dest;
 	uint8_t drive = 0x40;
 	
 	if (!ata_drives[drive_num].exists) //check whether drive was detected (if not, throw error)

@@ -84,7 +84,7 @@ void *alloc_physical_blocks(uint16_t amt) {
 
 void free_physical_blocks(void *ptr, uint16_t amt) {
 	for (uint16_t i = 0; i < amt; i++) {
-		mark_block(ptr+(i*PHYSICAL_BLOCK_SIZE),1,false);
+		mark_block((uint32_t)ptr+(i*PHYSICAL_BLOCK_SIZE),1,false);
 	}
 	out_of_memory = false;
 }
@@ -123,7 +123,7 @@ _Bool alloc_virtual_page(page_t *page) {
 	return true;
 }
 
-_Bool free_virtual_page(page_t *page) {
+void free_virtual_page(page_t *page) {
 	void *pageloc = (void *)(page->frame<<12);
 	if (pageloc)
 		free_physical_blocks(pageloc,1);

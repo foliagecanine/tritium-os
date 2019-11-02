@@ -48,3 +48,15 @@ void insw(unsigned short port, unsigned char * data, unsigned long size) {
 void insl(unsigned short port, unsigned char * data, unsigned long size) {
 	asm volatile ("rep insl" : "+D" (data), "+c" (size) : "d" (port) : "memory");
 }
+
+inline int cpuid_string(int code, int where[4]) {
+  __asm__ volatile ("cpuid":"=a"(*where),"=b"(*(where+0)),
+               "=d"(*(where+1)),"=c"(*(where+2)):"a"(code));
+  return (int)where[0];
+}
+ 
+char * cpu_string() {
+	static char s[16] = "CPUID_ERROR!";
+	cpuid_string(0, (int*)(s));
+	return s;
+}

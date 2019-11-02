@@ -1,5 +1,7 @@
 isodir
 sysroot
 ExtraInfo
+bootloader
 *.d
 *.o
+.goutputstream*

@@ -55,7 +55,7 @@ void print_fat12_values(uint8_t drive_num) {
 	
 	uint8_t read[512];
 	read_sector_lba(drive_num,0,read);
-	PBOOTSECT bootsect = (PBOOTSECT *)read;
+	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
 	//Print Start Code
@@ -86,7 +86,7 @@ void print_fat12_values(uint8_t drive_num) {
 _Bool detect_fat12(uint8_t drive_num) {
 	uint8_t read[512];
 	read_sector_lba(drive_num,0,read);
-	PBOOTSECT bootsect = (PBOOTSECT *)read;
+	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
 	if (bootsect->Signature!=0xAA55)
@@ -202,7 +202,7 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	//Get neccesary details. We don't need to check whether this is FAT12 because it is already done in file.c.
 	uint8_t read[512];
 	read_sector_lba(drive_num,0,read);
-	PBOOTSECT bootsect = (PBOOTSECT *)read;
+	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
 	//Setup basic things
@@ -269,7 +269,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 				if (reading[11]&0x10&&j==10)
 					printf("/");
 			}
-			int32_t nextCluster = (reading[27] << 8) | reading[26];
+			//int32_t nextCluster = (reading[27] << 8) | reading[26];
 			printf(" [%d]");
 			printf("\n");
 		}
@@ -290,6 +290,7 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	FILE retFile;
 	char *searchpath = filename+1;
 	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
+	#pragma GCC diagnostic ignored "-Wint-conversion"
 	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
 	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
 	searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
@@ -378,7 +379,7 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 	uint16_t sectorToRead = file->location/512;
 	char read[512];
 	while(curLen>0) {
-		read_sector_lba(drive_num,sectorToRead,read);
+		read_sector_lba(drive_num,sectorToRead,(uint8_t *)read);
 		uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
 		memcpy(buf+(curLoc-(start+file->location)),&read[curLoc%512],amt);
 		curLen-=amt;

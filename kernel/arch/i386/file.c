@@ -34,6 +34,7 @@ uint8_t mountDrive(uint8_t drive) {
 }
 
 //Similar to brokenthorn (see urls in fat12.c)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 FILE fopen(const char *filename, const char *mode) {
 	//Check if filename is present (we can't open nothing)
 	if (filename) {

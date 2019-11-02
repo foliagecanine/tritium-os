@@ -9,7 +9,7 @@ bool check_command(char* command) {
 	bool usingNewline = true;
 	bool breakcode = false;
 	if (strcmp(command, "help")||strcmp(command, "?")) {
-		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
+		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsdisk - list all disks\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
 		cmdAck=true;
 	}
 	
@@ -26,6 +26,13 @@ bool check_command(char* command) {
 	
 	if (strcmp(command,"reboot")) {
 		reboot();
+	}
+
+	if (strcmp(command,"lsdisk")) {
+		
+		
+		usingNewline = false;
+		cmdAck=true;
 	}
 
 	if (strcmp(command, "color")) {
@@ -59,8 +66,7 @@ bool check_command(char* command) {
 		if (strlen(command)>6) {
 			memset(commandPart,0,strlen(command)+1);
 			strcut(command,commandPart,6,strlen(command));
-			const char* possibleValues[] = { "-12","-11","-10","-9","-8","-7","-6","-5","-4","-3","-2","-1","+0","+1","+2","+3","+4","+5","+6","+7","+8","+9","+10","+11","+12","+13","+14","-9:30","-3:30","-2:30","+3:30","+4:30","+5:30","+5:45","+6:30","+8:45","+9:30","+10:30","+12:45","+13:45"
-															};
+			const char* possibleValues[] = { "-12","-11","-10","-9","-8","-7","-6","-5","-4","-3","-2","-1","+0","+1","+2","+3","+4","+5","+6","+7","+8","+9","+10","+11","+12","+13","+14","-9:30","-3:30","-2:30","+3:30","+4:30","+5:30","+5:45","+6:30","+8:45","+9:30","+10:30","+12:45","+13:45"};
 			for (int i=-12;i<15;i++) {
 				if (strcmp(possibleValues[i+12],commandPart)){
 					set_time_zone(i);
@@ -187,6 +193,34 @@ bool check_command(char* command) {
 			memset(data,0,f.size+1);
 			fread(&f,data,0,f.size);
 			printf(data);
+		}
+		free(filename);
+		usingNewline = false;
+		cmdAck = true;
+	}
+	
+	memset(commandPart,0,strlen(command)+1);
+	strcut(command,commandPart,0,3);
+	if (strcmp(commandPart,"run")) {
+		memset(commandPart,0,strlen(command)+1);
+		strcut(command,commandPart,4,strlen(command));
+		char filename[strlen(currentDirectory)+strlen(commandPart)+1];
+		if (commandPart[1]==':') {
+			strcpy(filename,commandPart);
+		} else {
+			strcpy(filename,currentDirectory);
+			strcpy(filename+strlen(currentDirectory),commandPart);
+		}
+		FILE f = fopen(filename,"r");
+		if (!f.valid) {
+			printf("Error: file \"%s\" not found.\n",filename);
+		} else if (f.directory) {
+			printf("Error: \"%s\" is a directory.\n",filename);
+		} else {
+			char data[f.size+1];
+			memset(data,0,f.size+1);
+			fread(&f,data,0,f.size);
+			asm("jmp %%eax": :"a"(&data));
 		}
 		free(filename);
 		usingNewline = false;

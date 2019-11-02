@@ -74,7 +74,7 @@ uint8_t current_second_rtc() {
 //that way, we calculate the hour as a uint32_t, and recalculate the day/month/year from the hour.
 uint32_t full_hour_time() {
 	//days in previous months (first set is non-leap-year, second set is leap year) <I hope I got the math right ;-) >
-	const int days_in_month[] = {0,31,59,90,120,151,181,212,243,273,304,334,  0,31,60,91,121,152,182,213,244,274,305,335};
+	const unsigned int days_in_month[] = {0,31,59,90,120,151,181,212,243,273,304,334,  0,31,60,91,121,152,182,213,244,274,305,335};
 	
 	uint32_t full_hour = 0;
 	full_hour += hour;
@@ -128,7 +128,7 @@ uint32_t current_year_time() {
 }
 
 uint32_t current_month_time() {
-  const int days_in_month[] = {31,59,90,120,151,181,212,243,273,304,334,365,  31,60,91,121,152,182,213,244,274,305,335,366};
+  const unsigned int days_in_month[] = {31,59,90,120,151,181,212,243,273,304,334,365,  31,60,91,121,152,182,213,244,274,305,335,366};
   uint32_t hours_remaining = full_hour_time();
   int curr_year = 0;
   while(true) {
@@ -137,7 +137,7 @@ uint32_t current_month_time() {
         hours_remaining-=8784;
 	curr_year++;
       } else {
-        uint32_t last_month = 0;
+        //uint32_t last_month = 0;
         for (int i = 0; i < 12; i++){
 		printf(" %ld",hours_remaining);
           if (!(hours_remaining>(days_in_month[i+12]*24))) {
