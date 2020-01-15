@@ -304,3 +304,15 @@ void display_sector_data(uint8_t disk, uint32_t sector, uint16_t amt) {
 	}
 	printf("\n");
 }
+
+uint8_t read_sector(uint8_t drive_num, uint32_t lba, uint8_t *dest) {
+	if (drive_num<8) {
+		return read_sector_lba(drive_num,lba,dest);
+	} else {
+		uint8_t read[512];
+		memset(read,0,512);
+		uint8_t ret = ahci_read_sector(drive_num,lba,dest);
+		memcpy(read,dest,512);
+		return ret;
+	}
+}

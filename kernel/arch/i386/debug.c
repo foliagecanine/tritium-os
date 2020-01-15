@@ -9,7 +9,7 @@ bool check_command(char* command) {
 	bool usingNewline = true;
 	bool breakcode = false;
 	if (strcmp(command, "help")||strcmp(command, "?")) {
-		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsdisk - list all disks\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
+		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsmnt - list all mounts\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
 		cmdAck=true;
 	}
 	
@@ -29,8 +29,17 @@ bool check_command(char* command) {
 	}
 
 	if (strcmp(command,"lsdisk")) {
-		
-		
+		for (uint8_t i = 0; i < 8; i++) {
+			printf("%d\n",i);//getATADrive
+		}
+		usingNewline = false;
+		cmdAck=true;
+	}
+	
+	if (strcmp(command,"lsmnt")) {
+		for (uint8_t i = 0; i < 8; i++) {
+				if (getDiskMount(i).mountEnabled) printf("mnt%d (%c): %s%d, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], getDiskMount(i).drive<8 ? "ide" : "sata", getDiskMount(i).drive > 7 ? getDiskMount(i).drive-8 : getDiskMount(i).drive, getDiskMount(i).type);
+		}
 		usingNewline = false;
 		cmdAck=true;
 	}
@@ -91,13 +100,13 @@ bool check_command(char* command) {
 		if (strlen(command)>6) {
 			memset(commandPart,0,strlen(command)+1);
 			strcut(command,commandPart,6,strlen(command));
-			char * possibleValues[] = { "0", "1", "2", "3" };
-			for (uint8_t i = 0; i < 4; i++) {
+			char * possibleValues[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
+			for (uint8_t i = 0; i < 9; i++) {
 				if (strcmp(commandPart,possibleValues[i])) {
 					char *statuses[] = {"SUCCESS","INCORRECT_FS_TYPE","DRIVE_IN_USE","UNKNOWN_ERROR"};
 					printf("Mount finished with status: %s\n",statuses[mountDrive(i)]);
 					break;
-				} else if (i==3) {
+				} else if (i==8) {
 					printf("Unknown drive number: %s\n",commandPart);
 				}
 			}
@@ -113,13 +122,13 @@ bool check_command(char* command) {
 		if (strlen(command)>6) {
 			memset(commandPart,0,strlen(command)+1);
 			strcut(command,commandPart,7,strlen(command));
-			char * possibleValues[] = { "0", "1", "2", "3" };
-			for (uint8_t i = 0; i < 4; i++) {
+			char * possibleValues[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
+			for (uint8_t i = 0; i < 9; i++) {
 				if (strcmp(commandPart,possibleValues[i])) {
 					char *statuses[] = {"SUCCESS","INCORRECT_FS_TYPE","DRIVE_IN_USE","UNKNOWN_ERROR"};
 					printf("Unmount finished with status: %s\n",statuses[unmountDrive(i)]);
 					break;
-				} else if (i==3) {
+				} else if (i==8) {
 					printf("Unknown drive number: %s\n",commandPart);
 				}
 			}
@@ -130,8 +139,6 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command,"ls")||strcmp(command,"dir")) {
-		char stripcd[strlen(currentDirectory)-1];
-		memcpy(stripcd,currentDirectory,strlen(currentDirectory)-1);
 		FILE cd =  fopen(currentDirectory, "r");
 		if (!cd.valid) {
 			if (!getDiskMount(cd.mountNumber).mountEnabled)
@@ -139,7 +146,7 @@ bool check_command(char* command) {
 			else
 				printf("Could not open folder %s for reading.",currentDirectory);
 		} else {
-			FAT12_print_folder((uint32_t)cd.location,(uint32_t)cd.size,tolower(currentDirectory[0])-'a');
+			FAT12_print_folder((uint32_t)cd.location,(uint32_t)cd.size,getDiskMount(tolower(currentDirectory[0])-'a').drive);
 		}
 		cmdAck = true;
 	}
@@ -194,7 +201,6 @@ bool check_command(char* command) {
 			fread(&f,data,0,f.size);
 			printf(data);
 		}
-		free(filename);
 		usingNewline = false;
 		cmdAck = true;
 	}
@@ -230,6 +236,18 @@ bool check_command(char* command) {
 	if (strcmp(command, "exit")) {
 		breakcode = true;
 		cmdAck=true;
+	}
+	
+	if (strcmp(command, "test")) {
+		ahci_read_test();
+		usingNewline = false;
+		cmdAck = true;
+	}
+
+	if (strcmp(command, "mem")) {
+		mmu_info();
+		usingNewline = false;
+		cmdAck = true;
 	}
 
 	if (!cmdAck) {

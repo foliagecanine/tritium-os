@@ -25,5 +25,8 @@ uint8_t read_sector_lba(uint8_t drive_num, uint32_t lba, uint8_t *dest);
 uint8_t write_sector_lba(uint8_t drive_num, uint32_t lba_start, uint8_t *dest);
 void init_ata();
 void init_ahci();
+_Bool ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *);
+void ahci_read_test();
+uint8_t read_sector(uint8_t drive_num, uint32_t lba, uint8_t *dest);
 
 #endif

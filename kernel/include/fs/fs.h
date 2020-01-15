@@ -8,6 +8,7 @@ typedef struct {
 	uint64_t location;
 	uint64_t size;
 	uint8_t mountNumber;
+	uint32_t clusterNumber; //For FAT based systems
 	_Bool writelock;
 	_Bool valid;
 	_Bool directory;

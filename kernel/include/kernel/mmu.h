@@ -4,6 +4,7 @@
 #include <kernel/stdio.h>
 #include <kernel/multiboot.h>
 
+void mmu_info();
 void mmu_init(uint32_t krnend);
 char *strcpy(char *dest, const char *src);
 void* malloc(size_t size);

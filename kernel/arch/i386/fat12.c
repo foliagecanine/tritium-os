@@ -54,7 +54,7 @@ void print_fat12_values(uint8_t drive_num) {
 		return;
 	
 	uint8_t read[512];
-	read_sector_lba(drive_num,0,read);
+	read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
@@ -74,37 +74,48 @@ void print_fat12_values(uint8_t drive_num) {
 	printf("Number of FATs: %d\n",(uint32_t)bpb.NumFATs);
 	printf("Number of Root Directory Entries: %d\n",(uint32_t)bpb.NumRootDirectoryEntries);
 	printf("Number of Total Sectors: %d\n",(uint32_t)bpb.NumTotalSectors);
-	printf("Media Descriptor Type: %#\n",(uint32_t)bpb.MediaDescriptorType);
+	printf("Media Descriptor Type: %#\n",(uint64_t)bpb.MediaDescriptorType);
 	printf("Number of Sectors Per FAT: %d\n",(uint32_t)bpb.NumSectorsPerFAT);
 	printf("Number of Sectors Per Track: %d\n",(uint32_t)bpb.NumSectorsPerTrack);
 	printf("Number of Heads: %d\n",(uint32_t)bpb.NumHeads);
 	printf("Number of Hidden Sectors: %d\n",(uint32_t)bpb.NumHiddenSectors);
-	printf("Signature: %#\n",(uint32_t)bootsect->Signature);
+	printf("Signature: %#\n",(uint64_t)bootsect->Signature);
 }
 
 //Listing all the things as shown in https://forum.osdev.org/viewtopic.php?f=1&t=26639
 _Bool detect_fat12(uint8_t drive_num) {
 	uint8_t read[512];
-	read_sector_lba(drive_num,0,read);
+	read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
-	if (bootsect->Signature!=0xAA55)
+	if (bootsect->Signature!=0xAA55) {
+		printf("Signature error.\n");
 		return false;
+	}
 
-	if (bpb.BytesPerSector%2!=0||!(bpb.BytesPerSector>=512)||!(bpb.BytesPerSector<=4096))
+	if (bpb.BytesPerSector%2!=0||!(bpb.BytesPerSector>=512)||!(bpb.BytesPerSector<=4096)) {
+		printf("Illegal bytes per sector.\n");
 		return false;
+	}
 	
-	if (bpb.MediaDescriptorType!=0xf0&&!(bpb.MediaDescriptorType>=0xf8))
+	if (bpb.MediaDescriptorType!=0xf0&&!(bpb.MediaDescriptorType>=0xf8)) {
+		printf("Illegal MDT.\n");
 		return false;
+	}
 
-	if (bpb.NumFATs==0)
+	if (bpb.NumFATs==0) {
 		return false;
+		printf("No FATs.\n");
+	}
 	
-	if (bpb.NumRootDirectoryEntries==0)
+	if (bpb.NumRootDirectoryEntries==0) {
+		printf("No RDEs.\n");
 		return false;
+	}
 	
 	//This is probably enough. If it is just a random string of digits, we'll probably have broken it by now.
+	printf("Success in %d.\n",(uint32_t)drive_num);
 	return true;
 }
 
@@ -201,7 +212,7 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 FSMOUNT MountFAT12(uint8_t drive_num) {
 	//Get neccesary details. We don't need to check whether this is FAT12 because it is already done in file.c.
 	uint8_t read[512];
-	read_sector_lba(drive_num,0,read);
+	read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
@@ -219,7 +230,7 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	fat12mount->NumTotalSectors = bpb.NumTotalSectors;
 	fat12mount->FATOffset = 1;
 	fat12mount->NumRootDirectoryEntries = bpb.NumRootDirectoryEntries;
-	fat12mount->FATEntrySize = 8;
+	fat12mount->FATEntrySize = 12;
 	fat12mount->RootDirectoryOffset = (bpb.NumFATs * bpb.NumSectorsPerFAT) + 1;
 	fat12mount->RootDirectorySize = (bpb.NumRootDirectoryEntries * 32) / bpb.BytesPerSector;
 	fat12mount->FATSize = bpb.NumSectorsPerFAT;
@@ -235,18 +246,40 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	return fat12fs;
 }
 
+uint64_t getLocationFromCluster(uint32_t clusterNum,FAT12_MOUNT fm) {
+	return (uint64_t)((clusterNum-2)*512)+(fm.NumRootDirectoryEntries*32)+(fm.RootDirectoryOffset*512);
+}
+
+uint16_t getClusterValue(uint8_t * FAT, uint32_t cluster) {
+	uint16_t value = 0;
+	if (cluster%2==0) {
+		value = (FAT[1+((3*cluster)/2)]&0x0F)<<8;
+		value += FAT[(3*cluster)/2];
+		return value;
+	} else {
+		value = (FAT[(3*cluster)/2]&0xF0)<<4;
+		value += FAT[1+((3*cluster)/2)];
+		return value;
+	}
+}
+
 void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
-	uint8_t read[numEntries*32];
+	uint8_t *read = malloc(numEntries*32);
+	memset(read,0,numEntries*32);
 	
 	printf("Reading from %#\n",(uint64_t)location);
-	
-	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
-		uint8_t derr = read_sector_lba(drive_num, (location-1)/512+i, read+(i*512));
+
+	for (uint8_t i = 0; i < (512)/512; i++) {
+		printf("Loc: %# : %#\n",(uint64_t)(location-1)/512+i, (uint64_t)read+(i*512));
+		uint8_t derr = read_sector(drive_num, (location-1)/512+i, read+(i*512));
 		if (derr) {
-			printf("Drive error!");
+			printf("Drive error: %d!",derr);
+			free(read);
 			return;
 		}
 	}
+	
+	printf("End of read\n");
 	
 	char drivename[12];
 	memset(&drivename,0,12);
@@ -258,9 +291,9 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 	drivename[11] = 0;
 	
 	uint8_t *reading = (uint8_t *)read;
-	printf("Listing files/folders in %s:\n", drivename);
+	printf("Listing files/folders in current directory:\n");
 	for (unsigned int i = 0; i < numEntries; i++) {
-		if (!(reading[11]&0x08||reading[11]&0x02||reading[0]==0)) {
+		if (!(reading[11]&0x08||reading[11]&0x02||reading[0]==0||reading[0]==0xE5)) {
 			for (uint8_t j = 0; j < 11; j++) {
 				if (j==8&&reading[j]!=' ')
 					printf(".");
@@ -276,6 +309,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 		reading+=32;
 	}
 	printf("--End of directory----------------------\n");
+	free(read);
 }
 
 /* 
@@ -308,14 +342,18 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	}
 	
 	uint8_t *read = malloc(numEntries*32); //See free below
+	memset(read,0,numEntries*32);
 	
 	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
-		uint8_t derr = read_sector_lba(drive_num, (location-1)/512+i, read+(i*512));
+		printf("Loc: %# : %#\n",(uint64_t)(location-1)/512+i, (uint64_t)read+(i*512));
+		uint8_t derr = read_sector(drive_num, (location-1)/512+i, read+(i*512));
 		if (derr) {
 			retFile.valid = false;
 			return retFile;
 		}
 	}
+	
+	printf("End of read\n");
 	
 	char drivename[12];
 	memcpy(drivename,read,8);
@@ -347,8 +385,9 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 			return FAT12_fopen((fm.SystemAreaSize+((nextCluster-2)*fm.SectorsPerCluster))*512+1,16,searchpath,drive_num,fm,mode);
 		} else {
 			int32_t nextCluster = (reading[27] << 8) | reading[26];
+			retFile.clusterNumber = nextCluster;
 			retFile.valid = true;
-			retFile.location = (uint64_t)((nextCluster-2)*512)+(fm.NumRootDirectoryEntries*32)+(fm.RootDirectoryOffset*512);
+			retFile.location = getLocationFromCluster(nextCluster,fm);
 			uint32_t size = (reading[31]<<24) | (reading[30]<<16) | (reading[29]<<8) | reading[28];
 			retFile.size = (uint64_t)size;
 			if (mode&1) {
@@ -374,15 +413,27 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
 	if (!file)
 		return;
+	FAT12_MOUNT fm = *(FAT12_MOUNT *)getDiskMount(file->mountNumber).mount;
+	uint8_t FAT[fm.FATSize*512];
+	for (uint8_t i = 0; i < fm.FATSize; i++)
+		read_sector(drive_num,i+1,&FAT[i*512]);
+	uint16_t rCluster = file->clusterNumber;
 	uint32_t curLen = len;
-	uint32_t curLoc = start+file->location;
-	uint16_t sectorToRead = file->location/512;
+	uint32_t curLoc = start;
+	uint32_t curDiskLoc = 0;
 	char read[512];
-	while(curLen>0) {
-		read_sector_lba(drive_num,sectorToRead,(uint8_t *)read);
-		uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
-		memcpy(buf+(curLoc-(start+file->location)),&read[curLoc%512],amt);
-		curLen-=amt;
-		curLoc+=amt;
+	while (curLen>0) {
+		if ((curLoc-curDiskLoc)<512) {
+			read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
+			uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
+			memcpy(buf+curLoc,&read[curLoc%512],amt);
+			curLen-=amt;
+			curLoc+=amt;
+		}
+		curDiskLoc+=512;
+		rCluster = getClusterValue(FAT,rCluster);
+		if (rCluster>=0xFF0) {
+			break;
+		}
 	}
 }

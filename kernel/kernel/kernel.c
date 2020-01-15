@@ -14,6 +14,8 @@
 #include <kernel/syscalls.h> //Syscalls: init_syscalls
 #include <kernel/pci.h> //TEMP: REMOVE LATER
 
+#define DEBUG
+
 extern uint32_t krnend;
 
 uint32_t himem = 0;
@@ -26,7 +28,7 @@ void init() {
 	mmu_init((uint32_t)&krnend);
 	init_idt();
 	init_pit(1000);
-	init_mmu_paging((lomem + himem)*1024,mmap,&krnend);
+	//init_mmu_paging((lomem + himem)*1024,mmap,&krnend);
 	
 	init_ata();
 	init_ahci();
@@ -98,9 +100,11 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	
 	//Install syscalls before we enter usermode
 	init_syscalls();
+	printf("Syscalls finished.\n");
+	
 	
 	//Try mounting the first four disks
-	for (uint8_t i = 0; i < 4; i++)
+	for (uint8_t i = 0; i < 9; i++)
 		mountDrive(i);
 	
 	printf("Press the shift key to enter debug mode.\n");
@@ -124,7 +128,9 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 
 	printf("Loading TritiumOS.\n");
 	
-	pci_t c_pci;
+	ahci_read_test();
+	
+	/*pci_t c_pci;
 	for (uint16_t i = 0; i < 256; i++) {
 		c_pci = getPCIData(i,0,0);
 		if (c_pci.vendorID!=0xFFFF) {
@@ -141,7 +147,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 				}
 			}
 		}
-	}
+	}*/
 		
 	while(true) {
 		
