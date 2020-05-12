@@ -117,10 +117,28 @@ void init_paging() {
 void identity_map(void *addr) {
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
-	volatile uint32_t directory_entry = page/1024;
-	volatile uint32_t table_entry = page % 1024;
-	kernel_tables[(directory_entry*1024)+table_entry].address = page;
-	kernel_tables[(directory_entry*1024)+table_entry].readwrite = 1;
-	kernel_tables[(directory_entry*1024)+table_entry].present = 1;
+	/* volatile uint32_t directory_entry = page/1024;
+	volatile uint32_t table_entry = page % 1024; */
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].address = page;
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].readwrite = 1;
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].present = 1;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void map_addr(void *vaddr, void *paddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	kernel_tables[vaddr_page].address = paddr_page;
+	kernel_tables[vaddr_page].readwrite = 1;
+	kernel_tables[vaddr_page].present = 1;
+}
+
+void unmap_vaddr(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	kernel_tables[vaddr_page].address = 0;
+	kernel_tables[vaddr_page].readwrite = 0;
+	kernel_tables[vaddr_page].present = 0;
 }
