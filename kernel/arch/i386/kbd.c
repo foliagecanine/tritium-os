@@ -1,4 +1,4 @@
-#include <kernel/idt.h>
+#include <kernel/kbd.h>
 
 #define KEY_PRESSED 0
 #define KEY_RELEASED 128

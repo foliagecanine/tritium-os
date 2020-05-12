@@ -154,6 +154,8 @@ void init_idt() {
 	idt_ptr[1] = idt_addr >> 16;
 	
 	load_idt(idt_ptr);
+	
+	kprint("[INIT] IDT Enabled");
 }
 
 _Bool irq_finished[16];

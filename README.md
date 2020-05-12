@@ -1,4 +1,4 @@
-# TritiumOS
+# TritiumOS (Development Branch)
 Simple 32 bit Hobby OS  
 buildable: YES :heavy_check_mark:
 
@@ -7,6 +7,9 @@ Original Author: foliagecanine
 ## Introduction
 TritiumOS is an open-source operating system, successor to an 
 unpublished, expiremental test OS named Rogue2OS
+
+This branch is the Development branch of TritiumOS. For the main branch, select "master" from the list of branches.  
+This branch has effectively rebuilt TritiumOS from the ground up by combining original TritiumOS code with new code. Several improvements have been made in this branch. However, several features (i.e disk IO, file systems) have been removed. These features will eventually come back.
 
 ## How do you build this?
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
@@ -48,7 +51,7 @@ Or a floppy disk (no controller implemented yet) like so
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
 
 1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting
+2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
 3)You have to make a few scripts (I guess I made them for you though) 
 
 The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
@@ -79,12 +82,12 @@ SEE BOTTOM FOR DISCLAIMERS
 Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
-- [x] Memory Management
-- [x] Interrupts
+- [ ] Memory Management (Partial, improved)
+- [ ] Interrupts (Partial)
 - [x] Keyboard
-- [x] Disk IO
-- [ ] FAT12 Filesystem Driver <In Progress>
-- [ ] fileman (short for file management) <In Progress>
+- [ ] Disk IO
+- [ ] FAT12 Filesystem Driver
+- [ ] File management
 - [ ] Advanced Disk IO (AHCI)  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 

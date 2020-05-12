@@ -9,16 +9,10 @@
 #include <stdlib.h>
 #include <kernel/kprint.h> //kprint, kerror, etc.
 #include <kernel/io.h> //outb, inl, etc.
-#include <kernel/kbd.h> //getInKey
-#include <kernel/mmu.h>
+#include <kernel/kbd.h>
 
 //There is no predefined values for true or false, so we'll do it here
 #define false 0
 #define true 1 //Can be anything but zero, we'll do one for the sake of simplicity
-
-//uint24_t, to be used for FAT16
-typedef struct {
-    unsigned uint24 :24;
-} __attribute__((packed)) uint24_t;	
 
 #endif

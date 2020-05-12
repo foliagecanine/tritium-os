@@ -2,18 +2,15 @@
 #define _KERNEL_KBD_H
 
 #include <kernel/stdio.h>
+//#include <kernel/kbd.h>
+#include <kernel/exceptions.h>
+//#include <kernel/pit.h>
 
-typedef struct {
-	char charEquiv;
-	_Bool released;
-	uint8_t scanCode;
-} kbdin;
-
-void kbd_handler();
-kbdin getInKey(_Bool shift);
-char getchar();
 unsigned int getkey();
+int get_raw_scancode();
+char getchar();
 void print_keys();
 char scancode_to_char(unsigned int scancode);
+void kbd_handler();
 
 #endif
