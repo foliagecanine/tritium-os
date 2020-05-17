@@ -82,7 +82,7 @@ SEE BOTTOM FOR DISCLAIMERS
 Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
-- [ ] Memory Management (Partial, improved)
+- [x] Memory Management (improved)
 - [ ] Interrupts (Partial)
 - [x] Keyboard
 - [ ] Disk IO
