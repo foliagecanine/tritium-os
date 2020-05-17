@@ -32,9 +32,33 @@ page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
 
 page_table_entry *kernel_tables = (page_table_entry *)0xC0400000;
 
+//We'll also have a PMEM manager in this file too. This table will determine if a physical page is being used or not.
+char pmem_used[131072];
+const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","NVS","Bad RAM"};
+
 #define pagedir_addr 768
 
-void init_paging() {
+multiboot_memory_map_t *mmap;
+
+void claim_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	pmem_used[page/8]|=1<<(page%8);
+}
+
+void release_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	pmem_used[page/8]&= ~(1 << (page%8));
+}
+
+_Bool check_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	return (_Bool)(pmem_used[page/8] & (1 << (page%8)));
+}
+
+void init_paging(multiboot_info_t *mbi) {
 	//Stage 1:
 	//First, we need to identity map a new portion of RAM so that we have enough space for a new paging table
 	//We don't have any programs we're going to break, so any ram around us *should* be fine.
@@ -112,9 +136,37 @@ void init_paging() {
 	//Awesome! Now the default page tables are at vaddr:0xC0400000 and paddr:0x400000
 	//This won't get in the way of programs (which are loaded at vaddr:0x400000) but is still within a low capacity of memory (we only need 8MiB of memory right now)
 	kprint("[INIT] Paging initialized");
+	
+	//Allow us to read the MBI to find the memory map.
+	identity_map(mbi);
+	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
+	
+	//Clear out the current map so all entries are "claimed"
+	memset(&pmem_used[0],255,131072);
+	
+	//Scan the memory map for areas that we can use for general purposes
+	for (uint8_t i = 0; i < 15; i++) {
+		uint32_t type = mmap[i].type;
+		if (mmap[i].type>5)
+			type = 2;
+		if (i>0&&mmap[i].addr==0)
+			break;
+		if (mmap[i].type==1){
+			for (uint64_t physptr = mmap[i].addr; physptr<mmap[i].addr+mmap[i].len;physptr+=4096) {
+				release_phys_page((void *)(uint32_t)physptr);
+			}
+		}
+		printf("%d: 0x%#+0x%# %s\n",(uint32_t)i,(uint64_t)mmap[i].addr,(uint64_t)mmap[i].len,mem_types[type]);
+	}
+	
+	//Reclaim all the way up to 8MiB (for the kernel and the page tables)
+	for (uint32_t i=0;i<0x800000;i+=4096) {
+		claim_phys_page((void *)i);
+	}
 }
 
 void identity_map(void *addr) {
+	claim_phys_page(addr);
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
 	/* volatile uint32_t directory_entry = page/1024;
@@ -126,6 +178,7 @@ void identity_map(void *addr) {
 }
 
 void map_addr(void *vaddr, void *paddr) {
+	claim_phys_page(paddr);
 	uint32_t vaddr_page = (uint32_t)vaddr;
 	vaddr_page/=4096;
 	uint32_t paddr_page = (uint32_t)paddr;
@@ -138,7 +191,44 @@ void map_addr(void *vaddr, void *paddr) {
 void unmap_vaddr(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
 	vaddr_page/=4096;
+	release_phys_page((void *)(kernel_tables[vaddr_page].address*4096));
 	kernel_tables[vaddr_page].address = 0;
 	kernel_tables[vaddr_page].readwrite = 0;
 	kernel_tables[vaddr_page].present = 0;
+}
+
+void* alloc_page(size_t pages) {
+	//First find consecutive virtual pages
+	for(uint32_t i = 1024; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			 size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+					if (successful_pages==pages)
+						break;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				for (uint32_t step=0; step<pages;step++) {
+					for (uint32_t k=0; k<1048576; k++) {
+						if (!check_phys_page((void *)(k*4096))) {
+							map_addr((void *)((i+step)*4096),(void *)(k*4096));
+							break;
+						}
+					}
+				}
+				return (void *)(i*4096);
+			}
+		}
+	}
+	return 0;
+}
+
+void free_page(void *start, size_t pages) {
+	for (uint32_t i = 0; i < pages; i++) {
+		unmap_vaddr((void *)((uint32_t)start+(i*4096)));
+	}
 }

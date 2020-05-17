@@ -89,8 +89,10 @@ void init_gdt() {
 	gdtPtr.firstEntryAddr = (uint32_t)&gdtEntries;
 	
 	gdtEntries[0] = create_gdt_desc(0,0,0); // Null desc
+	//Kernel can do whatever it wants
 	gdtEntries[1] = create_gdt_desc(0,0xFFFFFFFF,0xCF9A); //Kernel code
 	gdtEntries[2] = create_gdt_desc(0,0xFFFFFFFF,0xCF92); // Kernel data
+	//In the future, change mapping to where programs will be loaded.
 	gdtEntries[3] = create_gdt_desc(0,0xFFFFFFFF,0xCFFA); //User code
 	gdtEntries[4] = create_gdt_desc(0,0xFFFFFFFF,0xCFF2); //User data
 	gdtEntries[5] = create_gdt_desc((uint32_t)&tss,(uint32_t)&tss+sizeof(tss)+1,0x89);

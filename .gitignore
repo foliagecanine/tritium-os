@@ -5,3 +5,4 @@ bootloader
 *.d
 *.o
 .goutputstream*
+VideoResearch
