@@ -83,12 +83,12 @@ Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
 - [x] Memory Management (improved)
-- [ ] Interrupts (Partial)
+- [ ] Interrupts (partial)
 - [x] Keyboard
-- [ ] Disk IO
+- --- Disk IO (ATA PIO) (not likely to be implemented)
 - [ ] FAT12 Filesystem Driver
 - [ ] File management
-- [ ] Advanced Disk IO (AHCI)  
+- [ ] Advanced Disk IO (AHCI) (partial)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS
