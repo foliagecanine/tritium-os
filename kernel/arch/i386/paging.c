@@ -1,4 +1,5 @@
 #include <kernel/ksetup.h>
+#include <kernel/mem.h>
 
 typedef struct {
 	uint8_t present:1;
@@ -163,6 +164,8 @@ void init_paging(multiboot_info_t *mbi) {
 	for (uint32_t i=0;i<0x800000;i+=4096) {
 		claim_phys_page((void *)i);
 	}
+	
+	kprint("[INIT] Kernel heap initialized");
 }
 
 void identity_map(void *addr) {
@@ -197,16 +200,20 @@ void unmap_vaddr(void *vaddr) {
 	kernel_tables[vaddr_page].present = 0;
 }
 
+void *get_phys_addr(void *vaddr) {
+	return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
+}
+
 void* alloc_page(size_t pages) {
 	//First find consecutive virtual pages
-	for(uint32_t i = 1024; i < 1048576; i++) {
+	for(volatile uint32_t i = 1024; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
 				if (!kernel_tables[j].present) {
 					successful_pages++;
-					if (successful_pages==pages)
-						break;
 				}
 				else
 					break;

@@ -2,6 +2,8 @@
 #include <kernel/ksetup.h>
 #include <kernel/tty.h>
 #include <kernel/multiboot.h>
+#include <kernel/pci.h>
+#include <fs/disk.h>
 
 multiboot_memory_map_t *mmap;
 multiboot_info_t *mbi;
@@ -25,14 +27,11 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_pit(1000);
 	mbi = (multiboot_info_t *)ebx;
 	init_paging(mbi);
+	init_ahci();
 	kprint("[KMSG] Kernel initialized successfully");
 	
-	//This one should already be mapped. They are in the same page.
-	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
-	
-	volatile uint32_t *test = alloc_page(2);
-	printf("%#",(uint64_t)test);
-	free_page((void *)test,2);
+	sleep(1000);
+	ahci_read_test();
 	
 	/* map_addr((void *)0x100000,(void *)0xF00000);
 	char testprgm[] = {0xb8, 0x00, 0xf0, 0x3f, 0xc0, 0xc6, 0x80, 0x00, 0x0a, 0x00, 0x00, 0x48,
