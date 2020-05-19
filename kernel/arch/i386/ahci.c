@@ -2,13 +2,11 @@
 
 typedef struct {
 	HBAData * abar;
-	void * abar_ahci_base;
 	HBAPort * port;
-	uint32_t portnum;
 	void * clb;
 	void * fb;
 	void * ctba[32];
-	void * unused[26]; //Even out the data size to 256 bytes
+	void * unused[28]; //Even out the data size to 256 bytes
 } ahci_port;
 
 ahci_port *ports;
@@ -16,7 +14,6 @@ uint32_t num_ports;
 
 void initialize_port(ahci_port *aport) {
 	HBAPort *port = aport->port;
-	//uint32_t portnum = aport->portnum;
 	port->cmd &= ~HBA_CMD_ST;
 	port->cmd &= ~HBA_CMD_FRE;
 	
@@ -68,7 +65,6 @@ void initialize_abar(HBAData *abar) {
 				memset(&ports[num_ports],0,256);
 				ports[num_ports].abar = abar;
 				ports[num_ports].port = &abar->ports[i];
-				ports[num_ports].portnum = i;
 				initialize_port(&ports[num_ports]);
 				num_ports++;
 			}
@@ -94,9 +90,10 @@ uint32_t find_cmdslot(ahci_port aport) {
  * 1 : No available slot
  * 2 : Port hung
  * 3 : Disk error
+ * 4 : Drive not found
  */
 
-uint8_t ahci_read_sectors(ahci_port aport, uint32_t startl, uint32_t starth, uint32_t count, uint8_t *buf) {
+uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t starth, uint32_t count, uint8_t *buf) {
 	HBAPort *port = aport.port;
 	port->is = 0xFFFFFFFF;
 	uint32_t slot = find_cmdslot(aport);
@@ -203,7 +200,21 @@ void init_ahci() {
 }
 
 uint8_t ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {
-	return ahci_read_sectors(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,1,buf);
+	if (ports[drive_num].abar!=0)
+		return ahci_read_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,1,buf);
+	else
+		return 4;
+}
+
+uint8_t ahci_read_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf) {
+	if (ports[drive_num].abar!=0)
+		return ahci_read_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,count,buf);
+	else
+		return 4;
+}
+
+bool drive_exists(uint8_t drive_num) {
+	return (ports[drive_num].abar!=0);
 }
 
 void print_sector(uint8_t *read) {

@@ -4,6 +4,7 @@
 #include <kernel/multiboot.h>
 #include <kernel/pci.h>
 #include <fs/disk.h>
+#include <fs/file.h>
 
 multiboot_memory_map_t *mmap;
 multiboot_info_t *mbi;
@@ -28,10 +29,24 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	mbi = (multiboot_info_t *)ebx;
 	init_paging(mbi);
 	init_ahci();
+	init_file();
 	kprint("[KMSG] Kernel initialized successfully");
 	
 	sleep(1000);
 	
+	if (!mountDrive(0)) {
+		printf("Mounted drive 0\n");
+	} else {
+		printf("No valid drive found.\n");
+		for(;;);
+	}
+	FILE cd = fopen("A:/","r");
+	if (!cd.valid) {
+		printf("INVALID\n");
+		for(;;)
+			;
+	}
+	FAT12_print_folder((uint32_t)cd.location,(uint32_t)cd.size,0);
 	
 	/* map_addr((void *)0x100000,(void *)0xF00000);
 	char testprgm[] = {0xb8, 0x00, 0xf0, 0x3f, 0xc0, 0xc6, 0x80, 0x00, 0x0a, 0x00, 0x00, 0x48,

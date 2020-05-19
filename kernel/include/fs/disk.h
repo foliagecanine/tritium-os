@@ -240,5 +240,8 @@ typedef struct {
 
 void init_ahci();
 uint8_t ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf);
+uint8_t ahci_read_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf);
+bool drive_exists(uint8_t drive_num);
+void print_sector(uint8_t *read);
 
 #endif
