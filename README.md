@@ -42,9 +42,9 @@ Type `./qemu.sh` to build then immediately test it.
 You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
 You can use this to add virtual hard disks to the OS.
 
-A FAT12 formatted "floppy" is included (named floppy2.flp) and can be used as a hard disk as below
-`./ahci-qemu.sh floppy2.flp "-boot d"`
-Or a floppy disk (no controller implemented yet) like so
+A FAT12 formatted "floppy" is included (named floppy2.flp) and can be used as a hard disk as below  
+`./ahci-qemu.sh floppy2.flp "-boot d"`  
+Or a floppy disk (no controller implemented yet) like so  
 `./qemu.sh "-fda floppy2.flp" "-boot d"`
 
 You can also have two drives by using the ahci-qemu2.sh script as below:  
