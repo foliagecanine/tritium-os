@@ -164,6 +164,77 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 	return 0;
 }
 
+uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t starth, uint32_t count, uint8_t *buf) {
+	HBAPort *port = aport.port;
+	port->is = 0xFFFFFFFF;
+	uint32_t slot = find_cmdslot(aport);
+	if (slot==0xFFFFFFFF)
+		return 1;
+	
+	uint32_t phys_buf = (uint32_t)get_phys_addr(buf);
+	
+	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
+	cmdheader+=slot;
+	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
+	cmdheader->w = 1; //We are writing this time
+	cmdheader->prdtl = (uint16_t)((count-1)>>4)+1;
+	
+	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
+	
+	uint16_t i;
+	for (i = 0; i < cmdheader->prdtl-1; i++) {
+		cmdtable->prdt_entry[i].dba = phys_buf;
+		cmdtable->prdt_entry[i].dbau = 0;
+		cmdtable->prdt_entry[i].dbc = 8192;
+		cmdtable->prdt_entry[i].i = 1;
+		phys_buf+=4096;
+		count-=16;
+	}
+	cmdtable->prdt_entry[i].dba = phys_buf;
+	cmdtable->prdt_entry[i].dbau = 0;
+	cmdtable->prdt_entry[i].dbc = count<<9;
+	cmdtable->prdt_entry[i].i = 1;
+	
+	FIS_HostToDevice *cmdfis = (FIS_HostToDevice *)(&cmdtable->cfis);
+	
+	cmdfis->FIS_Type=0x27; //Host to device
+	cmdfis->c = 1;
+	cmdfis->command = SATA_WRITE_DMA_EX;
+	
+	cmdfis->lba0 = (uint8_t)startl;
+	cmdfis->lba1 = (uint8_t)(startl>>8);
+	cmdfis->lba2 = (uint8_t)(startl>>16);
+	cmdfis->dev = 1<<6;
+	
+	cmdfis->lba3 = (uint8_t)(startl>>24);
+	cmdfis->lba4 = (uint8_t)(starth);
+	cmdfis->lba5 = (uint8_t)(starth>>8);
+	
+	cmdfis->countl = (count & 0xFF);
+	cmdfis->counth = (count>>8);
+	
+	for (uint32_t spin = 0; spin < 1000000; spin++) {
+		if (!(port->tfd & (SATA_BUSY | SATA_DRQ)))
+			break;
+	}
+	if ((port->tfd & (SATA_BUSY | SATA_DRQ)))
+		return 2;
+	
+	port->ci = (1<<slot);
+	
+	while(1) {
+		if (!(port->ci & (1<<slot)))
+			break;
+		if (port->is & (1<<30))
+			return 3;
+	}
+	
+	if (port->is & (1<<30))
+		return 3;
+	
+	return 0;
+}
+
 void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==1&&pci.subclass==6) {
 		if (k==0)
@@ -209,6 +280,20 @@ uint8_t ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {
 uint8_t ahci_read_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf) {
 	if (ports[drive_num].abar!=0)
 		return ahci_read_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,count,buf);
+	else
+		return 4;
+}
+
+uint8_t ahci_write_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {
+	if (ports[drive_num].abar!=0)
+		return ahci_write_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,1,buf);
+	else
+		return 4;
+}
+
+uint8_t ahci_write_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf) {
+	if (ports[drive_num].abar!=0)
+		return ahci_write_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,count,buf);
 	else
 		return 4;
 }

@@ -96,7 +96,7 @@ Here's the checklist:
   --- Disk IO (ATA PIO) (not likely to be implemented)
 - [x] FAT12 Filesystem Driver
 - [x] File management
-- [ ] Advanced Disk IO (AHCI) (partial)
+- [x] Advanced Disk IO (AHCI)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS
