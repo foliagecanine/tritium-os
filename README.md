@@ -94,8 +94,8 @@ Here's the checklist:
 - [ ] Interrupts (partial)
 - [x] Keyboard
   --- Disk IO (ATA PIO) (not likely to be implemented)
-- [ ] FAT12 Filesystem Driver
-- [ ] File management
+- [x] FAT12 Filesystem Driver
+- [x] File management
 - [ ] Advanced Disk IO (AHCI) (partial)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
