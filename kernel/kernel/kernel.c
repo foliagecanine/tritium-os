@@ -31,7 +31,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	kprint("[KMSG] Kernel initialized successfully");
 	
 	sleep(1000);
-	ahci_read_test();
+	
 	
 	/* map_addr((void *)0x100000,(void *)0xF00000);
 	char testprgm[] = {0xb8, 0x00, 0xf0, 0x3f, 0xc0, 0xc6, 0x80, 0x00, 0x0a, 0x00, 0x00, 0x48,

@@ -15,4 +15,6 @@
 #define false 0
 #define true 1 //Can be anything but zero, we'll do one for the sake of simplicity
 
+#define bool _Bool
+
 #endif

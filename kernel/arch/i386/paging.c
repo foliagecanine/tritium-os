@@ -231,7 +231,7 @@ void* alloc_page(size_t pages) {
 			}
 		}
 	}
-	return 0;
+	PANIC("OUT OF MEMORY");
 }
 
 void free_page(void *start, size_t pages) {
