@@ -7,5 +7,6 @@ void unmap_addr(void *vaddr);
 void *alloc_page(size_t pages);
 void free_page(void *start, size_t pages);
 void *get_phys_addr(void *vaddr);
+void *map_page_to(void *vaddr);
 
 #endif

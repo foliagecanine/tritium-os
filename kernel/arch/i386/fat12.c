@@ -346,15 +346,12 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	memset(read,0,numEntries*32);
 	
 	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
-		printf("Loc: %# : %#\n",(uint64_t)(location-1)/512+i, (uint64_t)read+(i*512));
 		uint8_t derr = ahci_read_sector(drive_num, (location-1)/512+i, read+(i*512));
 		if (derr) {
 			retFile.valid = false;
 			return retFile;
 		}
 	}
-	
-	printf("End of read\n");
 	
 	char drivename[12];
 	memcpy(drivename,read,8);
@@ -427,7 +424,7 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 		if ((curLoc-curDiskLoc)<512) {
 			ahci_read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
 			uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
-			memcpy(buf+curLoc,&read[curLoc%512],amt);
+			memcpy(buf,&read[curLoc%512],amt);
 			curLen-=amt;
 			curLoc+=amt;
 		}

@@ -1,5 +1,6 @@
 #include <kernel/ksetup.h>
 #include <kernel/mem.h>
+#include <kernel/syscalls.h>
 
 typedef struct {
 	uint8_t present:1;
@@ -204,6 +205,17 @@ void *get_phys_addr(void *vaddr) {
 	return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
 }
 
+void* map_page_to(void *vaddr) {
+	for (uint32_t k=0; k<1048576; k++) {
+		if (!check_phys_page((void *)(k*4096))) {
+			map_addr(vaddr,(void *)(k*4096));
+			return vaddr;
+		}
+	}
+	PANIC("OUT OF MEMORY");
+	return 0;
+}
+
 void* alloc_page(size_t pages) {
 	//First find consecutive virtual pages
 	for(volatile uint32_t i = 1024; i < 1048576; i++) {
@@ -232,6 +244,7 @@ void* alloc_page(size_t pages) {
 		}
 	}
 	PANIC("OUT OF MEMORY");
+	return 0;
 }
 
 void free_page(void *start, size_t pages) {
