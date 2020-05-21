@@ -91,13 +91,13 @@ Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
 - [x] Memory Management (improved)
-- [ ] Interrupts (partial)
+- [x] Interrupts
 - [x] Keyboard
   --- Disk IO (ATA PIO) (not likely to be implemented)
 - [x] FAT12 Filesystem Driver
 - [x] File management
 - [x] Advanced Disk IO (AHCI)
-- [x] Ring 3 Switching
+- [ ] Ring 3 Switching (partial)
 - [x] Syscalls
 - [ ] Program Loading (minimal)
 - [ ] Shell
