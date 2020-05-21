@@ -130,6 +130,7 @@ void init_paging(multiboot_info_t *mbi) {
 		kernel_page_dir[i].address = 0x400+(i);
 		kernel_page_dir[i].readwrite = 1;
 		kernel_page_dir[i].present = 1;
+		kernel_page_dir[i].user = 1; //All page directory entries to user because we can set it to supervisor only inside of the page table entry
 	}
 	
 	//Reset the CR3 so it flushes the TLB
@@ -190,6 +191,7 @@ void map_addr(void *vaddr, void *paddr) {
 	kernel_tables[vaddr_page].address = paddr_page;
 	kernel_tables[vaddr_page].readwrite = 1;
 	kernel_tables[vaddr_page].present = 1;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
 void unmap_vaddr(void *vaddr) {
@@ -199,6 +201,12 @@ void unmap_vaddr(void *vaddr) {
 	kernel_tables[vaddr_page].address = 0;
 	kernel_tables[vaddr_page].readwrite = 0;
 	kernel_tables[vaddr_page].present = 0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void mark_user(void *vaddr,bool user) {
+	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
 void *get_phys_addr(void *vaddr) {

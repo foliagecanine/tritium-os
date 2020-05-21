@@ -100,3 +100,23 @@ void init_gdt() {
 	gdt_flush((uint32_t)&gdtPtr);
 	kprint("[INIT] GDT Enabled");
 }
+
+extern void tss_flush();
+
+void install_tss() {
+	memset((void*) &tss, 0, sizeof(tss_entry_t));
+	
+	tss.ss0 = 0x10;
+	uint32_t stack_ptr = 0;
+	asm("mov %%esp, %0" : "=r"(stack_ptr));
+	tss.esp0 = stack_ptr;
+	
+	tss.cs = 0x0B;
+	tss.ss = 0x13;
+	tss.ds = 0x13;
+	tss.es = 0x13;
+	tss.fs = 0x13;
+	tss.gs =0x13;
+	
+	tss_flush();
+}
