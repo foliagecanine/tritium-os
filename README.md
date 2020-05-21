@@ -97,9 +97,9 @@ Here's the checklist:
 - [x] FAT12 Filesystem Driver
 - [x] File management
 - [x] Advanced Disk IO (AHCI)
-- [ ] Ring 3 Switching
-- [ ] Syscalls
-- [ ] Program Loading
+- [x] Ring 3 Switching
+- [x] Syscalls
+- [ ] Program Loading (minimal)
 - [ ] Shell
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
