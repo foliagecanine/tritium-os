@@ -100,7 +100,7 @@ Here's the checklist:
 - [ ] Ring 3 Switching (partial)
 - [x] Syscalls
 - [ ] Program Loading (minimal)
-- [ ] Shell
+- [ ] Shell  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS
