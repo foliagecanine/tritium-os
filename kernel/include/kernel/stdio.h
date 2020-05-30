@@ -17,4 +17,6 @@
 
 #define bool _Bool
 
+void debug_console(); //Hopefully temporary
+
 #endif

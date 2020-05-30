@@ -248,7 +248,7 @@ void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 
 void init_ahci() {
 	ports = alloc_page(16); //256*256 = 65536 bytes, or 16 pages. 256 ports is probably enough
-	kprint("Searching for SATA drives. Details below.");
+	kprint("[AHCI] Searching for SATA drives. Details below.");
 	
 	pci_t c_pci;
 	for (uint16_t i = 0; i < 256; i++) {
@@ -268,6 +268,7 @@ void init_ahci() {
 			}
 		}
 	}
+	kprint("[INIT] Initialized AHCI driver");
 }
 
 uint8_t ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {

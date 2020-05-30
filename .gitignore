@@ -6,3 +6,5 @@ bootloader
 *.o
 .goutputstream*
 VideoResearch
+mountall.sh
+umountall.sh

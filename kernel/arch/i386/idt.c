@@ -176,9 +176,17 @@ void set_irq_finish_state(uint8_t irq, _Bool state) {
 	irq_finished[irq] = state;
 }
 
+_Bool ts_enabled = false;
+tss_entry_t temp_tss;
+uint32_t ready_esp;
+
 void irq0_handler(void) {
+	if (ts_enabled)
+		asm("nop"); //Debug breakpoint
 	outb(0x20, 0x20); //EOI
 	pit_tick();
+	if (ts_enabled)
+		task_switch(temp_tss,ready_esp);
 	irq_finished[0] = true;
 }
  
@@ -265,4 +273,12 @@ void irq15_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
 	irq_finished[15] = true;
+}
+
+void enable_tasking() {
+	ts_enabled = true;
+}
+
+void disable_tasking() {
+	ts_enabled = false;
 }

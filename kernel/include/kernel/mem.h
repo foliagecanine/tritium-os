@@ -8,6 +8,6 @@ void *alloc_page(size_t pages);
 void free_page(void *start, size_t pages);
 void *get_phys_addr(void *vaddr);
 void *map_page_to(void *vaddr);
-void mark_user(void *vaddr,bool user);
+void mark_user(void *vaddr,_Bool user);
 
 #endif

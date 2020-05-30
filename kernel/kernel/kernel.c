@@ -10,14 +10,6 @@
 multiboot_memory_map_t *mmap;
 multiboot_info_t *mbi;
 
-//This is the code to switch to usermode. We'll put it in the page directly before 0x100000
-unsigned char enter_usermode[] = {
-  0xfa, 0x66, 0xb8, 0x23, 0x00, 0x8e, 0xd8, 0x8e, 0xc0, 0x8e, 0xe0, 0x8e,
-  0xe8, 0x6a, 0x23, 0x54, 0x9c, 0x6a, 0x1b, 0x68, 0x00, 0x00, 0x10, 0x00,
-  0xcf, 0x90, 0x90, 0x90
-};
-unsigned int eu_len = 28;
-
 void kernel_main(uint32_t magic, uint32_t ebx) {
 	if (magic!=0x2BADB002) {
 		terminal_initialize();
@@ -41,9 +33,8 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_file();
 	init_syscalls();
 	install_tss();
+	init_tasking(1);
 	kprint("[KMSG] Kernel initialized successfully");
-	
-	sleep(1000);
 	
 	if (!mountDrive(0)) {
 		printf("Mounted drive 0\n");
@@ -52,25 +43,31 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		for(;;);
 	}
 	
-	FILE txt = fopen("A:/TESTPRG.PRG","r");
-	char *read = map_page_to((void *)0x100000);
-	mark_user((void *)0x100000,true);
-	memset(read,0,4096);
-	fread(&txt,read,0,txt.size);
+	printf("Press shift key to enter Kernel Debug Console.\n");
+	for (uint16_t i = 0; i < 1000; i++) {
+		sleep(1);
+		int k = getkey();
+		
+		if (k==42||k==54||k==170||k==182) {
+			printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
+			debug_console();
+		}
+	}
 	
-	//Usermode time!
-	asm volatile("\
-		cli; \
-		mov $0x23, %ax; \
-		mov %ax, %ds; \
-		mov %ax, %es; \
-		mov %ax, %fs; \
-		mov %ax, %gs; \
-		push $0x23; \
-		push %esp; \
-		pushf; \
-		push $0x1B; \
-		push $0x100000; \
-		iret; \
-	");
+	start_program("A:/EXEC.PRG");
+	
+	//Idle program to prevent errors if the program above exits without any active children.
+	FILE prgm = fopen("A:/IDLE.SYS","r");
+	if (prgm.valid) {
+		void *buf = alloc_page((prgm.size/4096)+1);
+		fread(&prgm,buf,0,prgm.size);
+		create_process(buf,prgm.size);
+	}
+
+	//Load all the segment registers with the usermode data selector
+	//Then push the stack segment and the stack pointer (we need to change this)
+	//Then modify the flags so they enable interrupts on iret
+	//Push the code selector on the stack
+	//Push the location of the program in memory, then iret to enter usermode
+	kerror("Kernel has reached end of code.");
 }

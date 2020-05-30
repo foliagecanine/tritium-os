@@ -6,6 +6,7 @@
 #include <kernel/pit.h>
 #include <kernel/kbd.h>
 #include <kernel/multiboot.h>
+#include <kernel/tss.h>
 
 void init_gdt();
 void install_tss();
@@ -17,6 +18,36 @@ void* alloc_page(size_t pages);
 void free_page(void *start, size_t pages);
 void *get_phys_addr(void *vaddr);
 void *map_page_to(void *vaddr);
-void mark_user(void *vaddr,bool user);
+void mark_user(void *vaddr,_Bool user);
+void *clone_tables();
+void use_kernel_map();
+void switch_tables(void *new);
+uint32_t *get_current_tables();
+
+typedef struct {
+	uint8_t present:1;
+	uint8_t readwrite:1;
+	uint8_t user:1;
+	uint8_t writethru:1;
+	uint8_t cachedisable:1;
+	uint8_t access:1;
+	uint8_t zero:1;
+	uint8_t size:1;
+	uint8_t ignore:4;
+	uint32_t address:20;
+} __attribute__((packed)) page_dir_entry;
+
+typedef struct {
+	uint8_t present:1;
+	uint8_t readwrite:1;
+	uint8_t user:1;
+	uint8_t writethru:1;
+	uint8_t cached:1;
+	uint8_t access:1;
+	uint8_t dirty:1;
+	uint8_t zero:1;
+	uint8_t ignore:4;
+	uint32_t address:20;
+} __attribute__((packed)) page_table_entry;
 
 #endif

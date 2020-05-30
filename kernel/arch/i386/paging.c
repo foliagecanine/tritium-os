@@ -2,32 +2,6 @@
 #include <kernel/mem.h>
 #include <kernel/syscalls.h>
 
-typedef struct {
-	uint8_t present:1;
-	uint8_t readwrite:1;
-	uint8_t user:1;
-	uint8_t writethru:1;
-	uint8_t cachedisable:1;
-	uint8_t access:1;
-	uint8_t zero:1;
-	uint8_t size:1;
-	uint8_t ignore:4;
-	uint32_t address:20;
-} __attribute__((packed)) page_dir_entry;
-
-typedef struct {
-	uint8_t present:1;
-	uint8_t readwrite:1;
-	uint8_t user:1;
-	uint8_t writethru:1;
-	uint8_t cached:1;
-	uint8_t access:1;
-	uint8_t dirty:1;
-	uint8_t zero:1;
-	uint8_t ignore:4;
-	uint32_t address:20;
-} __attribute__((packed)) page_table_entry;
-
 page_dir_entry kernel_page_dir[1024] __attribute__((aligned(4096)));
 page_table_entry new_base_page_table[1024] __attribute__((aligned(4096)));
 page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
@@ -204,7 +178,7 @@ void unmap_vaddr(void *vaddr) {
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
-void mark_user(void *vaddr,bool user) {
+void mark_user(void *vaddr,_Bool user) {
 	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
@@ -259,4 +233,38 @@ void free_page(void *start, size_t pages) {
 	for (uint32_t i = 0; i < pages; i++) {
 		unmap_vaddr((void *)((uint32_t)start+(i*4096)));
 	}
+}
+
+uint32_t *get_current_tables() {
+	return (uint32_t *)kernel_tables;
+}
+
+void switch_tables(void *new) {
+	kernel_tables = new;
+}
+
+void use_kernel_map() {
+	kernel_tables = (page_table_entry *)0xC0400000;
+	asm volatile("mov %0, %%cr3"::"r"(get_phys_addr(&kernel_page_dir[0])));
+}
+
+void *clone_tables() {
+	void * new = alloc_page(1025);
+	page_table_entry * new_page_tables = new+4096;
+	page_dir_entry * new_page_dir = new;
+	memcpy(new_page_tables,kernel_tables,1024*4096);
+	memset(new_page_dir,0,4096);
+	for (uint32_t i = 0; i < 1024; i++) {
+		page_dir_entry *pde = &new_page_dir[i];
+		pde->user = 1;
+		pde->present = 1;
+		pde->readwrite = 1;
+		pde->address = ((uint32_t)get_phys_addr(new+4096)/0x1000)+i;
+	}
+	
+	uint32_t new_addr = (uint32_t)get_phys_addr(new);
+	switch_tables(new+4096);
+	asm volatile("mov %0, %%cr3":: "r"(new_addr));
+	
+	return (void *)new_addr;
 }
