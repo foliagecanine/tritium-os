@@ -97,10 +97,11 @@ Here's the checklist:
 - [x] FAT12 Filesystem Driver
 - [x] File management
 - [x] Advanced Disk IO (AHCI)
-- [ ] Ring 3 Switching (partial)
+- [x] Ring 3 Switching
 - [x] Syscalls
-- [ ] Program Loading (minimal)
-- [ ] Shell  
+- [x] Program Loading (mostly)
+- [ ] Shell
+- [ ] FAT16 Filesystem Driver (so we can put the kernel and programs in the same filesystem)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 ## DISCLAIMERS
