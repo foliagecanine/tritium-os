@@ -93,7 +93,7 @@ Here's the checklist:
 - [x] Memory Management (improved)
 - [x] Interrupts
 - [x] Keyboard
-  --- Disk IO (ATA PIO) (not likely to be implemented)
+  --- Disk IO (ATA PIO) (not likely to be implemented)  
 - [x] FAT12 Filesystem Driver
 - [x] File management
 - [x] Advanced Disk IO (AHCI)
