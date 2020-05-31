@@ -1,5 +1,0 @@
-*.c linguist-language=C
-*.h linguist-language=C
-*.S linguist-language=UnixAssembly
-*.asm linguist-language=Assembly
-*.sh linguist-language=Shell
