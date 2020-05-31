@@ -100,7 +100,7 @@ Here's the checklist:
 - [x] Ring 3 Switching
 - [x] Syscalls
 - [x] Program Loading (mostly)
-- [ ] Shell
+- [ ] Shell  
 - [ ] FAT16 Filesystem Driver (so we can put the kernel and programs in the same filesystem)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
