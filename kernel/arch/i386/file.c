@@ -69,11 +69,11 @@ FILE fopen(const char *filename, const char *mode) {
 	return noFile;
 }
 
-void fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
+uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	if (!file)
-		return;
+		return 1;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
-		FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
+		return FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
 }
 

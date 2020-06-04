@@ -22,7 +22,7 @@ void exit(int retval) {
 _Noreturn void main() {
 	writestring("Hello from EXEC.PRG!\n");
 	writestring("I'm going to launch TESTPRG.PRG now.\n");
-	exec("A:/TESTPRG.PRG");
+	exec("A:/PRGMS/TESTPRG2.PRG");
 	exit(0);
 	for(;;);
 }

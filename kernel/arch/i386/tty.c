@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <kernel/tty.h>
+#include <kernel/sysfunc.h>
 
 #include "vga.h"
 
@@ -40,7 +41,8 @@ uint8_t terminal_getcolor() {
 
 void terminal_putentryat(unsigned char c, uint8_t color, size_t x, size_t y) {
 	const size_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = vga_entry(c, color);
+	if (index<VGA_WIDTH*VGA_HEIGHT)
+		terminal_buffer[index] = vga_entry(c, color);
 }
 
 void terminal_scroll() {
@@ -134,5 +136,17 @@ void terminal_refresh() {
 			const size_t index = y * VGA_WIDTH + x;
 			terminal_putentryat(terminal_buffer[index], terminal_color, x, y);
 		}
+	}
+}
+
+uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
+	//printf("Recieved: c%d x%d y%d\n",(uint32_t)command,(uint32_t)x,(uint32_t)y);
+	if (command==0) {
+		terminal_column = x;
+		terminal_row = y;
+		return 0;
+	}
+	if (command==1) {
+		return (uint32_t)(((terminal_column&0xFF)<<8)|(terminal_row&0xFF));
 	}
 }

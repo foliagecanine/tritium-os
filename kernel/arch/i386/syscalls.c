@@ -1,27 +1,48 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	3
+#define NUM_SYSCALLS	10
 
 extern void start_program(char *name);
 
 static void *syscalls[NUM_SYSCALLS] = {
-	&terminal_writestring,
-	&start_program,
-	&exit_program
+	&terminal_writestring, 	// 0
+	&exec_syscall,			// 1
+	&exit_program,			// 2
+	&terminal_putentryat,	// 3
+	&getchar,				// 4
+	&getkey,				// 5
+	&yield,					// 6
+	&getpid,				// 7
+	&free_pages,			// 8
+	&terminal_option		// 9
 };
 
 extern bool ts_enabled;
-uint32_t ready_esp;
 
 void run_syscall() {
 	ts_enabled = false;
 	static int syscall_num;
-	asm("movl %%eax,%0" : "=r"(syscall_num));
-	
+	static int ebx;
+	static int ecx;
+	static int edx;
+	static int esi;
+	static int edi;
+	static int ebp;
+	static int esp;
+	asm("movl %%eax,%0" : "=m"(syscall_num));
+	asm("movl %%ebx,%0" : "=m"(ebx));
+	asm("movl %%ecx,%0" : "=m"(ecx));
+	asm("movl %%edx,%0" : "=m"(edx));
+	asm("movl %%esi,%0" : "=m"(esi));
+	asm("movl %%edi,%0" : "=m"(edi));
+	asm("movl %%ebp,%0" : "=m"(ebp));
+	asm("movl %%esp,%0" : "=m"(esp));
 	if (syscall_num>=NUM_SYSCALLS) {
 		ts_enabled = true;
-		asm("iret"); //We don't want to accidentally give them kernel mode access, do we?
+		return; //We don't want to accidentally give them kernel mode access, do we?
 	}
+	if (syscall_num==1)
+		asm("nop");
 	
 	void *function = syscalls[syscall_num];
 	
@@ -30,11 +51,11 @@ void run_syscall() {
 	//Call the function
 	asm volatile("\
 	push %%esp;	\
-	push %%edi; \
-	push %%esi; \
-	push %%edx; \
-	push %%ecx; \
-	push %%ebx; \
+	push %6; \
+	push %5; \
+	push %4; \
+	push %3; \
+	push %2; \
 	call *%1; \
 	pop %%ebx; \
 	pop %%ebx; \
@@ -42,16 +63,18 @@ void run_syscall() {
 	pop %%ebx; \
 	pop %%ebx; \
 	pop %%ebx; \
-	iret;\
-	" : "=a" (retVal) : "r"(function),"r"(ready_esp));
+	ret;\
+	" : "=a" (retVal) : "r"(function),"m"(ebx),"m"(ecx),"m"(edx),"m"(esi),"m"(edi));
 }
 
 void new_syscall(uint8_t inum, uint32_t irq_fn) {
 	idt_new_int_flags(inum,irq_fn, 0x60);
 }
 
+extern void run_syscall_asm;
+
 void init_syscalls() {
 	//Install all the syscalls we need
-	new_syscall(0x80,(uint32_t)&run_syscall);
+	new_syscall(0x80,(uint32_t)&run_syscall_asm);
 	kprint("[INIT] Initialized Syscalls.");
 }

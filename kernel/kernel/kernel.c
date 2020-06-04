@@ -43,6 +43,8 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		for(;;);
 	}
 	
+	FAT12_print_folder(0x2600,32,0);
+	
 	printf("Press shift key to enter Kernel Debug Console.\n");
 	for (uint16_t i = 0; i < 1000; i++) {
 		sleep(1);
@@ -54,10 +56,10 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 	
-	start_program("A:/EXEC.PRG");
-	
+	start_program("A:/bin/SHELL.SYS");
+	//start_program("A:/bin/MEM.PRG");
 	//Idle program to prevent errors if the program above exits without any active children.
-	FILE prgm = fopen("A:/IDLE.SYS","r");
+	FILE prgm = fopen("A:/bin/IDLE.SYS","r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);
 		fread(&prgm,buf,0,prgm.size);

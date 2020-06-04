@@ -263,8 +263,8 @@ uint16_t getClusterValue(uint8_t * FAT, uint32_t cluster) {
 		value += FAT[(3*cluster)/2];
 		return value;
 	} else {
-		value = (FAT[(3*cluster)/2]&0xF0)<<4;
-		value += FAT[1+((3*cluster)/2)];
+		value = (FAT[1+(3*cluster)/2])<<4;
+		value += (FAT[((3*cluster)/2)]&0xF0)>>4;
 		return value;
 	}
 }
@@ -273,15 +273,13 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 	uint8_t *read = alloc_page(((numEntries*32)/4096)+1);
 	memset(read,0,numEntries*32);
 	
-	for (uint8_t i = 0; i < (512)/512; i++) {
-		uint8_t derr = ahci_read_sector(drive_num, (location-1)/512+i, read+(i*512));
-		if (derr) {
-			printf("Drive error: %d!",derr);
-			free_page(read,((numEntries*32)/4096)+1);
-			return;
-		}
+	uint8_t derr = ahci_read_sector(drive_num, location/512, read);
+	if (derr) {
+		printf("Drive error: %d!",derr);
+		free_page(read,((numEntries*32)/4096)+1);
+		return;
 	}
-		
+			
 	char drivename[12];
 	memset(&drivename,0,12);
 	memcpy(drivename,read,8);
@@ -303,8 +301,9 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 				if (reading[11]&0x10&&j==10)
 					printf("/");
 			}
-			//int32_t nextCluster = (reading[27] << 8) | reading[26];
-			printf(" [%d]");
+			uint32_t nextCluster = (reading[27] << 8) | reading[26];
+			uint32_t size = *(uint32_t *)&reading[28];
+			printf(" [0x%#+%d]",(uint64_t)((nextCluster-2)*512)+(224*32)+(19*512),size);
 			printf("\n");
 		}
 		reading+=32;
@@ -324,7 +323,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t drive_num, FAT12_MOUNT fm, uint8_t mode) {
 	FILE retFile;
 	char *searchpath = filename+1;
-	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
+	char searchname[13];
 	#pragma GCC diagnostic ignored "-Wint-conversion"
 	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
 	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
@@ -341,16 +340,14 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 		retFile.directory = true;
 		return retFile;
 	}
+	uint32_t num_pages = ((numEntries*32)/4096)+1;
+	uint8_t *read = alloc_page(num_pages); //See free below
+	memset(read,0,num_pages*4096);
 	
-	uint8_t *read = alloc_page(((numEntries*32)/4096)+1);; //See free below
-	memset(read,0,numEntries*32);
-	
-	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
-		uint8_t derr = ahci_read_sector(drive_num, (location-1)/512+i, read+(i*512));
-		if (derr) {
-			retFile.valid = false;
-			return retFile;
-		}
+	uint8_t derr = ahci_read_sectors(drive_num, (location/512), (numEntries*32)/512, read);
+	if (derr) {
+		retFile.valid = false;
+		return retFile;
 	}
 	
 	char drivename[12];
@@ -408,9 +405,9 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	}
 }
 
-void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
+uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
 	if (!file)
-		return;
+		return 1;
 	FAT12_MOUNT fm = *(FAT12_MOUNT *)getDiskMount(file->mountNumber).mount;
 	uint8_t FAT[fm.FATSize*512];
 	for (uint8_t i = 0; i < fm.FATSize; i++)
@@ -424,7 +421,7 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 		if ((curLoc-curDiskLoc)<512) {
 			ahci_read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
 			uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
-			memcpy(buf,&read[curLoc%512],amt);
+			memcpy(buf+(curLoc-start),&read[curLoc%512],amt);
 			curLen-=amt;
 			curLoc+=amt;
 		}
@@ -434,4 +431,5 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 			break;
 		}
 	}
+	return 0;
 }

@@ -59,8 +59,13 @@ extern temp_tss
 
 extern new_temp_tss
 extern ready_esp
+
+extern syscall_temp_tss
+extern run_syscall
+extern yield_esp
  
 global switch_task
+global run_syscall_asm
 
 switch_task:
   mov esp,dword [ready_esp]
@@ -86,6 +91,60 @@ switch_task:
   mov edi,dword [new_temp_tss+68]
   mov esi,dword [new_temp_tss+64]
   mov ebp,dword [new_temp_tss+60]
+  
+  iret
+  
+run_syscall_asm:
+  mov dword [yield_esp],esp
+  mov dword [syscall_temp_tss+40],eax
+  mov dword [syscall_temp_tss+52],ebx
+  mov dword [syscall_temp_tss+44],ecx
+  mov dword [syscall_temp_tss+48],edx
+  mov dword [syscall_temp_tss+68],edi
+  mov dword [syscall_temp_tss+64],esi
+  mov dword [syscall_temp_tss+60],ebp
+  pushf
+  pop eax
+  mov dword [syscall_temp_tss+36],eax ;eflags
+  pop eax
+  push eax
+  mov dword [syscall_temp_tss+32],eax ;eip
+  add esp,0xC
+  pop eax
+  push eax
+  sub esp,0xC
+  mov dword [syscall_temp_tss+56],eax ;esp
+  mov eax, dword [syscall_temp_tss+40]
+  
+  cmp eax,1
+  jne a  
+  nop
+  
+a:
+  call run_syscall
+  
+  mov esp,dword [yield_esp]
+  
+  add esp,0xC
+  pop ebx
+  mov ebx,dword [syscall_temp_tss+56] ;esp
+  push ebx
+  sub esp,0xC
+  
+  pop ebx
+  mov ebx,dword [syscall_temp_tss+32] ;eip
+  push ebx
+  
+  mov ebx,dword [syscall_temp_tss+36] ;eflags
+  push ebx
+  popf
+  
+  mov ebx,dword [syscall_temp_tss+52]
+  mov ecx,dword [syscall_temp_tss+44]
+  mov edx,dword [syscall_temp_tss+48]
+  mov edi,dword [syscall_temp_tss+68]
+  mov esi,dword [syscall_temp_tss+64]
+  mov ebp,dword [syscall_temp_tss+60]
   
   iret
   

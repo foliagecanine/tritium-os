@@ -1,14 +1,17 @@
 #include <kernel/task.h>
+#include <kernel/sysfunc.h>
 
 #define TASK_DEBUG
 
-typedef struct {
+typedef struct thread_t thread_t;
+
+struct thread_t {
 	tss_entry_t tss;
 	uint32_t pid;
-	void *child;
+	thread_t *parent;
 	void *cr3;
 	void *tables;
-} thread_t;
+};
 
 thread_t *current_task;
 thread_t *threads;
@@ -38,15 +41,18 @@ uint32_t init_new_process(void *prgm, size_t size) {
 	threads[pid-1].cr3 = new;
 	threads[pid-1].tables = get_current_tables();
 	
-	for (uint32_t i = 0; i < (size/4096)+1; i++) {
+	for (uint32_t i = 0; i < 16; i++) {
 		map_page_to((void *)0x100000+(i*4096));
+		mark_user((void *)0x100000+(i*4096),true);
+		memset((void *)0x100000+(i*4096),0,4096);
 	}
-	mark_user((void *)0x100000,true);
 	memcpy((void *)0x100000,prgm,size);
-	map_page_to((void *)0xF00000);
-	mark_user((void *)0xF00000,true);
+	for (uint8_t i = 0; i < 4; i++) {
+		map_page_to((void *)0xF00000+(i*4096));
+		mark_user((void *)0xF00000+(i*4096),true);
+	}
 	
-	threads[pid-1].tss.esp = 0xF00FFB; //Give space for imaginary return address (GCC needs this)
+	threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
 	threads[pid-1].tss.eip = 0x100000;
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process created:");
@@ -118,18 +124,22 @@ void task_switch(tss_entry_t tss, uint32_t ready_esp) {
 }
 
 void start_program(char *name) {
-/* 	uint32_t current_cr3;
+ 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
 	uint32_t *current_tables = get_current_tables();
-	use_kernel_map(); */
+	
 	FILE prgm = fopen(name,"r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);
-		fread(&prgm,buf,0,prgm.size);
-		create_idle_process(buf,prgm.size);
-	}
-	/* switch_tables((void *)current_tables);
-	asm volatile("mov %0,%%cr3"::"r"(current_cr3)); */
+		if (!fread(&prgm,buf,0,prgm.size)) {
+			use_kernel_map();
+			create_idle_process(buf,prgm.size);
+		} else
+			kerror("Failed to read file.");
+	} else
+		kerror("Failed to read file.");
+	switch_tables((void *)current_tables);
+	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 }
 
 void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint32_t res3, uint32_t ready_esp) {
@@ -159,8 +169,16 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	}
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
-	printf("====== pid=%d",current_task->pid);
+	printf("====== pid=%d\n",current_task->pid);
 #endif
+	//Free all the memory to prevent leaks
+	free_page((void *)0x100000,16);
+	free_page((void *)0xF00000,4);
+	use_kernel_map();
+	free_page(current_task->tables-4096,1025);
+	switch_tables(current_task->tables);
+	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
+	
 	current_task->pid = 0;
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
@@ -169,4 +187,46 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	new_temp_tss = current_task->tss;
 	enable_tasking();
 	switch_task();
+}
+
+tss_entry_t syscall_temp_tss;
+uint32_t yield_esp;
+
+void yield() {
+	task_switch(syscall_temp_tss,yield_esp);
+}
+
+FILE prgm;
+
+uint8_t exec_syscall(char *name) {
+	uint32_t current_cr3;
+	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	uint32_t *current_tables = get_current_tables();
+	void *temp = alloc_page(1); //Resets the page tables because they broke for some reason
+	prgm = fopen(name,"r");
+	free_page(temp,1);
+	if (prgm.valid&&!prgm.directory) {
+		use_kernel_map();
+		void *buf = alloc_page((prgm.size/4096)+1);
+		memset(buf,0,((prgm.size/4096)+1)*4096);
+		if (!fread(&prgm,buf,0,prgm.size)) {
+			uint32_t pid = init_new_process(buf,prgm.size);
+			threads[pid-1].parent=current_task;
+			free_page(buf,(prgm.size/4096)+1);
+			switch_tables((void *)current_tables);
+			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			return 0;
+		} else {
+			free_page(buf,(prgm.size/4096)+1);
+			switch_tables((void *)current_tables);
+			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			return 1;
+		}
+	} else {
+		return 1;
+	}
+}
+
+uint32_t getpid() {
+	return current_task->pid;
 }

@@ -1,6 +1,7 @@
 #include <kernel/ksetup.h>
 #include <kernel/mem.h>
 #include <kernel/syscalls.h>
+#include <kernel/sysfunc.h>
 
 page_dir_entry kernel_page_dir[1024] __attribute__((aligned(4096)));
 page_table_entry new_base_page_table[1024] __attribute__((aligned(4096)));
@@ -188,6 +189,8 @@ void *get_phys_addr(void *vaddr) {
 }
 
 void* map_page_to(void *vaddr) {
+	if (kernel_tables[(uint32_t)vaddr/4096].present==1)
+		return 0;
 	for (uint32_t k=0; k<1048576; k++) {
 		if (!check_phys_page((void *)(k*4096))) {
 			map_addr(vaddr,(void *)(k*4096));
@@ -267,4 +270,13 @@ void *clone_tables() {
 	asm volatile("mov %0, %%cr3":: "r"(new_addr));
 	
 	return (void *)new_addr;
+}
+
+uint32_t free_pages() {
+	uint32_t retval = 0;
+	for (uint32_t i = 0; i < 131072; i++) {
+		if (!pmem_used[i])
+			retval++;
+	}
+	return retval;
 }
