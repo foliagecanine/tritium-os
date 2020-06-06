@@ -35,6 +35,15 @@ uint8_t mountDrive(uint8_t drive) {
 		} else {
 			return UNKNOWN_ERROR;
 		}
+	} else if (detect_fat16(drive)) {
+		FSMOUNT newMount = MountFAT16(drive);
+		if (strcmp(newMount.type,"FAT16")) {
+			mounts[numActiveMounts] = newMount;
+			numActiveMounts++;
+			return SUCCESS;
+		} else {
+			return UNKNOWN_ERROR;
+		}
 	} else {
 		return INCORRECT_FS_TYPE;
 	}
@@ -52,13 +61,22 @@ FILE fopen(const char *filename, const char *mode) {
 			//Filename without drive prefix
 			char* flongname = (char*) filename+2;
 			if (flongname&&device<9) {
-				if (mounts[device].mountEnabled&&strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
-					FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
-					uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
-					uint32_t NRDE = mnt->NumRootDirectoryEntries;
-					FILE retFile = FAT12_fopen(RDO, NRDE, flongname,mounts[device].drive,*mnt,0);
-					retFile.mountNumber = device;
-					return retFile;
+				if (mounts[device].mountEnabled) {
+					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
+						FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
+						uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
+						uint32_t NRDE = mnt->NumRootDirectoryEntries;
+						FILE retFile = FAT12_fopen(RDO, NRDE, flongname,mounts[device].drive,*mnt,0);
+						retFile.mountNumber = device;
+						return retFile;
+					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
+						FAT16_MOUNT *mnt = (FAT16_MOUNT *)mounts[device].mount;
+						uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
+						uint32_t NRDE = mnt->NumRootDirectoryEntries;
+						FILE retFile = FAT16_fopen(RDO, NRDE, flongname,mounts[device].drive,*mnt,0);
+						retFile.mountNumber = device;
+						return retFile;
+					}
 				}
 			}
 		}
@@ -74,6 +92,8 @@ uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 		return 1;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
 		return FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
+	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
+		return FAT16_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
 }
 

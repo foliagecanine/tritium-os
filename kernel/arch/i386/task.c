@@ -72,6 +72,11 @@ void create_process(void *prgm,size_t size) {
 		return;
 	current_task = &threads[pid-1];
 	enable_tasking();
+	//Load all the segment registers with the usermode data selector
+	//Then push the stack segment and the stack pointer (we need to change this)
+	//Then modify the flags so they enable interrupts on iret
+	//Push the code selector on the stack
+	//Push the location of the program in memory, then iret to enter usermode
 	asm volatile("\
 		cli; \
 		mov $0x23, %ax; \
@@ -80,7 +85,7 @@ void create_process(void *prgm,size_t size) {
 		mov %ax, %fs; \
 		mov %ax, %gs; \
 		push $0x23; \
-		push $0xF01000; \
+		push $0xF03FFB; \
 		pushf; \
 		pop %eax; \
 		or $0x200,%eax; \

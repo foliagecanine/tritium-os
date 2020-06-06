@@ -5,6 +5,8 @@
 #include <kernel/pci.h>
 #include <fs/disk.h>
 #include <fs/file.h>
+#include <fs/fat12.h>
+#include <fs/fat16.h>
 #include <kernel/syscalls.h>
 
 multiboot_memory_map_t *mmap;
@@ -43,7 +45,11 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		for(;;);
 	}
 	
-	FAT12_print_folder(0x2600,32,0);
+	if (strcmp(getDiskMount(0).type,"FAT12"))
+		FAT12_print_folder(((FAT12_MOUNT *)getDiskMount(0).mount)->RootDirectoryOffset*512+1,32,0);
+	
+	if (strcmp(getDiskMount(0).type,"FAT16"))
+		FAT16_print_folder(((FAT16_MOUNT *)getDiskMount(0).mount)->RootDirectoryOffset*512+1,32,0);
 	
 	printf("Press shift key to enter Kernel Debug Console.\n");
 	for (uint16_t i = 0; i < 1000; i++) {
@@ -66,10 +72,5 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		create_process(buf,prgm.size);
 	}
 
-	//Load all the segment registers with the usermode data selector
-	//Then push the stack segment and the stack pointer (we need to change this)
-	//Then modify the flags so they enable interrupts on iret
-	//Push the code selector on the stack
-	//Push the location of the program in memory, then iret to enter usermode
 	kerror("Kernel has reached end of code.");
 }

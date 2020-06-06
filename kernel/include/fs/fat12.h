@@ -5,6 +5,7 @@
 #include <fs/disk.h>
 #include <fs/fs.h>
 #include <fs/file.h>
+#include <fs/fat.h>
 
 typedef struct {
 	uint32_t MntSig;
