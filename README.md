@@ -42,18 +42,19 @@ Type `./qemu.sh` to build then immediately test it.
 You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
 You can use this to add virtual hard disks to the OS.
 
-A FAT12 formatted "floppy" is included (named floppy2.flp) and can be used as a hard disk as below  
-`./ahci-qemu.sh floppy2.flp "-boot d"`  
+A FAT16 formatted "floppy" is included (named floppy.flp) and can be used as a hard disk as below  
+`./ahci-qemu.sh floppy.flp "-boot d"` 
 Or a floppy disk (no controller implemented yet) like so  
-`./qemu.sh "-fda floppy2.flp" "-boot d"`
+`./qemu.sh "-fda floppy.flp" "-boot d"`
 
 You can also have two drives by using the ahci-qemu2.sh script as below:  
-`./ahci-qemu.sh floppy2.flp floppy.flp "-boot d"
+`./ahci-qemu.sh old/floppy2.flp floppy.flp "-boot d"`  
 
 There are three images included that can be used for testing.  
- - floppy2.flp	: A FAT12 formatted image for testing files less than 512 bytes
- - floppy.flp 	: A FAT12 formatted image for testing files greater than 512 bytes
- - testrand.img	: An image created by `dd if=/dev/urandom of=testrand.img bs=1K count=1440`, to be used for testing images with no valid filesystem.
+ - floppy.flp : A FAT16 formatted image that contains programs to run (>512 bytes)
+ - old/floppy2.flp	: A FAT12 formatted image for testing files less than 512 bytes
+ - old/floppy.flp 	: A FAT12 formatted image for testing files greater than 512 bytes
+ - old/testrand.img	: An image created by `dd if=/dev/urandom of=testrand.img bs=1K count=1440`, to be used for testing images with no valid filesystem.
 
 ### What are the rpi-* shell scripts?
 These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
