@@ -9,7 +9,7 @@ TritiumOS is an open-source operating system, successor to an
 unpublished, expiremental test OS named Rogue2OS
 
 This branch is the Development branch of TritiumOS. For the main branch, select "master" from the list of branches.  
-This branch has effectively rebuilt TritiumOS from the ground up by combining original TritiumOS code with new code. Several improvements have been made in this branch. However, several features (i.e disk IO, file systems) have been removed. These features will eventually come back.
+This branch has effectively rebuilt TritiumOS from the ground up by combining original TritiumOS code with new code. Several improvements have been made in this branch. The branches will be merged relatively soon (once programs like ls and cat are implemented)
 
 ## How do you build this?
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
