@@ -149,4 +149,7 @@ uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
 	if (command==1) {
 		return (uint32_t)(((terminal_column&0xFF)<<8)|(terminal_row&0xFF));
 	}
+	if (command==2) {
+		terminal_scroll();
+	}
 }

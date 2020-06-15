@@ -127,7 +127,6 @@ bool detect_fat16(uint8_t drive_num) {
 }
 
 FSMOUNT MountFAT16(uint8_t drive_num) {
-	print_fat16_values(drive_num);
 	//Get neccesary details. We don't need to check whether this is FAT16 because it is already done in file.c.
 	uint8_t read[512];
 	ahci_read_sector(drive_num,0,read);
@@ -334,8 +333,7 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 			curDiskLoc+=512;
 		}
 		rCluster = f16_getClusterValue(FAT,rCluster);
-		printf("rCluster: %d\n",(uint32_t)rCluster);
-		if (rCluster>=0xFF0) {
+		if (rCluster>=0xFFF0) {
 			break;
 		}
 	}

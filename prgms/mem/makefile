@@ -1,4 +1,4 @@
-LIBDIR=libc
+LIBDIR=../libc
 CFLAGS=-m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
 
 include $(LIBDIR)/make.config
@@ -16,7 +16,7 @@ MEM.PRG: $(OBJS) linker.ld
 	ld -T linker.ld $(OBJS) -o MEM.PRG
 	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -Ilibc/include
+	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
 	
 dump: MEM.PRG
 	objdump -D -b binary -mi386 MEM.PRG

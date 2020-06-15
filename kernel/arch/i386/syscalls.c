@@ -1,8 +1,10 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	10
+#define NUM_SYSCALLS	14
 
 extern void start_program(char *name);
+void fopen_usermode(FILE *f, const char* filename, const char* mode);
+void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -14,7 +16,11 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&yield,					// 6
 	&getpid,				// 7
 	&free_pages,			// 8
-	&terminal_option		// 9
+	&terminal_option,		// 9
+	&waitpid,				// 10
+	&get_retval,			// 11
+	&fopen_usermode,		// 12
+	&fread_usermode,		// 13
 };
 
 extern bool ts_enabled;
@@ -77,4 +83,18 @@ void init_syscalls() {
 	//Install all the syscalls we need
 	new_syscall(0x80,(uint32_t)&run_syscall_asm);
 	kprint("[INIT] Initialized Syscalls.");
+}
+
+void fopen_usermode(FILE *f, const char* filename, const char* mode) {
+	if ((uint32_t)f>0x100000&&(uint32_t)f+sizeof(FILE)<0xF04000) {
+		*f = fopen(filename,mode);
+	}
+}
+
+void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
+	uint64_t start = (((uint64_t)starth)<<32)|startl;
+	uint64_t len = (uint64_t)lenl;
+	if ((uint32_t)buf>0x100000&&(uint32_t)buf+len<0xF04000) {
+		fread(f,buf,start,len);
+	}
 }

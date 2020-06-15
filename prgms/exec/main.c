@@ -23,6 +23,7 @@ _Noreturn void main() {
 	writestring("Hello from EXEC.PRG!\n");
 	writestring("I'm going to launch TESTPRG.PRG now.\n");
 	exec("A:/PRGMS/TESTPRG2.PRG");
+	writestring("EXEC.PRG will now exit. Bye!\n");
 	exit(0);
 	for(;;);
 }

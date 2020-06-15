@@ -12,16 +12,25 @@ void writestring(char *string) {
 	syscall(0);
 }
 
-uint8_t exec(char *name) {
-	uint8_t retval;
+uint32_t exec(char *name) {
+	uint32_t retval;
 	asm volatile("mov %0,%%ebx"::"r"(name));
 	syscall(1);
-	asm volatile("mov %%al,%0":"=m"(retval):);
+	asm volatile("mov %%eax,%0":"=m"(retval):);
 	return retval;
 }
 
 void yield() {
 	syscall(6);
+}
+
+uint32_t waitpid(uint32_t pid) {
+	uint32_t retval;
+	asm volatile("mov %0,%%ebx"::"r"(pid));
+	syscall(10); //waitpid
+	syscall(11); //get_retval
+	asm volatile("mov %%eax,%0":"=m"(retval):);
+	return retval;
 }
 
 uint32_t getpid() {
@@ -35,6 +44,7 @@ char cmd[256] = "";
 char temp[256] = "";
 char cd[256] = "A:/";
 uint8_t index = 0;
+uint8_t child_pid = 0;
 
 void commandline() {
 	printf("%s>",cd);
@@ -57,7 +67,7 @@ void commandline() {
 			printf("\n");
 			break;
 		}
-		if (index!=254) {
+		if (index!=249) {
 			putchar(c);
 			cmd[index] = c;
 			cmd[index+1] = 0;
@@ -89,18 +99,25 @@ void commandline() {
 			syscall(2);
 		}
 	} else {
+		/*cmd[strlen(cmd)]='.';
+		cmd[strlen(cmd)]='P';
+		cmd[strlen(cmd)]='R';
+		cmd[strlen(cmd)]='G';
+		cmd[strlen(cmd)]=0;
 		memset(temp,0,256);
 		strcpy(temp,"A:/bin/");
 		memcpy(temp+strlen(temp),cmd,256-strlen(temp));
 		printf("Running %s...\n",temp);
-		if (exec(temp)) {
+		child_pid = exec(temp);
+		if (!child_pid) {
 			memset(temp,0,256);
 			strcpy(temp,"A:/prgms/");
 			for (uint8_t i = 9; i < 255; i++) {
 				temp[i]=cmd[i-9];
 			}
 			printf("Running %s...\n",temp);
-			if (exec(temp)) {
+			child_pid = exec(temp);
+			if (!child_pid) {
 				strcpy(temp,cd);
 				uint8_t off=0;
 				if (cd[strlen(cd)-1]!='/')
@@ -109,16 +126,118 @@ void commandline() {
 				temp[strlen(cd)-1+off]='/';
 				temp[256]=0;
 				printf("Running %s...\n",temp);
-				if (exec(temp)) {
-					printf("Error reading file!\n");
+				child_pid = exec(temp);
+				if (!child_pid) {
+					printf("Error reading file: %s!\n",cmd);
+				}
+			}
+		}*/
+		memset(temp,0,256);
+		strcpy(temp,"A:/bin/");
+		for (uint8_t i = 7; i != 0; i++) {
+			temp[i]=cmd[i-7];
+		}
+		temp[strlen(temp)]='.';
+		temp[strlen(temp)]='P';
+		temp[strlen(temp)]='R';
+		temp[strlen(temp)]='G';
+		temp[strlen(temp)]=0;
+		
+		printf("Running %s...\n",temp);
+		child_pid = exec(temp);
+		
+		if (!child_pid) {
+			memset(temp,0,256);
+			strcpy(temp,"A:/prgms/");
+			for (uint8_t i = 9; i != 0; i++) {
+				temp[i]=cmd[i-9];
+			}
+			temp[strlen(temp)]='.';
+			temp[strlen(temp)]='P';
+			temp[strlen(temp)]='R';
+			temp[strlen(temp)]='G';
+			temp[strlen(temp)]=0;
+			
+			printf("Running %s...\n",temp);
+			child_pid = exec(temp);
+			
+			if (!child_pid) {
+				memset(temp,0,256);
+				strcpy(temp,cd);
+				if (temp[strlen(temp)-1]!='/')
+					temp[strlen(temp)]='/';
+				uint8_t c = strlen(temp);
+				for (uint8_t i = c; i != 0; i++) {
+					temp[i]=cmd[i-c];
+				}
+				temp[strlen(temp)]='.';
+				temp[strlen(temp)]='P';
+				temp[strlen(temp)]='R';
+				temp[strlen(temp)]='G';
+				temp[strlen(temp)]=0;
+
+				printf("Running %s...\n",temp);
+				child_pid = exec(temp);
+				
+				if (!child_pid) {
+					memset(temp,0,256);
+					strcpy(temp,"A:/bin/");
+					for (uint8_t i = 7; i != 0; i++) {
+						temp[i]=cmd[i-7];
+					}
+					temp[strlen(temp)]='.';
+					temp[strlen(temp)]='S';
+					temp[strlen(temp)]='Y';
+					temp[strlen(temp)]='S';
+					temp[strlen(temp)]=0;
+
+					printf("Running %s...\n",temp);
+					child_pid = exec(temp);
+					
+					if (!child_pid) {
+						memset(temp,0,256);
+						strcpy(temp,"A:/prgms/");
+						for (uint8_t i = 9; i != 0; i++) {
+							temp[i]=cmd[i-9];
+						}
+						temp[strlen(temp)]='.';
+						temp[strlen(temp)]='S';
+						temp[strlen(temp)]='Y';
+						temp[strlen(temp)]='S';
+						temp[strlen(temp)]=0;
+
+						printf("Running %s...\n",temp);
+						child_pid = exec(temp);
+						
+						if (!child_pid) {
+							memset(temp,0,256);
+							strcpy(temp,cd);
+							if (temp[strlen(temp)-1]!='/')
+								temp[strlen(temp)]='/';
+							uint8_t d = strlen(temp);
+							for (uint8_t i = d; i != 0; i++) {
+								temp[i]=cmd[i-d];
+							}
+							temp[strlen(temp)]='.';
+							temp[strlen(temp)]='S';
+							temp[strlen(temp)]='Y';
+							temp[strlen(temp)]='S';
+							temp[strlen(temp)]=0;
+							
+							printf("Running %s...\n",temp);
+							child_pid = exec(temp);
+							if (!child_pid)
+								printf("No file found.\n");
+						}
+					}
 				}
 			}
 		}
 	}
 	
-	
 	index = 0;
-	cmd[0] = 0;
+	memset(cmd,0,256);
+	
 }
 
 _Noreturn void main() {

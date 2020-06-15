@@ -1,4 +1,4 @@
-LIBDIR=libc
+LIBDIR=../libc
 CFLAGS=-m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
 
 include $(LIBDIR)/make.config
@@ -16,7 +16,7 @@ SHELL.SYS: $(OBJS) linker.ld
 	ld -T linker.ld $(OBJS) -o SHELL.SYS
 	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -Ilibc/include
+	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
 	
 dump: SHELL.SYS
 	objdump -D -b binary -mi386 SHELL.SYS

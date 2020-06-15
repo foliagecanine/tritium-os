@@ -100,26 +100,23 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 	if (slot==0xFFFFFFFF)
 		return 1;
 	
-	uint32_t phys_buf = (uint32_t)get_phys_addr(buf);
-	
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
 	cmdheader->w = 0;
-	cmdheader->prdtl = (uint16_t)((count-1)>>4)+1;
+	cmdheader->prdtl = (uint16_t)count;//(uint16_t)((count-1)>>4)+1;
 	
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 	
 	uint16_t i;
 	for (i = 0; i < cmdheader->prdtl-1; i++) {
-		cmdtable->prdt_entry[i].dba = phys_buf;
+		cmdtable->prdt_entry[i].dba = (uint32_t)get_phys_addr(buf+(i*512));
 		cmdtable->prdt_entry[i].dbau = 0;
-		cmdtable->prdt_entry[i].dbc = 8192;
+		cmdtable->prdt_entry[i].dbc = 512;
 		cmdtable->prdt_entry[i].i = 1;
-		phys_buf+=4096;
-		count-=16;
+		count-=1;
 	}
-	cmdtable->prdt_entry[i].dba = phys_buf;
+	cmdtable->prdt_entry[i].dba = (uint32_t)get_phys_addr(buf+(i*512));
 	cmdtable->prdt_entry[i].dbau = 0;
 	cmdtable->prdt_entry[i].dbc = count<<9;
 	cmdtable->prdt_entry[i].i = 1;
@@ -171,8 +168,6 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 	if (slot==0xFFFFFFFF)
 		return 1;
 	
-	uint32_t phys_buf = (uint32_t)get_phys_addr(buf);
-	
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
@@ -183,14 +178,13 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 	
 	uint16_t i;
 	for (i = 0; i < cmdheader->prdtl-1; i++) {
-		cmdtable->prdt_entry[i].dba = phys_buf;
+		cmdtable->prdt_entry[i].dba = (uint32_t)get_phys_addr(buf+(i*4096));
 		cmdtable->prdt_entry[i].dbau = 0;
 		cmdtable->prdt_entry[i].dbc = 8192;
 		cmdtable->prdt_entry[i].i = 1;
-		phys_buf+=4096;
 		count-=16;
 	}
-	cmdtable->prdt_entry[i].dba = phys_buf;
+	cmdtable->prdt_entry[i].dba = (uint32_t)get_phys_addr(buf+(i*4096));
 	cmdtable->prdt_entry[i].dbau = 0;
 	cmdtable->prdt_entry[i].dbc = count<<9;
 	cmdtable->prdt_entry[i].i = 1;
