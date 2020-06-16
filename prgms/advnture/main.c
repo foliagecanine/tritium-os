@@ -26,7 +26,7 @@ uint8_t num_inv_items = 0;
 item items[MAX_INV_ITEMS];
 bool doors[12];
 
-#define NUM_COMMANDS 10
+#define NUM_COMMANDS 11
 
 char *commands[NUM_COMMANDS] = {
 	"help",
@@ -35,6 +35,7 @@ char *commands[NUM_COMMANDS] = {
 	"inv",
 	"look {under/at} [object]",
 	"take [object]",
+	"open [container]",
 	"north/n",
 	"south/s",
 	"east/e",
@@ -48,6 +49,7 @@ char *helptext[NUM_COMMANDS] = {
 	"Show items in your inventory",
 	"Look under/at object specified",
 	"Grab the specified object",
+	"Open the specified container",
 	"Go north",
 	"Go south",
 	"Go east",
@@ -57,13 +59,13 @@ char *helptext[NUM_COMMANDS] = {
 char *cr_texts[3][3] = {
 	{
 		"You are in a stone room with a red carpet and door to the north.",
-		"You are in an empty room. There is a door to the south.",
-		"Error: no room text",
+		"You are in a stone room with a lit torch attached to the wall.\nThere is a door to the south and the north.",
+		"You are in a stone room with a door to the east and the south.\nThere is a sign that says \"LOOK AT THE WALL.\"",
 	},
 	{
-		"You are in an empty room. There is a door to the west.",
+		"You are in a stone room with a chest in the center. There is a door to the west.",
 		"Error: no room text",
-		"Error: no room text",
+		"You are in an empty stone room with a door to the west.",
 	},
 	{
 		"Error: no room text",
@@ -150,7 +152,13 @@ uint8_t run() {
 	}
 	
 	if (cr_x==1&&cr_y==2) {
-		
+		if (strcmp(cmd,"w")||strcmp(cmd,"west")) {
+			printf("You walk west\n");
+			cr_x--;
+		}
+		if (strcmp(cmd,"look at wall")) {
+			printf("This game isn't finished you know.\n");
+		}
 	}
 	
 	if (cr_x==1&&cr_y==1) {
@@ -158,18 +166,50 @@ uint8_t run() {
 	}
 	
 	if (cr_x==1&&cr_y==0) {
-		if (strcmp(cmd,"w")) {
+		if (strcmp(cmd,"w")||strcmp(cmd,"west")) {
 			printf("You walk west\n");
 			cr_x--;
+		}
+		if (strcmp(cmd,"open chest")) {
+			printf("You open the chest and find");
+			if (has(1)) {
+				printf(" nothing\n");
+			} else {
+				printf(" a blue key.\nYou take the key.\n");
+				give_item(1);
+			}
 		}
 	}
 	
 	if (cr_x==0&&cr_y==2) {
-		
+		if (strcmp(cmd,"s")||strcmp(cmd,"south")) {
+			printf("You walk south\n");
+			cr_y--;
+		}
+		if (strcmp(cmd,"e")||strcmp(cmd,"east")) {
+			if (doors[2]||has(1)) {
+				if (has(1)) {
+					printf("You insert the blue key.\nIt unlocks, but the key won't come out.\n");
+					remove_item(1);
+					doors[2]=true;
+				}
+				cr_x++;
+				printf("You walk east\n");
+			} else {
+				printf("That door is locked.\n");
+			}
+		}
+		if (strcmp(cmd,"look at wall")) {
+			printf("You find tiny text on the wall that says \"Not here! The other room!\"\n");
+		}
 	}
 	
 	if (cr_x==0&&cr_y==1) {
-		if (strcmp(cmd,"s")) {
+		if (strcmp(cmd,"n")||strcmp(cmd,"north")) {
+			printf("You walk north\n");
+			cr_y++;
+		}
+		if (strcmp(cmd,"s")||strcmp(cmd,"south")) {
 			printf("You walk south\n");
 			cr_y--;
 		}
@@ -179,10 +219,10 @@ uint8_t run() {
 		if (strcmp(cmd,"n")||strcmp(cmd,"north")) {
 			if (doors[1]||has(0)) {
 				if (has(0)) {
-					printf("You insert the key.\nIt unlocks, but the key won't come out.\n");
+					printf("You insert the red key.\nIt unlocks, but the key won't come out.\n");
 					remove_item(0);
+					doors[1]=true;
 				}
-				doors[1]=true;
 				cr_y++;
 				printf("You walk north\n");
 			} else {
@@ -226,7 +266,7 @@ uint8_t run() {
 		} else if (num_inv_items==1) {
 			for (uint8_t i = 0; i < MAX_INV_ITEMS; i++) {
 				if (has(i)) {
-					printf("%s",items[0].name);
+					printf("%s",items[i].name);
 					break;
 				}
 			}
@@ -271,6 +311,9 @@ _Noreturn void main() {
 	memset(inventory,0xFF,16);
 	
 	items[0].name = "a red key";
+	items[1].name = "a blue key";
+	
+	current_room_text = cr_texts[cr_x][cr_y];
 	
 	while(run())
 		current_room_text = cr_texts[cr_x][cr_y];
