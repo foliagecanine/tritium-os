@@ -16,7 +16,7 @@ SHELL.SYS: $(OBJS) linker.ld
 	ld -T linker.ld $(OBJS) -o SHELL.SYS
 	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
+	$(GCC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
 	
 dump: SHELL.SYS
 	objdump -D -b binary -mi386 SHELL.SYS
@@ -32,3 +32,6 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.objdump
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 	rm SHELL.SYS
+
+install: SHELL.SYS
+	sudo cp SHELL.SYS /mnt/F1/bin

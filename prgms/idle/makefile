@@ -7,3 +7,6 @@ upload: IDLE.SYS
 	sudo cp IDLE.SYS /mnt/F1/bin
 	sudo umount /mnt/F1
 	sudo rmdir /mnt/F1
+
+install: IDLE.SYS
+	sudo cp IDLE.SYS /mnt/F1/bin

@@ -7,3 +7,6 @@ upload: TESTPRG.PRG
 	sudo cp TESTPRG.PRG /mnt/F1/prgms
 	sudo umount /mnt/F1
 	sudo rmdir /mnt/F1
+
+install: TESTPRG.PRG
+	sudo cp TESTPRG.PRG /mnt/F1/prgms

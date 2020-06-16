@@ -45,6 +45,7 @@ char temp[256] = "";
 char cd[256] = "A:/";
 uint8_t index = 0;
 uint8_t child_pid = 0;
+bool failed = false;
 
 void commandline() {
 	printf("%s>",cd);
@@ -132,6 +133,7 @@ void commandline() {
 				}
 			}
 		}*/
+		
 		memset(temp,0,256);
 		strcpy(temp,"A:/bin/");
 		for (uint8_t i = 7; i != 0; i++) {
@@ -226,13 +228,19 @@ void commandline() {
 							
 							printf("Running %s...\n",temp);
 							child_pid = exec(temp);
-							if (!child_pid)
+							if (!child_pid) {
 								printf("No file found.\n");
+								failed = true;
+							}
 						}
 					}
 				}
 			}
 		}
+	}
+	
+	if (!failed) {
+		waitpid(child_pid);
 	}
 	
 	index = 0;

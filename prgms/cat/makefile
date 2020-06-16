@@ -16,7 +16,7 @@ CAT.PRG: $(OBJS) linker.ld
 	ld -T linker.ld $(OBJS) -o CAT.PRG
 	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
+	$(GCC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
 	
 dump: CAT.PRG
 	objdump -D -b binary -mi386 CAT.PRG
@@ -32,3 +32,6 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.objdump
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 	rm CAT.PRG
+
+install: CAT.PRG
+	sudo cp CAT.PRG /mnt/F1/bin

@@ -15,3 +15,6 @@ upload: EXEC.PRG
 clean:
 	rm main.o
 	rm EXEC.PRG
+
+install: EXEC.PRG
+	sudo cp EXEC.PRG /mnt/F1/prgms

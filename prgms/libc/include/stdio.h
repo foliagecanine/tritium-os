@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+#define true 1
+#define false 0
+#define bool _Bool
+
 int printf(const char* __restrict, ...);
 int putchar(int);
 void terminal_clear();

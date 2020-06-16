@@ -16,7 +16,7 @@ MEM.PRG: $(OBJS) linker.ld
 	ld -T linker.ld $(OBJS) -o MEM.PRG
 	
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
+	$(GCC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
 	
 dump: MEM.PRG
 	objdump -D -b binary -mi386 MEM.PRG
@@ -32,3 +32,6 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.objdump
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 	rm MEM.PRG
+
+install: MEM.PRG
+	sudo cp MEM.PRG /mnt/F1/bin
