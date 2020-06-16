@@ -26,7 +26,7 @@ uint8_t num_inv_items = 0;
 item items[MAX_INV_ITEMS];
 bool doors[12];
 
-#define NUM_COMMANDS 11
+#define NUM_COMMANDS 12
 
 char *commands[NUM_COMMANDS] = {
 	"help",
@@ -35,6 +35,7 @@ char *commands[NUM_COMMANDS] = {
 	"inv",
 	"look {under/at} [object]",
 	"take [object]",
+	"place [object]",
 	"open [container]",
 	"north/n",
 	"south/s",
@@ -49,6 +50,7 @@ char *helptext[NUM_COMMANDS] = {
 	"Show items in your inventory",
 	"Look under/at object specified",
 	"Grab the specified object",
+	"Place the specified object",
 	"Open the specified container",
 	"Go north",
 	"Go south",
@@ -65,7 +67,7 @@ char *cr_texts[3][3] = {
 	{
 		"You are in a stone room with a chest in the center. There is a door to the west.",
 		"Error: no room text",
-		"You are in an empty stone room with a door to the west.",
+		"You are in a stone room with a door to the west. It's rather dark in here.\nMaybe it's because there's no torch in the torch holder.",
 	},
 	{
 		"Error: no room text",
@@ -141,31 +143,36 @@ uint8_t run() {
 	
 	if (cr_x==2&&cr_y==2) {
 		
-	}
-	
-	if (cr_x==2&&cr_y==1) {
+	} else if (cr_x==2&&cr_y==1) {
 		
-	}
-	
-	if (cr_x==2&&cr_y==0) {
+	} else if (cr_x==2&&cr_y==0) {
 		
-	}
-	
-	if (cr_x==1&&cr_y==2) {
+	} else if (cr_x==1&&cr_y==2) {
 		if (strcmp(cmd,"w")||strcmp(cmd,"west")) {
 			printf("You walk west\n");
 			cr_x--;
 		}
-		if (strcmp(cmd,"look at wall")) {
-			printf("This game isn't finished you know.\n");
+		if ((strcmp(cmd,"s")||strcmp(cmd,"south"))&&doors[3]) {
+			printf("You walk south\n");
+			cr_y--;
 		}
-	}
-	
-	if (cr_x==1&&cr_y==1) {
+		if (strcmp(cmd,"place torch")&&has(2)) {
+			printf("You place the torch in the torch holder.\n");
+			printf("A door opens to the south.\n");
+			items[2].x = cr_x;
+			items[2].y = cr_y;
+			cr_texts[cr_x][cr_y] = "You are in a stone room with a lit torch attached to the wall.\nThere is a door to the west.";
+			remove_item(2);
+			doors[3] = true;
+		}
+		if (strcmp(cmd,"take torch")&&items[2].x==cr_x&&items[2].y==cr_y) {
+			printf("You take the torch. The door to the south closes.\n");
+			doors[3]=false;
+			give_item(2);
+		}
+	} else if (cr_x==1&&cr_y==1) {
 		
-	}
-	
-	if (cr_x==1&&cr_y==0) {
+	} else if (cr_x==1&&cr_y==0) {
 		if (strcmp(cmd,"w")||strcmp(cmd,"west")) {
 			printf("You walk west\n");
 			cr_x--;
@@ -179,9 +186,7 @@ uint8_t run() {
 				give_item(1);
 			}
 		}
-	}
-	
-	if (cr_x==0&&cr_y==2) {
+	} else if (cr_x==0&&cr_y==2) {
 		if (strcmp(cmd,"s")||strcmp(cmd,"south")) {
 			printf("You walk south\n");
 			cr_y--;
@@ -202,9 +207,7 @@ uint8_t run() {
 		if (strcmp(cmd,"look at wall")) {
 			printf("You find tiny text on the wall that says \"Not here! The other room!\"\n");
 		}
-	}
-	
-	if (cr_x==0&&cr_y==1) {
+	} else if (cr_x==0&&cr_y==1) {
 		if (strcmp(cmd,"n")||strcmp(cmd,"north")) {
 			printf("You walk north\n");
 			cr_y++;
@@ -213,9 +216,19 @@ uint8_t run() {
 			printf("You walk south\n");
 			cr_y--;
 		}
-	}
-	
-	if (cr_x==0&&cr_y==0) {
+		if (strcmp(cmd,"place torch")&&has(2)) {
+			printf("You place the torch in the torch holder.\n");
+			items[2].x = cr_x;
+			items[2].y = cr_y;
+			cr_texts[cr_x][cr_y] = "You are in a stone room with a lit torch attached to the wall.\nThere is a door to the south and the north.";
+			remove_item(2);
+		}
+		if (strcmp(cmd,"take torch")&&items[2].x==cr_x&&items[2].y==cr_y) {
+			printf("You take the torch.\n");
+			cr_texts[cr_x][cr_y] = "You are in a stone room with a door to the north and the south. It's rather dark in here.\nMaybe it's because there's no torch in the torch holder.",
+			give_item(2);
+		}
+	} else if (cr_x==0&&cr_y==0) {
 		if (strcmp(cmd,"n")||strcmp(cmd,"north")) {
 			if (doors[1]||has(0)) {
 				if (has(0)) {
@@ -312,6 +325,9 @@ _Noreturn void main() {
 	
 	items[0].name = "a red key";
 	items[1].name = "a blue key";
+	items[2].name = "a torch";
+	items[2].x = 0;
+	items[2].y = 1;
 	
 	current_room_text = cr_texts[cr_x][cr_y];
 	
