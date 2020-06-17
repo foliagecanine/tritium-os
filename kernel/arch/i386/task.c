@@ -32,7 +32,7 @@ void init_tasking(uint32_t num_pages) {
 	kprint("[INIT] Tasking initialized.");
 }
 
-uint32_t init_new_process(void *prgm, size_t size, char* arguments, size_t argsize) {
+uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t argl_vaddr) {
 	volatile uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
 		if (threads[pid-1].pid==0)
@@ -56,17 +56,22 @@ uint32_t init_new_process(void *prgm, size_t size, char* arguments, size_t argsi
 		memset((void *)0x100000+(i*4096),0,4096);
 	}
 	
-	//Program stack: 0xF00000 to 0xF04000, Program arguments 0xF04000 to 0xF05000
+	//Program stack: 0xF00000 to 0xF04000
 	memcpy((void *)0x100000,prgm,size);
-	for (uint8_t i = 0; i < 5; i++) {
+	for (uint8_t i = 0; i < 4; i++) {
 		map_page_to((void *)0xF00000+(i*4096));
 		mark_user((void *)0xF00000+(i*4096),true);
 	}
 	
-	//Total space: 16+5 pages = 64KiB + 20 KiB = 84 KiB per process
-	if (argsize!=0) {
-		memcpy((void *)0xF04000,arguments,argsize);
+	//Program arguments 0xF04000 to 0xF05000
+	if (argl_paddr) {
+		map_addr(0xF04000,argl_paddr);
+	} else {
+		map_page_to((void *)0xF04000);
 	}
+	mark_user((void *)0xF04000,true);
+	
+	//Total space: 16+5 pages = 64KiB + 20 KiB = 84 KiB per process
 	
 	threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
 	threads[pid-1].tss.eip = 0x100000;
@@ -77,8 +82,8 @@ uint32_t init_new_process(void *prgm, size_t size, char* arguments, size_t argsi
 	return pid;
 }
 
-void create_idle_process(void *prgm, size_t size, char* arguments, size_t argsize) {
-	init_new_process(prgm,size,arguments,argsize);
+void create_idle_process(void *prgm, size_t size, char* arguments, size_t argvize) {
+	init_new_process(prgm,size,arguments,argvize);
 	use_kernel_map();
 }
 
@@ -230,54 +235,63 @@ void yield() {
 }
 
 FILE prgm;
+uint32_t argl_v;
 
 uint32_t exec_syscall(char *name, char **arguments) {
 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
 	uint32_t *current_tables = get_current_tables();
 	
-	//Make sure arguments are present
+	uint32_t argc = 0;
+	char **argv = alloc_page(1);
+	memset(argv,0,4096);
+	void *aptr = argv;
+	
 	if (arguments) {
 		//Count arguments until we reach a NULL.
-		uint32_t argc = 0;
 		while (arguments[argc]!=NULL)
 			argc++;
-		printf("%d ARGUMENTS FOUND\n",argc);
-		for (uint32_t i = 0; arguments[i]!=NULL; i++) {
-			printf("Argument %d: %s\n",i,arguments[i]);
+	}
+	
+	aptr+=sizeof(char *)*(argc+2); //Reserve space for the pointers
+	argv[0] = (uint32_t *)(((uint32_t)aptr%0x1000)+0xF04000);
+	strcpy(aptr,name);
+	aptr+=strlen(name);
+	aptr++;
+	argc++;
+	
+	//Make sure arguments are present
+	if (arguments) {
+		for (uint32_t i = 0; i < argc-1; i++) {
+			argv[i+1] = (uint32_t *)(((uint32_t)aptr%0x1000)+0xF04000);
+			strcpy(aptr,arguments[i]);
+			aptr+=strlen(arguments[i]);
+			aptr++;
 		}
 	}
-	/*uint32_t *args = alloc_page(1);
-	char **aptr = args;
-	aptr+=sizeof(char *)*(argc+1); //Reserve space for the pointers
-	args[0] = aptr;
-	aptr = strcpy(aptr,name);
-	aptr++;
-	for (uint32_t i = 0; i < argc; i++) {
-		args[i+1] = (uint32_t *)aptr;
-		aptr = strcpy(aptr,arguments[i]);
-		aptr++;
-	}
-	char **test = args;
-	for (uint32_t i = 0; test[i]!=NULL; i++) {
-		printf("ARGUMENT: %s\n",test[i]);
-	}*/
+	
+	argl_v = (uint32_t)get_phys_addr(argv);
+	
 	prgm = fopen(name,"r");
 	if (prgm.valid&&!prgm.directory) {
 		use_kernel_map();
 		void *buf = alloc_page((prgm.size/4096)+1);
 		memset(buf,0,((prgm.size/4096)+1)*4096);
 		if (!fread(&prgm,buf,0,prgm.size)) {
-			uint32_t pid = init_new_process(buf,prgm.size,(char*)0,0);
+			uint32_t pid = init_new_process(buf,prgm.size,argl_v,0);
 			threads[pid-1].parent=current_task;
+			threads[pid-1].tss.eax=argc;
+			threads[pid-1].tss.ecx=0xF04000;
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			trade_vaddr(argv);
 			return pid;
 		} else {
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			trade_vaddr(argv);
 			return 0;
 		}
 	} else {

@@ -179,6 +179,16 @@ void unmap_vaddr(void *vaddr) {
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
+void trade_vaddr(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	//Don't release the page, because the program has given it to another address space
+	kernel_tables[vaddr_page].address = 0;
+	kernel_tables[vaddr_page].readwrite = 0;
+	kernel_tables[vaddr_page].present = 0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
 void mark_user(void *vaddr,_Bool user) {
 	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");

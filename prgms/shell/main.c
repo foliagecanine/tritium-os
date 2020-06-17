@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
-__asm__("jmp main");
+__asm__("push %ecx; push %eax; call main");
 
 static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
@@ -283,7 +282,7 @@ void commandline() {
 
 #define INTRO
 
-_Noreturn void main() {
+_Noreturn void main(uint32_t argc, char **argv) {
 	writestring("Hello from SHELL.SYS!\n");
 	terminal_init();
 	printf("ElectronShell online.\n");
@@ -298,6 +297,7 @@ _Noreturn void main() {
 	printf("\n");
 	printf("Remember, you don't need to put PRG or SYS at the end.\n");
 	printf("The shell does that for you.\n");
+	printf("Argc: %d | Argv: %#\n",argc,(uint64_t)argv);
 #endif
 	for(;;) {
 		commandline();
