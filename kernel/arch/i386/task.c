@@ -32,7 +32,7 @@ void init_tasking(uint32_t num_pages) {
 	kprint("[INIT] Tasking initialized.");
 }
 
-uint32_t init_new_process(void *prgm, size_t size) {
+uint32_t init_new_process(void *prgm, size_t size, char* arguments, size_t argsize) {
 	volatile uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
 		if (threads[pid-1].pid==0)
@@ -49,15 +49,23 @@ uint32_t init_new_process(void *prgm, size_t size) {
 	threads[pid-1].cr3 = new;
 	threads[pid-1].tables = get_current_tables();
 	
+	//Program code and variables: 0x100000 to 0x110000
 	for (uint32_t i = 0; i < 16; i++) {
 		map_page_to((void *)0x100000+(i*4096));
 		mark_user((void *)0x100000+(i*4096),true);
 		memset((void *)0x100000+(i*4096),0,4096);
 	}
+	
+	//Program stack: 0xF00000 to 0xF04000, Program arguments 0xF04000 to 0xF05000
 	memcpy((void *)0x100000,prgm,size);
-	for (uint8_t i = 0; i < 4; i++) {
+	for (uint8_t i = 0; i < 5; i++) {
 		map_page_to((void *)0xF00000+(i*4096));
 		mark_user((void *)0xF00000+(i*4096),true);
+	}
+	
+	//Total space: 16+5 pages = 64KiB + 20 KiB = 84 KiB per process
+	if (argsize!=0) {
+		memcpy((void *)0xF04000,arguments,argsize);
 	}
 	
 	threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
@@ -69,13 +77,13 @@ uint32_t init_new_process(void *prgm, size_t size) {
 	return pid;
 }
 
-void create_idle_process(void *prgm,size_t size) {
-	init_new_process(prgm,size);
+void create_idle_process(void *prgm, size_t size, char* arguments, size_t argsize) {
+	init_new_process(prgm,size,arguments,argsize);
 	use_kernel_map();
 }
 
 void create_process(void *prgm,size_t size) {
-	uint32_t pid = init_new_process(prgm,size);
+	uint32_t pid = init_new_process(prgm,size,(char*)0,0);
 	if (!pid)
 		return;
 	current_task = &threads[pid-1];
@@ -151,7 +159,7 @@ void start_program(char *name) {
 		void *buf = alloc_page((prgm.size/4096)+1);
 		if (!fread(&prgm,buf,0,prgm.size)) {
 			use_kernel_map();
-			create_idle_process(buf,prgm.size);
+			create_idle_process(buf,prgm.size,(char*)0,0);
 		} else
 			kerror("Failed to read file.");
 	} else
@@ -223,19 +231,44 @@ void yield() {
 
 FILE prgm;
 
-uint32_t exec_syscall(char *name) {
+uint32_t exec_syscall(char *name, char **arguments) {
 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
 	uint32_t *current_tables = get_current_tables();
-	void *temp = alloc_page(1); //Resets the page tables because they broke for some reason
+	
+	//Make sure arguments are present
+	if (arguments) {
+		//Count arguments until we reach a NULL.
+		uint32_t argc = 0;
+		while (arguments[argc]!=NULL)
+			argc++;
+		printf("%d ARGUMENTS FOUND\n",argc);
+		for (uint32_t i = 0; arguments[i]!=NULL; i++) {
+			printf("Argument %d: %s\n",i,arguments[i]);
+		}
+	}
+	/*uint32_t *args = alloc_page(1);
+	char **aptr = args;
+	aptr+=sizeof(char *)*(argc+1); //Reserve space for the pointers
+	args[0] = aptr;
+	aptr = strcpy(aptr,name);
+	aptr++;
+	for (uint32_t i = 0; i < argc; i++) {
+		args[i+1] = (uint32_t *)aptr;
+		aptr = strcpy(aptr,arguments[i]);
+		aptr++;
+	}
+	char **test = args;
+	for (uint32_t i = 0; test[i]!=NULL; i++) {
+		printf("ARGUMENT: %s\n",test[i]);
+	}*/
 	prgm = fopen(name,"r");
-	free_page(temp,1);
 	if (prgm.valid&&!prgm.directory) {
 		use_kernel_map();
 		void *buf = alloc_page((prgm.size/4096)+1);
 		memset(buf,0,((prgm.size/4096)+1)*4096);
 		if (!fread(&prgm,buf,0,prgm.size)) {
-			uint32_t pid = init_new_process(buf,prgm.size);
+			uint32_t pid = init_new_process(buf,prgm.size,(char*)0,0);
 			threads[pid-1].parent=current_task;
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);

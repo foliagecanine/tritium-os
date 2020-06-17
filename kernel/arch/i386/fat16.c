@@ -340,3 +340,9 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 	free_page(FAT,((fm.FATSize*512)/4096)+1);
 	return 0;
 }
+
+uint8_t FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
+	if (!file)
+		return;
+	
+}

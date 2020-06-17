@@ -1,3 +1,4 @@
+GCC=gcc
 LIBDIR=../libc
 CFLAGS=-m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
 

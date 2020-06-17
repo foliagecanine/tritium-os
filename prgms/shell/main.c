@@ -14,9 +14,17 @@ void writestring(char *string) {
 
 uint32_t exec(char *name) {
 	uint32_t retval;
-	asm volatile("mov %0,%%ebx"::"r"(name));
+	asm volatile("mov %0,%%ebx; mov $0,%%ecx"::"r"(name));
 	syscall(1);
 	asm volatile("mov %%eax,%0":"=m"(retval):);
+	return retval;
+}
+
+uint32_t exec_args(char *name, char **arguments) {
+	uint32_t retval;
+	asm volatile("pusha; mov %0,%%ebx; mov %1,%%ecx"::"r"(name),"r"(arguments));
+	syscall(1);
+	asm volatile("mov %%eax,%0; popa":"=m"(retval):);
 	return retval;
 }
 
@@ -41,6 +49,7 @@ uint32_t getpid() {
 }
 
 char cmd[256] = "";
+char args[256] = "";
 char temp[256] = "";
 char cd[256] = "A:/";
 uint8_t index = 0;
@@ -134,6 +143,30 @@ void commandline() {
 			}
 		}*/
 		
+		char *argstart = strchr(cmd,' ');
+		char *argv[256];
+		uint8_t argc = 0;
+		memset(argv,0,sizeof(char *)*128);
+		argv[0]=NULL;
+		if (argstart) {
+			memset(args,0,256);
+			strcpy(args,argstart+1);
+			memset(argstart,0,256-strlen(cmd));
+			uint8_t max = strlen(args);
+			uint8_t argvptr = 0;
+			argc = 1;
+			argv[0]=args;
+			
+			//Replace all instances of space with zero to denote end of string
+			for (char *i = args; i<max+args; i++) {
+				if (*i==' ') {
+					*i=0;
+					argv[++argvptr] = i+1;
+					argc++;
+				}
+			}
+		}
+		
 		memset(temp,0,256);
 		strcpy(temp,"A:/bin/");
 		for (uint8_t i = 7; i != 0; i++) {
@@ -146,7 +179,7 @@ void commandline() {
 		temp[strlen(temp)]=0;
 		
 		printf("Running %s...\n",temp);
-		child_pid = exec(temp);
+		child_pid = exec_args(temp,argv);
 		
 		if (!child_pid) {
 			memset(temp,0,256);
@@ -161,7 +194,7 @@ void commandline() {
 			temp[strlen(temp)]=0;
 			
 			printf("Running %s...\n",temp);
-			child_pid = exec(temp);
+			child_pid = exec_args(temp,argv);
 			
 			if (!child_pid) {
 				memset(temp,0,256);
@@ -179,7 +212,7 @@ void commandline() {
 				temp[strlen(temp)]=0;
 
 				printf("Running %s...\n",temp);
-				child_pid = exec(temp);
+				child_pid = exec_args(temp,argv);
 				
 				if (!child_pid) {
 					memset(temp,0,256);
@@ -194,7 +227,7 @@ void commandline() {
 					temp[strlen(temp)]=0;
 
 					printf("Running %s...\n",temp);
-					child_pid = exec(temp);
+					child_pid = exec_args(temp,argv);
 					
 					if (!child_pid) {
 						memset(temp,0,256);
@@ -209,7 +242,7 @@ void commandline() {
 						temp[strlen(temp)]=0;
 
 						printf("Running %s...\n",temp);
-						child_pid = exec(temp);
+						child_pid = exec_args(temp,argv);
 						
 						if (!child_pid) {
 							memset(temp,0,256);
@@ -227,7 +260,7 @@ void commandline() {
 							temp[strlen(temp)]=0;
 							
 							printf("Running %s...\n",temp);
-							child_pid = exec(temp);
+							child_pid = exec_args(temp,argv);
 							if (!child_pid) {
 								printf("No file found.\n");
 								failed = true;
@@ -248,10 +281,24 @@ void commandline() {
 	
 }
 
+#define INTRO
+
 _Noreturn void main() {
 	writestring("Hello from SHELL.SYS!\n");
 	terminal_init();
 	printf("ElectronShell online.\n");
+#ifdef INTRO
+	printf("\n");
+	printf("Sorry, but right now there's no directory listing program.\n");
+	printf("Instead, here's some commands you could try:\n");
+	printf("ADVNTURE - Text adventure mini-game\n");
+	printf("CAT - Print README.TXT\n");
+	printf("EXEC - Test the exec syscall\n");
+	printf("If you want more, look in the PRGMS directory in the source code\n");
+	printf("\n");
+	printf("Remember, you don't need to put PRG or SYS at the end.\n");
+	printf("The shell does that for you.\n");
+#endif
 	for(;;) {
 		commandline();
 	}

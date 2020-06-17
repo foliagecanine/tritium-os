@@ -97,6 +97,17 @@ uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	}
 }
 
+//We expect buf to be 256 characters long
+uint8_t readdir(FILE *file, char* buf, uint32_t n) {
+	if (!file)
+		return 1;
+	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
+		//return FAT12_readdir(file,buf,n,mounts[file->mountNumber].drive);
+	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
+		return FAT16_readdir(file,buf,n,mounts[file->mountNumber].drive);
+	}
+}
+
 FSMOUNT getDiskMount(uint8_t drive) {
 	return mounts[drive];
 }

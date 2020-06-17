@@ -1,3 +1,5 @@
+GCC=gcc
+
 all: idle.asm
 	nasm -fbin idle.asm -o IDLE.SYS
 

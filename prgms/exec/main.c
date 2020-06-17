@@ -10,7 +10,7 @@ void writestring(char *string) {
 }
 
 void exec(char *name) {
-	asm volatile("mov %0,%%ebx"::"r"(name));
+	asm volatile("mov %0,%%ebx; mov $0,ecx; mov $0,edx"::"r"(name));
 	syscall(1);
 }
 

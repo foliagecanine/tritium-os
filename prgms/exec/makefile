@@ -1,3 +1,5 @@
+GCC=gcc
+
 all: main.c
 	gcc -m32 -Os -s -fno-pie -c -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin main.c -o main.o
 	ld -T linker.ld main.o -o EXEC.PRG
