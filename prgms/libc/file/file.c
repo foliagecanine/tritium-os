@@ -15,18 +15,21 @@ FILE fopen (const char* filename, const char* mode) {
 	return f;
 }
 
-void fread (FILE *t, char *buf, uint64_t start, uint64_t len) {
+uint8_t fread (FILE *t, char *buf, uint64_t start, uint64_t len) {
+	uint8_t retval;
 	uint32_t starth = start>>32;
 	uint32_t startl = start&0xFFFFFFFF;
 	//uint32_t lenh = len>>32;
 	uint32_t lenl = len&0xFFFFFFFF;
 	asm volatile("pusha;\
-				mov %0,%%ebx;\
-				mov %1,%%ecx;\
-				mov %2, %%edx;\
-				mov %3, %%esi;\
-				mov %4, %%edi;\
+				mov %1,%%ebx;\
+				mov %2,%%ecx;\
+				mov %3, %%edx;\
+				mov %4, %%esi;\
+				mov %5, %%edi;\
 				mov $13,%%eax;\
 				int $0x80;\
-				popa"::"m"(t),"m"(buf),"m"(starth),"m"(startl),"m"(lenl));
+				mov %%eax,%0;\
+				popa":"=m"(retval):"m"(t),"m"(buf),"m"(starth),"m"(startl),"m"(lenl));
+	return retval;
 }

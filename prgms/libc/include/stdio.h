@@ -57,7 +57,7 @@ typedef struct {
 } FILE, *PFILE;
 
 FILE fopen(const char* filename, const char* mode);
-void fread(FILE *file, char *buf, uint64_t start, uint64_t len);
+uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len);
 
 void exit(uint32_t code);
 
