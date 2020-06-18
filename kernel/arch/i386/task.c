@@ -129,6 +129,8 @@ void task_switch(tss_entry_t tss, uint32_t ready_esp) {
 	volatile uint32_t new_pid = 0;
 	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
 		if (threads[i-1].pid!=0) {
+			if (threads[i-1].state==TASK_STATE_WAITPID&&threads[threads[i-1].waitpid-1].state==TASK_STATE_NULL)
+				threads[i-1].state = TASK_STATE_ACTIVE;
 			if (threads[i-1].state!=TASK_STATE_WAITPID&&threads[i-1].state!=TASK_STATE_NULL) {
 				new_pid = i;
 				break;
@@ -138,6 +140,8 @@ void task_switch(tss_entry_t tss, uint32_t ready_esp) {
 	if (!new_pid) {
 		for (uint32_t j = 1; j < max_threads; j++) {
 			if (threads[j-1].pid!=0) {
+				if (threads[j-1].state==TASK_STATE_WAITPID&&threads[threads[j-1].waitpid-1].state==TASK_STATE_NULL)
+					threads[j-1].state = TASK_STATE_ACTIVE;
 				if (threads[j-1].state!=TASK_STATE_WAITPID&&threads[j-1].state!=TASK_STATE_NULL) {
 					new_pid = j;
 					break;
@@ -186,6 +190,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 			parent->waitpid = retval;
 		}
 	}
+	current_task->state = TASK_STATE_NULL;
 	volatile uint32_t new_pid = 0;
 	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
 		if (threads[i-1].pid!=0) {

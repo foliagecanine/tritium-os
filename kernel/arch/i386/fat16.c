@@ -341,8 +341,28 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 	return 0;
 }
 
-uint8_t FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
-	if (!file)
-		return;
+FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
+	FILE retfile;
+	memset(&retfile,0,sizeof(FILE));
 	
+	if (!file)
+		return retfile;
+	char read[512];
+	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
+	PFAT16DIR dir_entry = (PFAT16DIR)read;
+	dir_entry+=sizeof(FAT16DIR)*n;
+	
+	if (dir_entry->Filename[0]==0||dir_entry->Filename[0]==0xE5) {
+		return retfile;
+	}
+	retfile.valid = true;
+	retfile.size = dir_entry->FileSize;
+	memcpy(buf,dir_entry->Filename,8);
+	buf[9]=' ';
+	char * ext = strchr(buf,' ');
+	*ext++ = '.';
+	memcpy(ext,dir_entry->Extension,3);
+	ext+=4;
+	*ext = 0;
+	return retfile;
 }

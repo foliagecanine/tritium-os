@@ -291,13 +291,12 @@ _Noreturn void main(uint32_t argc, char **argv) {
 	printf("Sorry, but right now there's no directory listing program.\n");
 	printf("Instead, here's some commands you could try:\n");
 	printf("ADVNTURE - Text adventure mini-game\n");
-	printf("CAT - Print README.TXT\n");
+	printf("CAT - Print specified file's contents to terminal\n");
 	printf("EXEC - Test the exec syscall\n");
 	printf("If you want more, look in the PRGMS directory in the source code\n");
 	printf("\n");
 	printf("Remember, you don't need to put PRG or SYS at the end.\n");
 	printf("The shell does that for you.\n");
-	printf("Argc: %d | Argv: %#\n",argc,(uint64_t)argv);
 #endif
 	for(;;) {
 		commandline();

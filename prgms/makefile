@@ -22,3 +22,6 @@ $(PRGMS):
 umount:
 	@sudo umount /mnt/F1
 	@sudo rmdir /mnt/F1
+
+clean:
+	
