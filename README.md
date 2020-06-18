@@ -93,7 +93,7 @@ Here's the checklist:
 - [x] Syscalls
 - [x] Program Loading (mostly)
 - [ ] Shell (almost there)
-- [x] FAT16 Filesystem Driver (so we can put the kernel and programs in the same filesystem)  
+- [x] FAT16 Filesystem Driver
 - [x] Arguments
 - [ ] Environment variables
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
