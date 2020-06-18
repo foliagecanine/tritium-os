@@ -35,6 +35,7 @@ uint32_t waitpid(uint32_t pid) {
 	uint32_t retval;
 	asm volatile("mov %0,%%ebx"::"r"(pid));
 	syscall(10); //waitpid
+	syscall(6); //yield
 	syscall(11); //get_retval
 	asm volatile("mov %%eax,%0":"=m"(retval):);
 	return retval;
