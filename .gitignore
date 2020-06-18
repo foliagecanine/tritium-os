@@ -9,3 +9,5 @@ VideoResearch
 mountall.sh
 umountall.sh
 test.img
+rpi-iso.sh
+rpi-qemu.sh

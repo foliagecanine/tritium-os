@@ -56,15 +56,6 @@ There are three images included that can be used for testing.
  - old/floppy.flp 	: A FAT12 formatted image for testing files greater than 512 bytes
  - old/testrand.img	: An image created by `dd if=/dev/urandom of=testrand.img bs=1K count=1440`, to be used for testing images with no valid filesystem.
 
-### What are the rpi-* shell scripts?
-These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
-
-1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting  
-3)You have to make a few scripts (I guess I made them for you though) 
-
-The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
-
 ### How about that add-o-file.sh script?
 That is an easy way of editing the make.config file.  
 You can use it to add a .o file to the list of files to be included in the build.
@@ -101,9 +92,16 @@ Here's the checklist:
 - [x] Ring 3 Switching
 - [x] Syscalls
 - [x] Program Loading (mostly)
-- [ ] Shell (partial)
+- [ ] Shell (almost there)
 - [x] FAT16 Filesystem Driver (so we can put the kernel and programs in the same filesystem)  
+- [x] Arguments
+- [ ] Environment variables
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
+
+Programs:
+- [x] Directory listing program
+- [x] Program to display text files
+- [ ] Text adventure game
 
 ## DISCLAIMERS
 
