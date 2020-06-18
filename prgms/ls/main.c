@@ -1,13 +1,33 @@
 #include <stdio.h>
 #include <string.h>
 
-__asm__("push %ecx; push %eax; call main");
+extern char **envp;
+extern uint32_t envc;
+asm ("push %ecx;\
+		push %eax;\
+		mov %ebx,(envc);\
+		mov %edx,(envp);\
+		call main");
 
 uint8_t buf[513];
+char fname[4096];
 
 _Noreturn void main(uint32_t argc, char **argv) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
-	FILE f = fopen(argv[1],"r");
+	char *cd = getenv("CD");
+	memset(fname,0,4096);
+	FILE f;
+	if (argc>1) {
+		if (argv[1][1]==':')
+			strcpy(fname,argv[1]);
+		else {
+			memcpy(fname,cd,strlen(cd));
+			memcpy(fname+strlen(cd),argv[1],strlen(argv[1]));
+		}
+	} else {
+		strcpy(fname,cd);
+	}
+	f = fopen(fname,"r");
 	FILE r = f;
 	if (f.valid) {
 		if (f.directory) {
@@ -18,10 +38,10 @@ _Noreturn void main(uint32_t argc, char **argv) {
 				memset(buf,0,512);
 			}
 		} else {
-			printf("Error: %s is not a directory.\n",argv[1]);
+			printf("Error: %s is not a directory.\n",fname);
 		}
 	} else {
-		printf("Error: file not found.\n");
+		printf("Error: file %s not found.\n",fname);
 	}
 	exit(0);
 }

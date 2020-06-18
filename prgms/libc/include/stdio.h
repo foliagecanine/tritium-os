@@ -60,6 +60,8 @@ FILE fopen(const char* filename, const char* mode);
 uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len);
 FILE readdir(FILE *d, char* buf, uint32_t n);
 
+char *getenv(char *name);
+
 void exit(uint32_t code);
 
 #ifdef __cplusplus

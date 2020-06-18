@@ -19,9 +19,9 @@ uint32_t exec(char *name) {
 	return retval;
 }
 
-uint32_t exec_args(char *name, char **arguments) {
+uint32_t exec_args(char *name, char **arguments, char **environment) {
 	uint32_t retval;
-	asm volatile("pusha; mov %0,%%ebx; mov %1,%%ecx"::"r"(name),"r"(arguments));
+	asm volatile("pusha; mov %0,%%ebx; mov %1,%%ecx; mov %2,%%edx"::"m"(name),"m"(arguments),"m"(environment));
 	syscall(1);
 	asm volatile("mov %%eax,%0; popa":"=m"(retval):);
 	return retval;
@@ -32,9 +32,10 @@ void yield() {
 }
 
 uint32_t waitpid(uint32_t pid) {
-	uint32_t retval;
+	uint32_t retval = 1;
 	asm volatile("mov %0,%%ebx"::"r"(pid));
 	syscall(10); //waitpid
+	syscall(6); //yield
 	syscall(6); //yield
 	syscall(11); //get_retval
 	asm volatile("mov %%eax,%0":"=m"(retval):);
@@ -52,11 +53,13 @@ char cmd[256] = "";
 char args[256] = "";
 char temp[256] = "";
 char cd[256] = "A:/";
+char *envp[4096];
 uint8_t index = 0;
 uint8_t child_pid = 0;
 bool failed = false;
 
 void commandline() {
+	failed = false;
 	printf("%s>",cd);
 	for(;;) {
 		char c = 0;
@@ -93,14 +96,15 @@ void commandline() {
 		if (temp[1]==':') {
 			memcpy(cd,temp,256);
 		} else {
-			if (cd[strlen(cd)-1]!='/') {
-				cd[strlen(cd)+1]=0;
-				cd[strlen(cd)]='/';
-			}
+			
 			memcpy(cd+strlen(cd),temp,256-strlen(cd));
 		}
 		if (strlen(cd)!=3&&cd[strlen(cd)-1]=='/') {
 			cd[strlen(cd)-1]=0;
+		}
+		if (cd[strlen(cd)-1]!='/') {
+			cd[strlen(cd)+1]=0;
+			cd[strlen(cd)]='/';
 		}
 	} else if (strcmp(cmd,"cls")||strcmp(cmd,"clear")) {
 		terminal_clear();
@@ -143,8 +147,20 @@ void commandline() {
 			}
 		}*/
 		
+		if (cmd[0]=='&') {
+			memcpy(cmd,cmd+1,255); //Slide characters over by 1
+			failed = true; //Effectively disable waitpid
+		}
+		
+		//Environment variables
+		memset(envp,0,4096);
+		envp[0] = "CD";
+		envp[1] = cd;
+		envp[2] = NULL;
+
+		//Arguments
 		char *argstart = strchr(cmd,' ');
-		char *argv[256];
+		char *argv[256+128];
 		uint8_t argc = 0;
 		memset(argv,0,sizeof(char *)*128);
 		argv[0]=NULL;
@@ -179,7 +195,7 @@ void commandline() {
 		temp[strlen(temp)]=0;
 		
 		printf("Running %s...\n",temp);
-		child_pid = exec_args(temp,argv);
+		child_pid = exec_args(temp,argv,envp);
 		
 		if (!child_pid) {
 			memset(temp,0,256);
@@ -194,7 +210,7 @@ void commandline() {
 			temp[strlen(temp)]=0;
 			
 			printf("Running %s...\n",temp);
-			child_pid = exec_args(temp,argv);
+			child_pid = exec_args(temp,argv,envp);
 			
 			if (!child_pid) {
 				memset(temp,0,256);
@@ -212,7 +228,7 @@ void commandline() {
 				temp[strlen(temp)]=0;
 
 				printf("Running %s...\n",temp);
-				child_pid = exec_args(temp,argv);
+				child_pid = exec_args(temp,argv,envp);
 				
 				if (!child_pid) {
 					memset(temp,0,256);
@@ -227,7 +243,7 @@ void commandline() {
 					temp[strlen(temp)]=0;
 
 					printf("Running %s...\n",temp);
-					child_pid = exec_args(temp,argv);
+					child_pid = exec_args(temp,argv,envp);
 					
 					if (!child_pid) {
 						memset(temp,0,256);
@@ -242,7 +258,7 @@ void commandline() {
 						temp[strlen(temp)]=0;
 
 						printf("Running %s...\n",temp);
-						child_pid = exec_args(temp,argv);
+						child_pid = exec_args(temp,argv,envp);
 						
 						if (!child_pid) {
 							memset(temp,0,256);
@@ -260,7 +276,7 @@ void commandline() {
 							temp[strlen(temp)]=0;
 							
 							printf("Running %s...\n",temp);
-							child_pid = exec_args(temp,argv);
+							child_pid = exec_args(temp,argv,envp);
 							if (!child_pid) {
 								printf("No file found.\n");
 								failed = true;

@@ -32,7 +32,7 @@ void init_tasking(uint32_t num_pages) {
 	kprint("[INIT] Tasking initialized.");
 }
 
-uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr) {
+uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t envl_paddr) {
 	volatile uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
 		if (threads[pid-1].pid==0)
@@ -71,12 +71,22 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr) {
 	}
 	mark_user((void *)0xF04000,true);
 	
-	//Total space: 16+5 pages = 64KiB + 20 KiB = 84 KiB per process
+	//Environment variables 0xF05000 to 0xF06000
+	if (envl_paddr) {
+		map_addr((void *)0xF05000,(void *)envl_paddr);
+	} else {
+		map_page_to((void *)0xF05000);
+	}
+	mark_user((void *)0xF05000,true);
+	
+	//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
 	
 	threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
 	threads[pid-1].tss.eip = 0x100000;
 	threads[pid-1].tss.eax = 0;
+	threads[pid-1].tss.ebx = 0;
 	threads[pid-1].tss.ecx = 0;
+	threads[pid-1].tss.edx = 0;
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process created:");
 	printf("====== pid=%d\n",pid);
@@ -85,12 +95,12 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr) {
 }
 
 void create_idle_process(void *prgm, size_t size) {
-	init_new_process(prgm,size,0);
+	init_new_process(prgm,size,0,0);
 	use_kernel_map();
 }
 
 void create_process(void *prgm,size_t size) {
-	uint32_t pid = init_new_process(prgm,size,0);
+	uint32_t pid = init_new_process(prgm,size,0,0);
 	if (!pid)
 		return;
 	current_task = &threads[pid-1];
@@ -218,7 +228,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 #endif
 	//Free all the memory to prevent leaks
 	free_page((void *)0x100000,16);
-	free_page((void *)0xF00000,4);
+	free_page((void *)0xF00000,6);
 	use_kernel_map();
 	free_page(current_task->tables-4096,1025);
 	switch_tables(current_task->tables);
@@ -243,12 +253,39 @@ void yield() {
 
 FILE prgm;
 uint32_t argl_v;
+uint32_t envl_v;
 
-uint32_t exec_syscall(char *name, char **arguments) {
+uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
 	uint32_t *current_tables = get_current_tables();
 	
+	//Process environment variables
+	uint32_t envc = 0;
+	char **envp = alloc_page(1);
+	memset(envp,0,4096);
+	void *eptr = envp;
+	
+	if (environment) {
+		//Count environment variables untill we reach NULL.
+		while(environment[envc]!=NULL)
+			envc++;
+	}
+	
+	eptr+=sizeof(char *)*(envc+1); //Reserve space for the pointers
+	
+	if (environment) {
+		for (uint32_t i = 0; i < envc; i++) {
+			envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xF05000);
+			strcpy(eptr,environment[i]);
+			eptr+=strlen(environment[i]);
+			eptr++;
+		}
+	}
+	
+	envl_v = (uint32_t)get_phys_addr(envp);
+	
+	//Now process arguments
 	uint32_t argc = 0;
 	char **argv = alloc_page(1);
 	memset(argv,0,4096);
@@ -285,10 +322,12 @@ uint32_t exec_syscall(char *name, char **arguments) {
 		void *buf = alloc_page((prgm.size/4096)+1);
 		memset(buf,0,((prgm.size/4096)+1)*4096);
 		if (!fread(&prgm,buf,0,prgm.size)) {
-			uint32_t pid = init_new_process(buf,prgm.size,argl_v);
+			uint32_t pid = init_new_process(buf,prgm.size,argl_v,envl_v);
 			threads[pid-1].parent=current_task;
 			threads[pid-1].tss.eax=argc;
+			threads[pid-1].tss.ebx=envc;
 			threads[pid-1].tss.ecx=0xF04000;
+			threads[pid-1].tss.edx=0xF05000;
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
@@ -318,4 +357,8 @@ void waitpid(uint32_t wait) {
 
 uint32_t get_retval() {
 	return current_task->waitpid;
+}
+
+uint32_t get_process_state(uint32_t pid) {
+	return (uint32_t)threads[pid-1].state;
 }

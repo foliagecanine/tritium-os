@@ -1,6 +1,6 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	15
+#define NUM_SYSCALLS	16
 
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
@@ -22,7 +22,8 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&get_retval,			// 11
 	&fopen_usermode,		// 12
 	&fread_usermode,		// 13
-	&readdir_usermode		// 14
+	&readdir_usermode,		// 14
+	&get_process_state,		// 15
 };
 
 extern bool ts_enabled;
