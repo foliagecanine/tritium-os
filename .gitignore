@@ -8,3 +8,4 @@ bootloader
 VideoResearch
 mountall.sh
 umountall.sh
+test.img
