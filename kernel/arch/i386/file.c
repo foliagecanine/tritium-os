@@ -105,7 +105,7 @@ FILE readdir(FILE *file, char* buf, uint32_t n) {
 	if (!file)
 		return retfile;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
-		//return FAT12_readdir(file,buf,n,mounts[file->mountNumber].drive);
+		return FAT12_readdir(file,buf,n,mounts[file->mountNumber].drive);
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_readdir(file,buf,n,mounts[file->mountNumber].drive);
 	}
