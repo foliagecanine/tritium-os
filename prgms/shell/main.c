@@ -280,24 +280,27 @@ void commandline() {
 	
 }
 
-#define INTRO
+uint8_t buf[513];
 
 _Noreturn void main(uint32_t argc, char **argv) {
 	writestring("Hello from SHELL.SYS!\n");
 	terminal_init();
 	printf("ElectronShell online.\n");
-#ifdef INTRO
-	printf("\n");
-	printf("Sorry, but right now there's no directory listing program.\n");
-	printf("Instead, here's some commands you could try:\n");
-	printf("ADVNTURE - Text adventure mini-game\n");
-	printf("CAT - Print specified file's contents to terminal\n");
-	printf("EXEC - Test the exec syscall\n");
-	printf("If you want more, look in the PRGMS directory in the source code\n");
-	printf("\n");
-	printf("Remember, you don't need to put PRG or SYS at the end.\n");
-	printf("The shell does that for you.\n");
-#endif
+	if (!argc||!argv) { //This only happens when the kernel launches us. User-launched programs always have at least one argument
+		FILE f = fopen("A:/MOTD.TXT","r");
+		if (f.valid) {
+			if (!f.directory) {
+				for (uint32_t i = 0; i < f.size; i+=512) {
+					fread(&f,buf,i,512);
+					printf("%s",buf);
+				}
+			} else {
+				printf("Error: cannot read MOTD.\n");
+			}
+		} else {
+			printf("Error: cannot read MOTD.\n");
+		}
+	}
 	for(;;) {
 		commandline();
 	}

@@ -33,3 +33,16 @@ uint8_t fread (FILE *t, char *buf, uint64_t start, uint64_t len) {
 				popa":"=m"(retval):"m"(t),"m"(buf),"m"(starth),"m"(startl),"m"(lenl));
 	return retval;
 }
+
+FILE readdir(FILE *d, char* buf, uint32_t n) {
+	fp = &f;
+	asm volatile("pusha;\
+				mov %0,%%ebx;\
+				mov %1,%%ecx;\
+				mov %2, %%edx;\
+				mov %3, %%esi;\
+				mov $14,%%eax;\
+				int $0x80;\
+				popa"::"m"(fp),"m"(d),"m"(buf),"m"(n));
+	return f;
+}

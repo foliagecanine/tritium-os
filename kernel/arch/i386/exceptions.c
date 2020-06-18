@@ -76,7 +76,7 @@ uint32_t address;
 uint32_t temp_pre_esp;
 uint32_t temp_post_esp;
 
-void exception_page_fault(uint32_t *regs, uint32_t error) {
+void exception_page_fault(/*uint32_t *regs,*/ uint32_t error) {
 	//asm volatile("mov %%esp,%0;pusha;mov %%esp,%1":"=m"(temp_pre_esp),"=m"(temp_post_esp):);
 	//asm volatile("mov %0,%%esp"::"m"(temp_pre_esp));
 	asm volatile("mov %%cr2, %0":"=a"(address):);

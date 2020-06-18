@@ -5,7 +5,7 @@
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
-void readdir_usermode(FILE *f, char *buf, uint32_t n);
+void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n);
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -101,11 +101,10 @@ void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32
 	}
 }
 
-void readdir_usermode(FILE *f, char *buf, uint32_t n) {
+void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
 	if (!f->directory)
 		return;
-	printf("Reading directory %s",buf);
 	if ((uint32_t)buf>0x100000&&(uint32_t)buf+256<0xF04000&&(uint32_t)f>0x100000&&(uint32_t)f+256<0xF04000) {
-		//readdir(f, buf, n);
+		*o = readdir(f, buf, n);
 	}
 }

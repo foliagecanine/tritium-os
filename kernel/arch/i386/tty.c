@@ -152,4 +152,5 @@ uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
 	if (command==2) {
 		terminal_scroll();
 	}
+	return 1;
 }

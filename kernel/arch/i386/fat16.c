@@ -347,22 +347,31 @@ FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
 	
 	if (!file)
 		return retfile;
-	char read[512];
-	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
-	PFAT16DIR dir_entry = (PFAT16DIR)read;
-	dir_entry+=sizeof(FAT16DIR)*n;
+	if (n>31)
+		return retfile;
 	
-	if (dir_entry->Filename[0]==0||dir_entry->Filename[0]==0xE5) {
+	char read[512];
+	memset(read,0,512);
+	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
+	FAT16DIR dir_entry = *(PFAT16DIR)(read+(32*n));
+	
+	if (dir_entry.FileAttributes&0x08||dir_entry.FileAttributes&0x02||dir_entry.Filename[0]==0||dir_entry.Filename[0]==0xE5) {
 		return retfile;
 	}
 	retfile.valid = true;
-	retfile.size = dir_entry->FileSize;
-	memcpy(buf,dir_entry->Filename,8);
-	buf[9]=' ';
-	char * ext = strchr(buf,' ');
-	*ext++ = '.';
-	memcpy(ext,dir_entry->Extension,3);
-	ext+=4;
-	*ext = 0;
+	retfile.size = dir_entry.FileSize;
+	char *ptr = buf;
+	for (uint8_t i = 0; i < 8; i++) {
+		if (dir_entry.Filename[i]!=' ')
+			*ptr++ = dir_entry.Filename[i];
+		if (i==7&&dir_entry.Extension[0]!=' ')
+			*ptr++ = '.';
+	}
+	for (uint8_t i = 0; i < 3; i++) {
+		if (dir_entry.Extension[i]!=' ')
+			*ptr++ = dir_entry.Extension[i];
+		if (dir_entry.FileAttributes&0x10&&i==2)
+			*ptr++ = '/';
+	}
 	return retfile;
 }

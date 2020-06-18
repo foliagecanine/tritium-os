@@ -10,7 +10,7 @@ page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
 page_table_entry *kernel_tables = (page_table_entry *)0xC0400000;
 
 //We'll also have a PMEM manager in this file too. This table will determine if a physical page is being used or not.
-volatile char pmem_used[131072] __attribute__((aligned(4096)));
+char pmem_used[131072] __attribute__((aligned(4096)));
 const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","NVS","Bad RAM"};
 
 #define pagedir_addr 768
@@ -120,7 +120,7 @@ void init_paging(multiboot_info_t *mbi) {
 	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
 	
 	//Clear out the current map so all entries are "claimed"
-	memset(&pmem_used[0],255,131072);
+	memset((void *)&pmem_used[0],255,131072);
 	
 	//Scan the memory map for areas that we can use for general purposes
 	for (uint8_t i = 0; i < 15; i++) {

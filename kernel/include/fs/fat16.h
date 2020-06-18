@@ -25,6 +25,7 @@ FSMOUNT MountFAT16(uint8_t drive_num);
 FILE FAT16_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint8_t drive_num, FAT16_MOUNT fm, uint8_t mode);
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num);
 uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num);
+FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num);
 void print_fat16_values(uint8_t drive_num);
 
 #endif

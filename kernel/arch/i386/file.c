@@ -95,17 +95,21 @@ uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
+	return 1;
 }
 
 //We expect buf to be 256 characters long
-uint8_t readdir(FILE *file, char* buf, uint32_t n) {
+FILE readdir(FILE *file, char* buf, uint32_t n) {
+	FILE retfile;
+	memset(&retfile,0,sizeof(FILE));
 	if (!file)
-		return 1;
+		return retfile;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
 		//return FAT12_readdir(file,buf,n,mounts[file->mountNumber].drive);
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_readdir(file,buf,n,mounts[file->mountNumber].drive);
 	}
+	return retfile;
 }
 
 FSMOUNT getDiskMount(uint8_t drive) {

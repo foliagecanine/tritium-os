@@ -7,6 +7,7 @@ SHELL.SYS \
 MEM.PRG \
 CAT.PRG \
 ADVNTURE.PRG \
+LS.PRG \
 
 all: $(PRGMS)
 
