@@ -64,16 +64,20 @@ The filename is the name of the c/asm/S file to include without the extension. F
 To add mynewfile.c (or mynewfile.S or mynewfile.asm) to the make.config  
 Note there is no extension in the filename.
 
+## How do I make programs for TritiumOS?
+For information on writing programs for TritiumOS, see [prgms/docs/COMPILING.md](prgms/docs/COMPILING.md)
+
+## What if I just want to use the ISO? How can I do that?
+
+You can use the .iso file in the root of this repository and run it in a virtual machine.
+If you want to run it on real hardware (not recommended), burn it to a disk, thumb drive, (even a hard drive if you're brave enough). Then have the computer boot from it.
+
+SEE BOTTOM FOR DISCLAIMERS
+
 ## When will it be done?
 Never. I will continue adding to it and editing it until I get bored or just stop for some reason.
 
 There will be no "finished" state, but at the top of this README you will see the word "buildable:" either the word "YES" or "NO". If it's YES then you can build it without any problems. If it says "NO", then you can browse the older commits until you find one that is buildable.
-
-## What if I just want to use the ISO? How can I do that?
-
-You can use the .iso file in the root of this repository and burn it to a disk, thumb drive, (even a hard drive if you're brave enough). Then have the computer boot from it.
-
-SEE BOTTOM FOR DISCLAIMERS
 
 ## What's next (TODO)?
 Here's the checklist:

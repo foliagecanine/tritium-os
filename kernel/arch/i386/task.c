@@ -359,6 +359,6 @@ uint32_t get_retval() {
 	return current_task->waitpid;
 }
 
-uint32_t get_process_state(uint32_t pid) {
+/*uint32_t get_process_state(uint32_t pid) {
 	return (uint32_t)threads[pid-1].state;
-}
+}*/
