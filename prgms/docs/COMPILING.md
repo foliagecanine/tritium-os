@@ -5,7 +5,7 @@ Welcome to COMPILING.MD. Here you will find how to compile programs for TritiumO
 ## Compiling
 ### Requirements
 For assembly programs
- - NASM, GAS, or other assembler for x86
+ - NASM, GAS, or other assembler for x86  
 For C programs
  - GCC x86 compiler (May work with other compilers such as clang, but untested)
  - GNU ld (or equivelant, untested)
