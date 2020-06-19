@@ -2,7 +2,6 @@
 #define _KERNEL_FS_H
 
 #include <kernel/stdio.h>
-#include <kernel/easylib.h>
 
 typedef struct {
 	uint64_t location;

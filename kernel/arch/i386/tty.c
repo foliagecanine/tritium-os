@@ -4,17 +4,19 @@
 #include <string.h>
 
 #include <kernel/tty.h>
+#include <kernel/sysfunc.h>
 
 #include "vga.h"
 
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
-static uint16_t* const VGA_MEMORY = (uint16_t*) 0xB8000;
+static uint16_t* const VGA_MEMORY = (uint16_t*) 0xC03FF000;
 
 static size_t terminal_row;
 static size_t terminal_column;
 static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
+static bool scroll = true;
 
 void terminal_initialize(void) {
 	terminal_row = 0;
@@ -39,19 +41,22 @@ uint8_t terminal_getcolor() {
 
 void terminal_putentryat(unsigned char c, uint8_t color, size_t x, size_t y) {
 	const size_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = vga_entry(c, color);
+	if (index<VGA_WIDTH*VGA_HEIGHT)
+		terminal_buffer[index] = vga_entry(c, color);
 }
 
 void terminal_scroll() {
-	for (size_t y = 1; y < VGA_HEIGHT; y++) {
-		for (size_t x = 0; x < VGA_WIDTH; x++) {
-			size_t from_index = y * VGA_WIDTH + x;
-			size_t to_index = (y-1) * VGA_WIDTH + x;
-			terminal_buffer[to_index] = terminal_buffer[from_index];
+	if (scroll) {
+		for (size_t y = 1; y < VGA_HEIGHT; y++) {
+			for (size_t x = 0; x < VGA_WIDTH; x++) {
+				size_t from_index = y * VGA_WIDTH + x;
+				size_t to_index = (y-1) * VGA_WIDTH + x;
+				terminal_buffer[to_index] = terminal_buffer[from_index];
+			}
 		}
+		for (size_t x = 0; x < VGA_WIDTH; x++)
+			terminal_buffer[(VGA_HEIGHT-1)*VGA_WIDTH+x] = vga_entry(' ', terminal_color);
 	}
-	for (size_t x = 0; x < VGA_WIDTH; x++)
-		terminal_buffer[(VGA_HEIGHT-1)*VGA_WIDTH+x] = vga_entry(' ', terminal_color);
 }
 
 void terminal_putchar(char c) {
@@ -76,6 +81,10 @@ void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }
 
+void set_scroll(_Bool allow_scroll) {
+	scroll = allow_scroll;
+}
+
 void disable_cursor() {
 	outb(0x3D4,0x0A);
 	outb(0x3D5,0x20);
@@ -87,6 +96,8 @@ void cursor_position(size_t x, size_t y) {
 	outb(0x3D5, (uint8_t) (index & 0xFF));
 	outb(0x3D4,0x0E);
 	outb(0x3D5, (uint8_t) ((index>>8) & 0xFF));
+	terminal_column = x;
+	terminal_row = y;
 }
 
 void enable_cursor(uint8_t start, uint8_t end) {
@@ -126,4 +137,20 @@ void terminal_refresh() {
 			terminal_putentryat(terminal_buffer[index], terminal_color, x, y);
 		}
 	}
+}
+
+uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
+	//printf("Recieved: c%d x%d y%d\n",(uint32_t)command,(uint32_t)x,(uint32_t)y);
+	if (command==0) {
+		terminal_column = x;
+		terminal_row = y;
+		return 0;
+	}
+	if (command==1) {
+		return (uint32_t)(((terminal_column&0xFF)<<8)|(terminal_row&0xFF));
+	}
+	if (command==2) {
+		terminal_scroll();
+	}
+	return 1;
 }

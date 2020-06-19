@@ -1,4 +1,4 @@
-# TritiumOS
+# TritiumOS (Development Branch)
 Simple 32 bit Hobby OS  
 buildable: YES :heavy_check_mark:
 
@@ -7,6 +7,9 @@ Original Author: foliagecanine
 ## Introduction
 TritiumOS is an open-source operating system, successor to an 
 unpublished, expiremental test OS named Rogue2OS
+
+This branch is the Development branch of TritiumOS. For the main branch, select "master" from the list of branches.  
+This branch has effectively rebuilt TritiumOS from the ground up by combining original TritiumOS code with new code. Several improvements have been made in this branch. The branches will be merged relatively soon (once programs like ls and cat are implemented)
 
 ## How do you build this?
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
@@ -39,19 +42,19 @@ Type `./qemu.sh` to build then immediately test it.
 You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
 You can use this to add virtual hard disks to the OS.
 
-A FAT12 formatted "floppy" is included (named floppy2.flp) and can be used as a hard disk as below
-`./qemu.sh "-hda floppy2.flp" "-boot d"`
-Or a floppy disk (no controller implemented yet) like so
-`./qemu.sh "-fda floppy2.flp" "-boot d"`
+A FAT16 formatted "floppy" is included (named floppy.flp) and can be used as a hard disk as below  
+`./ahci-qemu.sh floppy.flp "-boot d"` 
+Or a floppy disk (no controller implemented yet) like so  
+`./qemu.sh "-fda floppy.flp" "-boot d"`
 
-### What are the rpi-* shell scripts?
-These are for building on a Raspberry Pi system. However, this is not recommended for these reasons:
+You can also have two drives by using the ahci-qemu2.sh script as below:  
+`./ahci-qemu.sh old/floppy2.flp floppy.flp "-boot d"`  
 
-1)It takes forever to build GCC on a Raspberry Pi (abbr. RPI)  
-2)You ALSO have to build GRUB on the RPI which is another forever of waiting
-3)You have to make a few scripts (I guess I made them for you though) 
-
-The only difference between the normal scripts and rpi-\* scripts is that when calling grub-mkrescue it instead calls i686-grub-mkrescue
+There are three images included that can be used for testing.  
+ - floppy.flp : A FAT16 formatted image that contains programs to run (>512 bytes)
+ - old/floppy2.flp	: A FAT12 formatted image for testing files less than 512 bytes
+ - old/floppy.flp 	: A FAT12 formatted image for testing files greater than 512 bytes
+ - old/testrand.img	: An image created by `dd if=/dev/urandom of=testrand.img bs=1K count=1440`, to be used for testing images with no valid filesystem.
 
 ### How about that add-o-file.sh script?
 That is an easy way of editing the make.config file.  
@@ -79,14 +82,26 @@ SEE BOTTOM FOR DISCLAIMERS
 Here's the checklist:
 - [x] Printing to terminal
 - [x] GDT
-- [x] Memory Management
+- [x] Memory Management (improved)
 - [x] Interrupts
-- [x] Keyboard
-- [x] Disk IO
-- [ ] FAT12 Filesystem Driver <In Progress>
-- [ ] fileman (short for file management) <In Progress>
-- [ ] Advanced Disk IO (AHCI)  
+- [x] Keyboard  
+  --- Disk IO (ATA PIO) (not likely to be implemented)  
+- [x] FAT12 Filesystem Driver
+- [x] File management
+- [x] Advanced Disk IO (AHCI)
+- [x] Ring 3 Switching
+- [x] Syscalls
+- [x] Program Loading (mostly)
+- [ ] Shell (almost there)
+- [x] FAT16 Filesystem Driver
+- [x] Arguments
+- [ ] Environment variables
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
+
+Programs:
+- [x] Directory listing program
+- [x] Program to display text files
+- [ ] Text adventure game
 
 ## DISCLAIMERS
 

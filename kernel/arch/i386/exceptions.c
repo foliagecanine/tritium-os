@@ -72,9 +72,30 @@ void exception_general_protection_fault() {
 	for (;;);
 }
 
-void exception_page_fault() {
-	kerror("[Exception.Fault] Page Fault!");
-	for (;;);
+uint32_t address;
+uint32_t temp_pre_esp;
+uint32_t temp_post_esp;
+
+void exception_page_fault(/*uint32_t *regs,*/ uint32_t error) {
+	//asm volatile("mov %%esp,%0;pusha;mov %%esp,%1":"=m"(temp_pre_esp),"=m"(temp_post_esp):);
+	//asm volatile("mov %0,%%esp"::"m"(temp_pre_esp));
+	asm volatile("mov %%cr2, %0":"=a"(address):);
+	if(error&4) {
+		//Try to correct the error by giving it a blank page. 
+		//We'll clear this so it doesn't see any other process data.
+		if (!map_page_to((void *)(address&0xFFFFF000))) {
+			kerror("[Exception.Fault] Usermode Page Privelage Fault!");
+			printf("Fault address: 0x%#\n",(uint64_t)address);
+			printf("Error: 0x%#\n",(uint64_t)error&7);
+			for(;;);
+		}
+		asm("mov %0,%%esp; popa; iret"::"m"(temp_post_esp));
+	} else {
+		kerror("[Exception.Fault] Kernel Page Fault!");
+		printf("Fault address: 0x%#\n",(uint64_t)address);
+		printf("Error: 0x%#\n",(uint64_t)error&7);
+		for(;;);
+	}
 }
 
 //Interrupt 15 reserved here

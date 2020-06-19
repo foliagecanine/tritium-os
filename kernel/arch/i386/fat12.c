@@ -1,10 +1,5 @@
 #include <fs/fat12.h>
 
-//Thanks to https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html ("win.tue.nl") for the fat12 details
-//along with http://www.brokenthorn.com/Resources/OSDev22.html ("brokenthorn") for when I get stuck
-//Also thanks to https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system for the Logical Sector Number formula
-//However, I wrote this wholly myself
-
 typedef struct {
 	uint8_t OEMName[8];
 	uint16_t BytesPerSector;
@@ -18,23 +13,17 @@ typedef struct {
 	uint16_t NumSectorsPerTrack;
 	uint16_t NumHeads;
 	uint16_t NumHiddenSectors;
-} __attribute__ ((packed)) BPB, *PBPB; //Hehe: ptr BIOS parameter block
-//These must be packed or else the compiler will space these out, making the pointer invalid
-//When it was not packed, the OEMName listed as SWIN4.1? where ? is an unknown unprintable value.
+} __attribute__ ((packed)) BPB, *PBPB;
 
 typedef struct {
 	uint8_t StartCode[3];
 	BPB BiosParameterBlock;
-	uint8_t Bootstrap[480]; //Funny thing is brokenthorn has another BPB and reduces the size of the bootstrap... No clue, but I'll follow the win.tue.nl one.
+	uint8_t Bootstrap[480];
 	uint16_t Signature;
 } __attribute__ ((packed)) BOOTSECT, *PBOOTSECT;
 
-//These next two structs are very similar to those from brokenthorn
-
-//FAT12_MOUNT relocated to fat12.h
-
 typedef struct {
-	uint8_t Filename[8]; //8.3 = Filename.Extension
+	uint8_t Filename[8];
 	uint8_t Extension[3];
 	uint8_t FileAttributes;
 	uint8_t Reserved;
@@ -54,7 +43,7 @@ void print_fat12_values(uint8_t drive_num) {
 		return;
 	
 	uint8_t read[512];
-	read_sector(drive_num,0,read);
+	ahci_read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
@@ -83,136 +72,51 @@ void print_fat12_values(uint8_t drive_num) {
 }
 
 //Listing all the things as shown in https://forum.osdev.org/viewtopic.php?f=1&t=26639
-_Bool detect_fat12(uint8_t drive_num) {
+bool detect_fat12(uint8_t drive_num) {
 	uint8_t read[512];
-	read_sector(drive_num,0,read);
+	ahci_read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
 	if (bootsect->Signature!=0xAA55) {
-		printf("Signature error.\n");
+		//printf("Signature error.\n");
 		return false;
 	}
 
 	if (bpb.BytesPerSector%2!=0||!(bpb.BytesPerSector>=512)||!(bpb.BytesPerSector<=4096)) {
-		printf("Illegal bytes per sector.\n");
+		//printf("Illegal bytes per sector.\n");
 		return false;
 	}
 	
 	if (bpb.MediaDescriptorType!=0xf0&&!(bpb.MediaDescriptorType>=0xf8)) {
-		printf("Illegal MDT.\n");
+		//printf("Illegal MDT.\n");
 		return false;
 	}
 
 	if (bpb.NumFATs==0) {
 		return false;
-		printf("No FATs.\n");
+		//printf("No FATs.\n");
 	}
 	
 	if (bpb.NumRootDirectoryEntries==0) {
-		printf("No RDEs.\n");
+		//printf("No RDEs.\n");
+		return false;
+	}
+	
+	if (bpb.NumSectorsPerFAT!=9) {
+		//printf("Number of sectors per FAT incorrect\n");
 		return false;
 	}
 	
 	//This is probably enough. If it is just a random string of digits, we'll probably have broken it by now.
-	printf("Success in %d.\n",(uint32_t)drive_num);
+	//printf("Success in %d.\n",(uint32_t)drive_num);
 	return true;
-}
-
-/*
- * This function should probably be optimized!
- */
-void LongToShortFilename(char * longfn, char * shortfn) {
-	// Longfilename.extension -> LONGFI~6EXT, textfile.txt -> TEXTFILETXT, short.txt -> SHORT   TXT
-	memset(shortfn,' ',11); //Fill with spaces
-	
-	//First check for . and ..
-	if (strcmp(longfn,".")) {
-		strcpy(shortfn,".          ");
-		return;
-	}
-	if (strcmp(longfn,"..")) {
-		strcpy(shortfn,"..         ");
-		return;
-	}
-	
-	//Then do the rest
-	int locOfDot = findCharInArray(longfn,'.');
-	if (locOfDot>8) {
-		memcpy(shortfn,longfn,6);
-		shortfn[6]='~';
-		if ((locOfDot-6)>9) {
-			shortfn[7]='~';
-		} else {
-			shortfn[7]=intToChar(locOfDot-6);
-		}
-	} else {
-		if (locOfDot!=-1) { //If there is no dot then just copy the whole thing (up to 8).
-			memcpy(shortfn,longfn,locOfDot);
-			for (uint8_t i = strlen(longfn)-4; i < 9; i++) {
-				shortfn[i]=' ';
-			}
-		} else if (strlen(longfn)<9) {
-			memcpy(shortfn,longfn,strlen(longfn));
-		} else {
-			memcpy(shortfn,longfn,6);
-			shortfn[6]='~';
-			if ((strlen(longfn)-6)>9) {
-				shortfn[7]='~';
-			} else {
-				shortfn[7]=intToChar(strlen(longfn)-6);
-			}
-		}
-	}
-	
-	//Check for extension
-	if (locOfDot!=-1) {
-		//Yes extension. Copy up to the first 3 letters. If more than 3 do this: extens -> e~5
-		int extLen = strlen(longfn)-locOfDot-1;
-		
-		if (extLen>0) 
-			shortfn[8]=longfn[locOfDot+1];
-		
-		if (extLen>1&&extLen<4) 
-			shortfn[9]=longfn[locOfDot+2];
-		
-		if (extLen>2&&extLen<4)
-			shortfn[10]=longfn[locOfDot+3];
-		
-		if (extLen>=4) {
-			shortfn[9]='~';
-			if ((extLen-1)>9) {
-			shortfn[10]='~';
-			} else {
-				shortfn[10]=intToChar(extLen-1);
-			}
-		}
-		
-		shortfn[11] = 0; //End string
-	} else {
-		//No extension. Just put 3 spaces.
-		shortfn[8]=' '; shortfn[9]=' '; shortfn[10] = ' ';
-		shortfn[11] = 0; //End string
-	}
-	
-	//Uppercase our name. 8.3 only stores uppercase (not counting LFN; not going to do LFN for a while)
-	for (uint8_t i = 0; i < 12; i++) {
-		shortfn[i] = toupper(shortfn[i]);
-	}
-	
-	//Add any neccesary padding
-	/* if (shortfn[0]!=0) {
-		for (uint8_t i = 0; i<11; i++) {
-			if (shortfn[i]==0)
-				shortfn[i] = ' ';
-		}
-	} */
 }
 
 FSMOUNT MountFAT12(uint8_t drive_num) {
 	//Get neccesary details. We don't need to check whether this is FAT12 because it is already done in file.c.
 	uint8_t read[512];
-	read_sector(drive_num,0,read);
+	ahci_read_sector(drive_num,0,read);
 	PBOOTSECT bootsect = (PBOOTSECT)read;
 	BPB bpb = bootsect->BiosParameterBlock;
 	
@@ -223,9 +127,8 @@ FSMOUNT MountFAT12(uint8_t drive_num) {
 	fat12fs.drive = drive_num;
 	
 	//Set the mount part of FSMOUNT to our FAT12_MOUNT
-	FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)malloc(sizeof(FAT12_MOUNT));
+	FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)alloc_page(1);
 	
-	//Populate the values as shown in brokenthorn (see url at top)
 	fat12mount->MntSig = 0xAABBCCDD;
 	fat12mount->NumTotalSectors = bpb.NumTotalSectors;
 	fat12mount->FATOffset = 1;
@@ -257,30 +160,23 @@ uint16_t getClusterValue(uint8_t * FAT, uint32_t cluster) {
 		value += FAT[(3*cluster)/2];
 		return value;
 	} else {
-		value = (FAT[(3*cluster)/2]&0xF0)<<4;
-		value += FAT[1+((3*cluster)/2)];
+		value = (FAT[1+(3*cluster)/2])<<4;
+		value += (FAT[((3*cluster)/2)]&0xF0)>>4;
 		return value;
 	}
 }
 
 void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
-	uint8_t *read = malloc(numEntries*32);
+	uint8_t *read = alloc_page(((numEntries*32)/4096)+1);
 	memset(read,0,numEntries*32);
 	
-	printf("Reading from %#\n",(uint64_t)location);
-
-	for (uint8_t i = 0; i < (512)/512; i++) {
-		printf("Loc: %# : %#\n",(uint64_t)(location-1)/512+i, (uint64_t)read+(i*512));
-		uint8_t derr = read_sector(drive_num, (location-1)/512+i, read+(i*512));
-		if (derr) {
-			printf("Drive error: %d!",derr);
-			free(read);
-			return;
-		}
+	uint8_t derr = ahci_read_sector(drive_num, location/512, read);
+	if (derr) {
+		printf("Drive error: %d!",derr);
+		free_page(read,((numEntries*32)/4096)+1);
+		return;
 	}
-	
-	printf("End of read\n");
-	
+			
 	char drivename[12];
 	memset(&drivename,0,12);
 	memcpy(drivename,read,8);
@@ -302,14 +198,15 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 				if (reading[11]&0x10&&j==10)
 					printf("/");
 			}
-			//int32_t nextCluster = (reading[27] << 8) | reading[26];
-			printf(" [%d]");
+			uint32_t nextCluster = (reading[27] << 8) | reading[26];
+			uint32_t size = *(uint32_t *)&reading[28];
+			printf(" [0x%#+%d]",(uint64_t)((nextCluster-2)*512)+(224*32)+(19*512),size);
 			printf("\n");
 		}
 		reading+=32;
 	}
 	printf("--End of directory----------------------\n");
-	free(read);
+	free_page(read,((numEntries*32)/4096)+1);
 }
 
 /* 
@@ -323,7 +220,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t drive_num, FAT12_MOUNT fm, uint8_t mode) {
 	FILE retFile;
 	char *searchpath = filename+1;
-	char searchname[((int)strchr(searchpath,'/')-(int)searchpath)+1];
+	char searchname[13];
 	#pragma GCC diagnostic ignored "-Wint-conversion"
 	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
 	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
@@ -340,20 +237,15 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 		retFile.directory = true;
 		return retFile;
 	}
+	uint32_t num_pages = ((numEntries*32)/4096)+1;
+	uint8_t *read = alloc_page(num_pages); //See free below
+	memset(read,0,num_pages*4096);
 	
-	uint8_t *read = malloc(numEntries*32); //See free below
-	memset(read,0,numEntries*32);
-	
-	for (uint8_t i = 0; i < (numEntries*32)/512; i++) {
-		printf("Loc: %# : %#\n",(uint64_t)(location-1)/512+i, (uint64_t)read+(i*512));
-		uint8_t derr = read_sector(drive_num, (location-1)/512+i, read+(i*512));
-		if (derr) {
-			retFile.valid = false;
-			return retFile;
-		}
+	uint8_t derr = ahci_read_sectors(drive_num, (location/512), (numEntries*32)/512, read);
+	if (derr) {
+		retFile.valid = false;
+		return retFile;
 	}
-	
-	printf("End of read\n");
 	
 	char drivename[12];
 	memcpy(drivename,read,8);
@@ -381,7 +273,7 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 	if (success) {
 		if (searchpath&&reading[11]&0x10) {
 			uint16_t nextCluster = (reading[27] << 8) | reading[26];
-			free(read); //This way we don't use so much space. We aren't going to use this data any more.
+			free_page(read,((numEntries*32)/4096)+1); //This way we don't use so much space. We aren't going to use this data any more.
 			return FAT12_fopen((fm.SystemAreaSize+((nextCluster-2)*fm.SectorsPerCluster))*512+1,16,searchpath,drive_num,fm,mode);
 		} else {
 			int32_t nextCluster = (reading[27] << 8) | reading[26];
@@ -400,23 +292,23 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 			} else {
 				retFile.directory = false;
 			}
-			free(read);
+			free_page(read,((numEntries*32)/4096)+1);
 			return retFile;
 		}
 	} else {
-		free(read);
+		free_page(read,((numEntries*32)/4096)+1);
 		retFile.valid = false;
 		return retFile;
 	}
 }
 
-void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
+uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
 	if (!file)
-		return;
+		return 1;
 	FAT12_MOUNT fm = *(FAT12_MOUNT *)getDiskMount(file->mountNumber).mount;
-	uint8_t FAT[fm.FATSize*512];
+	uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize*512)/4096)+1);
 	for (uint8_t i = 0; i < fm.FATSize; i++)
-		read_sector(drive_num,i+1,&FAT[i*512]);
+		ahci_read_sector(drive_num,i+1,&FAT[i*512]);
 	uint16_t rCluster = file->clusterNumber;
 	uint32_t curLen = len;
 	uint32_t curLoc = start;
@@ -424,9 +316,9 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 	char read[512];
 	while (curLen>0) {
 		if ((curLoc-curDiskLoc)<512) {
-			read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
+			ahci_read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
 			uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
-			memcpy(buf+curLoc,&read[curLoc%512],amt);
+			memcpy(buf+(curLoc-start),&read[curLoc%512],amt);
 			curLen-=amt;
 			curLoc+=amt;
 		}
@@ -436,4 +328,41 @@ void FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t dr
 			break;
 		}
 	}
+	free_page(FAT,((fm.FATSize*512)/4096)+1);
+	return 0;
+}
+
+FILE FAT12_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
+	FILE retfile;
+	memset(&retfile,0,sizeof(FILE));
+	
+	if (!file)
+		return retfile;
+	if (n>31)
+		return retfile;
+	
+	char read[512];
+	memset(read,0,512);
+	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
+	FAT12DIR dir_entry = *(PFAT12DIR)(read+(32*n));
+	
+	if (dir_entry.FileAttributes&0x08||dir_entry.FileAttributes&0x02||dir_entry.Filename[0]==0||dir_entry.Filename[0]==0xE5) {
+		return retfile;
+	}
+	retfile.valid = true;
+	retfile.size = dir_entry.FileSize;
+	char *ptr = buf;
+	for (uint8_t i = 0; i < 8; i++) {
+		if (dir_entry.Filename[i]!=' ')
+			*ptr++ = dir_entry.Filename[i];
+		if (i==7&&dir_entry.Extension[0]!=' ')
+			*ptr++ = '.';
+	}
+	for (uint8_t i = 0; i < 3; i++) {
+		if (dir_entry.Extension[i]!=' ')
+			*ptr++ = dir_entry.Extension[i];
+		if (dir_entry.FileAttributes&0x10&&i==2)
+			*ptr++ = '/';
+	}
+	return retfile;
 }

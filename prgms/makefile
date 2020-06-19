@@ -1,0 +1,28 @@
+PRGMS=\
+IDLE.SYS \
+TESTPRG.PRG \
+TESTPRG2.PRG \
+EXEC.PRG \
+SHELL.SYS \
+MEM.PRG \
+CAT.PRG \
+ADVNTURE.PRG \
+LS.PRG \
+
+all: $(PRGMS)
+
+install: mount $(PRGMS) umount
+
+mount:
+	@sudo mkdir -p /mnt/F1
+	@-sudo mount -o loop,rw ../floppy.flp /mnt/F1
+
+$(PRGMS):
+	cd $(basename $(shell echo $@ | tr A-Z a-z)) && $(MAKE) install -s
+
+umount:
+	@sudo umount /mnt/F1
+	@sudo rmdir /mnt/F1
+
+clean:
+	

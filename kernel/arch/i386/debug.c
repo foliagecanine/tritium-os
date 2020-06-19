@@ -1,8 +1,8 @@
-#include <kernel/debug.h>
-
-#define bool _Bool
+#include <kernel/stdio.h>
+#include <fs/file.h>
 
 char *currentDirectory;
+char commandPart[256];
 
 bool check_command(char* command) {
 	bool cmdAck = false;
@@ -24,21 +24,9 @@ bool check_command(char* command) {
 		cmdAck=true;
 	}
 	
-	if (strcmp(command,"reboot")) {
-		reboot();
-	}
-
-	if (strcmp(command,"lsdisk")) {
-		for (uint8_t i = 0; i < 8; i++) {
-			printf("%d\n",i);//getATADrive
-		}
-		usingNewline = false;
-		cmdAck=true;
-	}
-	
 	if (strcmp(command,"lsmnt")) {
 		for (uint8_t i = 0; i < 8; i++) {
-				if (getDiskMount(i).mountEnabled) printf("mnt%d (%c): %s%d, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], getDiskMount(i).drive<8 ? "ide" : "sata", getDiskMount(i).drive > 7 ? getDiskMount(i).drive-8 : getDiskMount(i).drive, getDiskMount(i).type);
+				if (getDiskMount(i).mountEnabled) printf("mnt%d (%c): %s%d, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", getDiskMount(i).drive, getDiskMount(i).type);
 		}
 		usingNewline = false;
 		cmdAck=true;
@@ -49,49 +37,6 @@ bool check_command(char* command) {
 		terminal_refresh();
 		usingNewline = false;
 		cmdAck=true;
-	}
-
-	if (strcmp(command, "time")) {
-		read_rtc();
-		printf("%d",(uint32_t)current_hour_time());
-		printf(":");
-		printf("%d",(uint32_t)current_minute_time());
-		printf(":");
-		printf("%d",(uint32_t)current_second_time());
-		printf("\n");
-		printf("%d",(uint32_t)current_month_time());
-		printf("/");
-		printf("%d",(uint32_t)current_day_time());
-		printf("/");
-		printf("%d",(uint32_t)current_year_time());
-		usingNewline = true;
-		cmdAck = true;
-	}
-	
-	char commandPart[strlen(command)+1];
-	memset(commandPart,0,strlen(command)+1);
-	strcut(command,commandPart,0,5);
-	if (strcmp(commandPart,"tzone")) {
-		if (strlen(command)>6) {
-			memset(commandPart,0,strlen(command)+1);
-			strcut(command,commandPart,6,strlen(command));
-			const char* possibleValues[] = { "-12","-11","-10","-9","-8","-7","-6","-5","-4","-3","-2","-1","+0","+1","+2","+3","+4","+5","+6","+7","+8","+9","+10","+11","+12","+13","+14","-9:30","-3:30","-2:30","+3:30","+4:30","+5:30","+5:45","+6:30","+8:45","+9:30","+10:30","+12:45","+13:45"};
-			for (int i=-12;i<15;i++) {
-				if (strcmp(possibleValues[i+12],commandPart)){
-					set_time_zone(i);
-					printf("Successfully set time zone: UTC");
-					printf(commandPart);
-					break;
-				} else if (i==14) {
-					printf("Error: Time zone did not match a value in possible time zone list. Did you format it correctly? (e.g. -7 for UTC-7 and +7 for UTC+7)\n");
-					printf("Entered time zone: UTC%s",commandPart);
-				}
-			}
-		} else {
-			printf("Error: Must specify time zone (e.g. -7 for UTC-7 and +7 for UTC+7)");
-		}
-		usingNewline = true;
-		cmdAck = true;
 	}
 	
 	memset(commandPart,0,strlen(command)+1);
@@ -154,12 +99,11 @@ bool check_command(char* command) {
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,2);
 	if (strcmp(commandPart,"cd")) {
-		free(currentDirectory);
 		memset(commandPart,0,strlen(command)+1);
 		strcut(command,commandPart,3,strlen(command));
 		
-		char filename[strlen(currentDirectory)+strlen(commandPart)+1];
-		memset(filename,0,strlen(currentDirectory)+strlen(commandPart)+1);
+		char filename[256];
+		memset(filename,0,256);
 		if (commandPart[1]==':') {
 			strcpy(filename,commandPart);
 		} else {
@@ -168,19 +112,19 @@ bool check_command(char* command) {
 		}
 		
 		if (filename[strlen(commandPart)-1]!='/') {
-			currentDirectory = malloc(sizeof(filename)+1);
+			memset(currentDirectory,0,4096);
 			strcpy(currentDirectory,filename);
 			currentDirectory[strlen(filename)]='/';
 		} else {
-			currentDirectory = malloc(sizeof(filename));
+			memset(currentDirectory,0,4096);
 			strcpy(currentDirectory,filename);
 		}
 		cmdAck = true;
 	}
 	
 	memset(commandPart,0,strlen(command)+1);
-	strcut(command,commandPart,0,3);
-	if (strcmp(commandPart,"cat")) {
+	strcut(command,commandPart,0,4);
+	if (strcmp(commandPart,"cat ")) {
 		memset(commandPart,0,strlen(command)+1);
 		strcut(command,commandPart,4,strlen(command));
 		char filename[strlen(currentDirectory)+strlen(commandPart)+1];
@@ -203,6 +147,10 @@ bool check_command(char* command) {
 		}
 		usingNewline = false;
 		cmdAck = true;
+	} else if (strcmp(commandPart,"cat")) {
+		printf("Please specify filename.\n");
+		cmdAck = true;
+		usingNewline = false;
 	}
 	
 	memset(commandPart,0,strlen(command)+1);
@@ -223,12 +171,11 @@ bool check_command(char* command) {
 		} else if (f.directory) {
 			printf("Error: \"%s\" is a directory.\n",filename);
 		} else {
-			char data[f.size+1];
-			memset(data,0,f.size+1);
-			fread(&f,data,0,f.size);
-			asm("jmp %%eax": :"a"(&data));
+			void * read = map_page_to((void *)0x100000);
+			memset(read,0,4096);
+			fread(&f,read,0,4096);
+			asm("jmp 0x100000");
 		}
-		free(filename);
 		usingNewline = false;
 		cmdAck = true;
 	}
@@ -236,18 +183,6 @@ bool check_command(char* command) {
 	if (strcmp(command, "exit")) {
 		breakcode = true;
 		cmdAck=true;
-	}
-	
-	if (strcmp(command, "test")) {
-		ahci_read_test();
-		usingNewline = false;
-		cmdAck = true;
-	}
-
-	if (strcmp(command, "mem")) {
-		mmu_info();
-		usingNewline = false;
-		cmdAck = true;
 	}
 
 	if (!cmdAck) {
@@ -262,7 +197,9 @@ bool check_command(char* command) {
 
 void debug_console() {
 	printf("Debug console active!\n");
-	currentDirectory = (char *)malloc(sizeof("A:/"));
+	printf("\nWARNING: This console is HIGHLY UNSTABLE and runs in KERNEL MODE.\nThat means that it can easily crash or break things.\n\n");
+	currentDirectory = (char *)alloc_page(1);
+	memset(currentDirectory,0,4096);
 	strcpy(currentDirectory,"A:/");
 	
 	char lastCommand[256];
@@ -324,7 +261,6 @@ void debug_console() {
 		lastNumChars = numChars;
 		
 		printf("\n");
-		if (check_command(command))
-			reboot();
+		check_command(command);
 	}
 }
