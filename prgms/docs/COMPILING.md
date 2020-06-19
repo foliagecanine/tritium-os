@@ -20,7 +20,7 @@ org 0x100000
 bits 32
 ```  
 Compile it with (NASM): 
-```sh
+```bash
 nasm -fbin input.asm -o OUTPUT.PRG
 ```
   
@@ -49,7 +49,7 @@ asm("jmp main");
 The code doesn't know where to start, so by adding this you direct it to launch the "main" function.
 
 Compile with the following flags (GCC):  
-```sh
+```bash
 gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
 ```
 
