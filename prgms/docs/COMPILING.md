@@ -9,7 +9,7 @@ For assembly programs
 For C programs
  - GCC x86 compiler (May work with other compilers such as clang, but untested)
  - GNU ld (or equivelant, untested)
- - GNU Make (reccommended)
+ - GNU Make (recommended)
  
 ### Compiling Assembly
 For assembly programs, simply write the code as you would.
@@ -22,7 +22,7 @@ Compile it with (NASM): nasm -fbin input.asm -o OUTPUT.PRG
   
 ### Compiling C
 For C programs, it's a little more complicated.
-It is reccommended to use a program like GNU Make for automation of the compilation.
+It is recommended to use a program like GNU Make for automation of the compilation.
 
 In the main c file, make sure you put code such as
 ```C
