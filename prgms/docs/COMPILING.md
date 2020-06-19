@@ -92,7 +92,7 @@ int 0x80, eax=1: exec_syscall
 Arguments:
 ebx = char  *name     : Program full path
 ecx = char **args     : Arguments, terminated by NULL
-edx = char **env	  : Environment variables, terminated by NULL
+edx = char **env      : Environment variables, terminated by NULL
 Return:
 eax = uint32_t pid    : PID of program started. 0 if failed.
 
