@@ -14,7 +14,7 @@ For C programs
  
 ### Compiling Assembly
 For assembly programs, simply write the code as you would.
-Start with (NASM) 
+Start with (NASM):  
 ```NASM
 org 0x100000
 bits 32
