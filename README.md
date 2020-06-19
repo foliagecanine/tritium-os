@@ -92,13 +92,13 @@ Here's the checklist:
 - [ ] Shell (almost there)
 - [x] FAT16 Filesystem Driver
 - [x] Arguments
-- [ ] Environment variables
+- [x] Environment variables
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 Programs:
 - [x] Directory listing program
 - [x] Program to display text files
-- [ ] Text adventure game
+- [x] Text adventure game
 
 ## DISCLAIMERS
 
