@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <vga.h>
 
 __asm__("jmp main");
 

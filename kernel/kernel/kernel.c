@@ -38,11 +38,14 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_tasking(1);
 	kprint("[KMSG] Kernel initialized successfully");
 	
-	if (!mountDrive(0)) {
-		printf("Mounted drive 0\n");
-	} else {
-		printf("No valid drive found.\n");
-		for(;;);
+	//Support up to 8 drives (for now)
+	for (uint8_t i = 0; i < 8; i++) {
+		if (!mountDrive(i)) {
+			printf("Mounted drive %d\n",i);
+		} else if (i==0) {
+			printf("No valid drive found.\n");
+			for(;;);
+		}
 	}
 	
 	if (strcmp(getDiskMount(0).type,"FAT12"))
