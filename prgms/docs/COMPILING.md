@@ -29,10 +29,10 @@ In the main c file, make sure you put code such as
 extern char **envp;
 extern uint32_t envc;
 asm ("push %ecx;\
-		push %eax;\
-		mov %ebx,(envc);\
-		mov %edx,(envp);\
-		call main");
+	push %eax;\
+	mov %ebx,(envc);\
+	mov %edx,(envp);\
+	call main");
 ```
 		
 This will save all arguments and environment variables then launch your code.
