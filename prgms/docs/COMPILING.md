@@ -79,7 +79,7 @@ edx: Pointer to char\*\* of environment variables (Should always be 0xF05000)
 There are several software interrupt functions available to the user process.  
 They can be called by putting the function number in eax and calling `int 0x80` (or "int $0x80" in GAS)
 
-```
+```C
 int 0x80, eax=0: terminal writestring  
 Arguments:  
 ebx = (char *)string : String to write
@@ -87,7 +87,7 @@ ebx = (char *)string : String to write
 This function simply prints a C string (terminated with 0/NULL) to the terminal.
 ```
 
-```
+```C
 int 0x80, eax=1: exec_syscall
 Arguments:
 ebx = char  *name     : Program full path
@@ -107,7 +107,7 @@ ebx = uint32_t status : Exit status
 This function exits the program properly. Exit status is given to any programs using waitpid.
 ```
 
-```
+```C
 int 0x80, eax=3: terminal_putentryat  
 Arguments:  
 bl  = uint8_t c       : Character to print
@@ -118,7 +118,7 @@ esi = size_t y        : Y location on screen. Can be 0-24
 This function puts a character at a specific point on the screen
 ```
 
-```
+```C
 int 0x80, eax=4: getchar  
 Return:
 al  = char c          : Character typed on keyboard. NULL if there is none.
@@ -126,7 +126,7 @@ al  = char c          : Character typed on keyboard. NULL if there is none.
 This function gets a character typed on the keyboard
 ```
 
-```
+```C
 int 0x80, eax=5: getkey  
 Return:
 al  = uint16_t k      : Key id of key pressed on keyboard. NULL if there is none.
@@ -134,13 +134,13 @@ al  = uint16_t k      : Key id of key pressed on keyboard. NULL if there is none
 This function gets a character typed on the keyboard
 ```
 
-```
+```C
 int 0x80, eax=6: yield
 
 Prematurely give control to another program in the queue. Useful when waiting for time-sensitive things like delays or keyboard input.
 ```
 
-```
+```C
 int 0x80, eax=7: getpid
 Return:
 eax = uint32_t pid    : PID of current program
@@ -148,7 +148,7 @@ eax = uint32_t pid    : PID of current program
 Get PID of current program
 ```
 
-```
+```C
 int 0x80, eax=8: free_pages
 Return:
 eax = uint32_t pages  : Number of memory pages (4KiB) free in the system
@@ -156,7 +156,7 @@ eax = uint32_t pages  : Number of memory pages (4KiB) free in the system
 Get amount of free memory in the system
 ```
 
-```
+```C
 int 0x80, eax=9, bl=0: terminal_option.setcursor
 Arguments:
 cl = uint8_t x        : X position of cursor
@@ -165,7 +165,7 @@ dl = uint8_t y        : Y position of cursor
 Set the cursor position to x,y
 ```
 
-```
+```C
 int 0x80, eax=9, bl=1: terminal_option.getcursor
 Return:
 eax = uint32_t cursor : Cursor position in format (0x0000<<16) | (x<<8) | (y)
@@ -173,13 +173,13 @@ eax = uint32_t cursor : Cursor position in format (0x0000<<16) | (x<<8) | (y)
 Get the cursor position
 ```
 
-```
+```C
 int 0x80, eax=9, bl=2: terminal_option.scroll
 
 Scroll the terminal one line
 ```
 
-```
+```C
 int 0x80, eax=10: waitpid
 Arguments:
 ebx = uint32_t pid    : PID to wait for
@@ -187,7 +187,7 @@ ebx = uint32_t pid    : PID to wait for
 Wait for PID to exit
 ```
 
-```
+```C
 int 0x80, eax=11: get_retval
 Return:
 eax = uint32_t retval : Program's return value
