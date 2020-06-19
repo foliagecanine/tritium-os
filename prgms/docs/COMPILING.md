@@ -19,7 +19,10 @@ Start with (NASM)
 org 0x100000
 bits 32
 ```  
-Compile it with (NASM): nasm -fbin input.asm -o OUTPUT.PRG  
+Compile it with (NASM): 
+```sh
+nasm -fbin input.asm -o OUTPUT.PRG
+```
   
 ### Compiling C
 For C programs, it's a little more complicated.
@@ -46,7 +49,9 @@ asm("jmp main");
 The code doesn't know where to start, so by adding this you direct it to launch the "main" function.
 
 Compile with the following flags (GCC):  
-`gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin`
+```sh
+gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
+```
 
 Note: The -m32 flag is only required when using a 64 bit compiler
 
