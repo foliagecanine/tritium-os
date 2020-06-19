@@ -99,7 +99,7 @@ eax = uint32_t pid    : PID of program started. 0 if failed.
 This function launches a file as a program. Arguments and environment variables are supplied by callee.
 ```
 
-```
+```C
 int 0x80, eax=2: exit_program  
 Arguments:  
 ebx = uint32_t status : Exit status
