@@ -38,7 +38,9 @@ asm ("push %ecx;\
 This will save all arguments and environment variables then launch your code.
 Or at a minimum
 
-`asm("jmp main");`
+```C
+asm("jmp main");
+```
 
 The code doesn't know where to start, so by adding this you direct it to launch the "main" function.
 
