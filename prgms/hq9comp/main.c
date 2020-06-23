@@ -33,7 +33,7 @@ _Noreturn void main(uint32_t argc, char **argv) {
 	FILE f;
 	if (argc>1) {
 		if (argv[argc-1][1]==':')
-			strcpy(fname,argv[1]);
+			strcpy(fname,argv[argc-1]);
 		else {
 			memcpy(fname,cd,strlen(cd));
 			memcpy(fname+strlen(cd),argv[argc-1],strlen(argv[argc-1]));
