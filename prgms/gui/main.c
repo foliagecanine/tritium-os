@@ -73,7 +73,53 @@ char cd[4096];
 char program[4096];
 uint32_t g_argc;
 
-bool selector() {
+uint8_t disks[8];
+uint8_t numdisks;
+uint8_t diskselected = 0;
+
+bool diskselector() {
+	for (uint8_t i = 0; i < numdisks; i++) {
+		if (i==diskselected) {
+			terminal_setcolor(0x9F);
+		} else {
+			terminal_setcolor(0xF0);
+		}
+		terminal_goto(36,9+(i));
+		if (disks[i]!=0xFF)
+			printf(" %c:/ ",65+disks[i]);
+		else {
+			printf("     ");
+		}
+	}
+	terminal_setcolor(0xF0);
+	terminal_goto(24,20);
+	while(1){
+		uint8_t g = getkey();
+		if (g==0x50||g==0xD0) {
+			if (diskselected<numdisks-1)
+				diskselected++;
+			return false;
+		}
+		if (g==0xC8||g==0x48) {
+			if (diskselected>0)
+				diskselected--;
+			return false;
+		}
+		if (g==0x1C||g==0x9C) {
+			getchar();
+			cd[0] = 65+disks[diskselected];
+			cd[1] = ':';
+			cd[2] = '/';
+			cd[3] = 0;
+			return true;
+		}
+		if (g==0x01||g==0x81) {
+			return true;
+		}
+	}
+}
+
+bool programselector() {
 	for (uint8_t i = min; i < min+12; i++) {
 		if (i==selected) {
 			terminal_setcolor(0x9F);
@@ -175,6 +221,27 @@ bool selector() {
 				exit(0);
 			}
 		}
+		if (g==0x3B||g==0xBB) {
+			drawrect(15,5,50,16,0x0F);
+			drawrect(17,6,46,14,0xF0);
+			terminal_goto(24,7);
+			printf("Use the cursor to select a disk:");
+			numdisks = 0;
+			char *testdisk = "#:/";
+			for (uint8_t i = 0; i < 8; i++) {
+				testdisk[0] = 65+i;
+				FILE f = fopen(testdisk,"r");
+				if (f.valid) {
+					disks[numdisks] = i;
+					numdisks++;
+				}
+			}
+			while(1) {
+				if (diskselector())
+					break;
+			}
+			return true;
+		}
 	}
 }
 
@@ -186,7 +253,7 @@ void gui() {
 	terminal_setcolor(0x70);
 	terminal_writestring("                             TritiumOS File Browser                             ");
 	terminal_goto(0,24);
-	terminal_writestring(" Esc = exit                                                                    ");
+	terminal_writestring(" Esc = exit | F1 = Change disk                                                 ");
 	terminal_putentryat(' ',0x70,79,24);
 	drawrect(20,2,40,21,0x0F);
 	terminal_setcolor(0xF0);
@@ -195,7 +262,7 @@ void gui() {
 	printf("Use the cursor to select a program");
 	drawrect(22,7,36,15,0xF0);
 	while(1) {
-		if (selector())
+		if (programselector())
 			return;
 	}
 }
