@@ -1,4 +1,5 @@
 #include <kernel/pit.h>
+#include <kernel/sysfunc.h>
 
 // Thanks to http://jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html 
 // for clarification of the assembly code from https://wiki.osdev.org/PIT
@@ -22,7 +23,7 @@ void init_pit(uint32_t freq) {
 }
 
 void dontoptimize() {
-	printf("");
+	asm volatile("nop");
 }
 
 void sleep(uint32_t ms) {

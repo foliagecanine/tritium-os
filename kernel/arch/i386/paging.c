@@ -32,7 +32,14 @@ void release_phys_page(void *addr) {
 _Bool check_phys_page(void *addr) {
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
-	return (_Bool)(pmem_used[page/8] & (1 << (page%8)));
+	_Bool r = (_Bool)(pmem_used[page/8] & (1 << (page%8)));
+	return r;
+}
+
+uint8_t check_page_cluster(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	return pmem_used[page/8];
 }
 
 void init_paging(multiboot_info_t *mbi) {
@@ -205,7 +212,9 @@ void* map_page_to(void *vaddr) {
 		return 0;
 	}
 	for (uint32_t k=0; k<1048576; k++) {
-		if (!check_phys_page((void *)(k*4096))) {
+		if (check_page_cluster((void *)(k*4096))==255)
+			k+=7;
+		else if (!check_phys_page((void *)(k*4096))) {
 			map_addr(vaddr,(void *)(k*4096));
 			return vaddr;
 		}
@@ -242,7 +251,9 @@ void* alloc_page(size_t pages) {
 			if (successful_pages==pages) {
 				for (uint32_t step=0; step<pages;step++) {
 					for (uint32_t k=0; k<1048576; k++) {
-						if (!check_phys_page((void *)(k*4096))) {
+						if (check_page_cluster((void *)(k*4096))==255)
+							k+=7;
+						else if (!check_phys_page((void *)(k*4096))) {
 							map_addr((void *)((i+step)*4096),(void *)(k*4096));
 							break;
 						}

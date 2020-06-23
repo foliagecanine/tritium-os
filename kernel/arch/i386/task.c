@@ -63,24 +63,9 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	memcpy((void *)0x100000,prgm,size);
 	for (uint8_t i = 0; i < 4; i++) {
 		map_page_to((void *)0xF00000+(i*4096));
-		if (pid==3) {
-			map_page_secretly(0x0F000000+(i*4096),get_phys_addr(0xF00000+(i*4096)));
-			pa[i]=get_phys_addr(0xF00000+(i*4096));
-		}
 		mark_user((void *)0xF00000+(i*4096),true);
 	}
-	
-	if (threads[2].pid) {
-		uint32_t *t = get_current_tables();
-		uint32_t c;
-		asm volatile("mov %%cr3,%0":"=r"(c):);
-		use_kernel_map();
-		for (uint8_t i = 0; i < 4; i++) {
-			map_page_secretly(0x0F000000+(i*4096),pa[i]);
-		}
-		switch_tables(t);
-		asm volatile("mov %0,%%cr3"::"r"(c));
-	}
+
 	
 	//Program arguments 0xF04000 to 0xF05000
 	if (argl_paddr) {
