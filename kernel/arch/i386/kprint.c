@@ -8,7 +8,7 @@
  */
 void kerror(const char* str) {
 	uint8_t prev_trm_color = terminal_getcolor();
-	terminal_setcolor(0x0c);
+	terminal_setcolor((prev_trm_color|0xc)&0xfc);
 	printf(str);
 	printf("\n");
 	terminal_setcolor(prev_trm_color);
@@ -16,7 +16,15 @@ void kerror(const char* str) {
 
 void kprint(const char* str) {
 	uint8_t prev_trm_color = terminal_getcolor();
-	terminal_setcolor(0x0e);
+	terminal_setcolor((prev_trm_color|0xe)&0xfe);
+	printf(str);
+	printf("\n");
+	terminal_setcolor(prev_trm_color);
+}
+
+void kwarn(const char* str) {
+	uint8_t prev_trm_color = terminal_getcolor();
+	terminal_setcolor((prev_trm_color|0x5)&0xf5);
 	printf(str);
 	printf("\n");
 	terminal_setcolor(prev_trm_color);

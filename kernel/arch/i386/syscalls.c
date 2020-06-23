@@ -1,11 +1,12 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	15
+#define NUM_SYSCALLS	16
 
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n);
+void debug_break();
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -23,7 +24,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&fopen_usermode,		// 12
 	&fread_usermode,		// 13
 	&readdir_usermode,		// 14
-	//&get_process_state,		// 15
+	&debug_break,			// 15
 };
 
 extern bool ts_enabled;
@@ -108,4 +109,8 @@ void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
 	if ((uint32_t)buf>0x100000&&(uint32_t)buf+256<0xF04000&&(uint32_t)f>0x100000&&(uint32_t)f+256<0xF04000) {
 		*o = readdir(f, buf, n);
 	}
+}
+
+void debug_break() {
+	asm volatile("nop");
 }

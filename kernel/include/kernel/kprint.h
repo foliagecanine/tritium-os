@@ -8,5 +8,6 @@
 
 void kerror(const char* str);
 void kprint(const char* str);
+void kwarn(const char* str);
 
 #endif

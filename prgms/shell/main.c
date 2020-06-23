@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <string.h>
-__asm__("push %ecx; push %eax; call main");
+extern char **envp;
+extern uint32_t envc;
+asm ("push %ecx;\
+		push %eax;\
+		mov %ebx,(envc);\
+		mov %edx,(envp);\
+		call main");
 
 static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
@@ -11,20 +17,16 @@ void writestring(char *string) {
 	syscall(0);
 }
 
-uint32_t exec(char *name) {
+/*uint32_t exec(char *name) {
 	uint32_t retval;
 	asm volatile("mov %0,%%ebx; mov $0,%%ecx"::"r"(name));
 	syscall(1);
 	asm volatile("mov %%eax,%0":"=m"(retval):);
 	return retval;
-}
+}*/
 
 uint32_t exec_args(char *name, char **arguments, char **environment) {
-	uint32_t retval;
-	asm volatile("pusha; mov %0,%%ebx; mov %1,%%ecx; mov %2,%%edx"::"m"(name),"m"(arguments),"m"(environment));
-	syscall(1);
-	asm volatile("mov %%eax,%0; popa":"=m"(retval):);
-	return retval;
+	asm volatile("mov $1,%%eax; int $0x80; pop %%ebx; pop %%ebp; ret;"::"b"(name),"c"(arguments),"d"(environment));
 }
 
 void yield() {
@@ -35,8 +37,8 @@ uint32_t waitpid(uint32_t pid) {
 	uint32_t retval = 1;
 	asm volatile("mov %0,%%ebx"::"r"(pid));
 	syscall(10); //waitpid
-	syscall(6); //yield
-	syscall(6); //yield
+	//syscall(6); //yield
+	//syscall(6); //yield
 	syscall(11); //get_retval
 	asm volatile("mov %%eax,%0":"=m"(retval):);
 	return retval;
@@ -53,7 +55,7 @@ char cmd[256] = "";
 char args[256] = "";
 char temp[256] = "";
 char cd[256] = "A:/";
-char *envp[4096];
+char *_envp[4096];
 uint8_t index = 0;
 uint8_t child_pid = 0;
 bool failed = false;
@@ -96,7 +98,6 @@ void commandline() {
 		if (temp[1]==':') {
 			memcpy(cd,temp,256);
 		} else {
-			
 			memcpy(cd+strlen(cd),temp,256-strlen(cd));
 		}
 		if (strlen(cd)!=3&&cd[strlen(cd)-1]=='/') {
@@ -152,11 +153,13 @@ void commandline() {
 			failed = true; //Effectively disable waitpid
 		}
 		
+		
+		
 		//Environment variables
-		memset(envp,0,4096);
-		envp[0] = "CD";
-		envp[1] = cd;
-		envp[2] = NULL;
+		memset(_envp,0,4096);
+		_envp[0] = "CD";
+		_envp[1] = cd;
+		_envp[2] = NULL;
 
 		//Arguments
 		char *argstart = strchr(cmd,' ');
@@ -195,7 +198,7 @@ void commandline() {
 		temp[strlen(temp)]=0;
 		
 		printf("Running %s...\n",temp);
-		child_pid = exec_args(temp,argv,envp);
+		child_pid = exec_args(temp,argv,_envp);
 		
 		if (!child_pid) {
 			memset(temp,0,256);
@@ -210,7 +213,7 @@ void commandline() {
 			temp[strlen(temp)]=0;
 			
 			printf("Running %s...\n",temp);
-			child_pid = exec_args(temp,argv,envp);
+			child_pid = exec_args(temp,argv,_envp);
 			
 			if (!child_pid) {
 				memset(temp,0,256);
@@ -228,7 +231,7 @@ void commandline() {
 				temp[strlen(temp)]=0;
 
 				printf("Running %s...\n",temp);
-				child_pid = exec_args(temp,argv,envp);
+				child_pid = exec_args(temp,argv,_envp);
 				
 				if (!child_pid) {
 					memset(temp,0,256);
@@ -243,7 +246,7 @@ void commandline() {
 					temp[strlen(temp)]=0;
 
 					printf("Running %s...\n",temp);
-					child_pid = exec_args(temp,argv,envp);
+					child_pid = exec_args(temp,argv,_envp);
 					
 					if (!child_pid) {
 						memset(temp,0,256);
@@ -258,7 +261,7 @@ void commandline() {
 						temp[strlen(temp)]=0;
 
 						printf("Running %s...\n",temp);
-						child_pid = exec_args(temp,argv,envp);
+						child_pid = exec_args(temp,argv,_envp);
 						
 						if (!child_pid) {
 							memset(temp,0,256);
@@ -276,7 +279,7 @@ void commandline() {
 							temp[strlen(temp)]=0;
 							
 							printf("Running %s...\n",temp);
-							child_pid = exec_args(temp,argv,envp);
+							child_pid = exec_args(temp,argv,_envp);
 							if (!child_pid) {
 								printf("No file found.\n");
 								failed = true;
@@ -294,7 +297,6 @@ void commandline() {
 	
 	index = 0;
 	memset(cmd,0,256);
-	
 }
 
 uint8_t buf[513];

@@ -129,6 +129,12 @@ void terminal_clear(void)    //clear all screen and set prompt to up left corner
   terminal_setcursor();
 }
 
+void terminal_goto(size_t x, size_t y) {
+	terminal_column = x;
+	terminal_row = y;
+	terminal_setcursor();
+}
+
 void exit(uint32_t code) {
 	asm("mov $2,%eax;int $0x80");
 }

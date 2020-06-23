@@ -3,6 +3,7 @@
 
 #include <kernel/stdio.h>
 #include <kernel/idt.h>
+#include <kernel/sysfunc.h>
 
 void init_exceptions();
 

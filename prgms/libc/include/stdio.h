@@ -23,6 +23,8 @@ unsigned int getkey();
 void terminal_backup();
 void terminal_setcolor(uint8_t color);
 
+#ifndef _VGA_COLOR
+#define _VGA_COLOR
 enum vga_color {
 	VGA_COLOR_BLACK = 0,
 	VGA_COLOR_BLUE = 1,
@@ -45,6 +47,7 @@ enum vga_color {
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
 	return fg | bg << 4;
 }
+#endif
 
 typedef struct {
 	uint64_t location;

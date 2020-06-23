@@ -32,6 +32,9 @@ void init_tasking(uint32_t num_pages) {
 	kprint("[INIT] Tasking initialized.");
 }
 
+uint32_t *watchme = (uint32_t*)0x0F003F9C;
+uint32_t pa[4];
+
 uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t envl_paddr) {
 	volatile uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
@@ -60,7 +63,23 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	memcpy((void *)0x100000,prgm,size);
 	for (uint8_t i = 0; i < 4; i++) {
 		map_page_to((void *)0xF00000+(i*4096));
+		if (pid==3) {
+			map_page_secretly(0x0F000000+(i*4096),get_phys_addr(0xF00000+(i*4096)));
+			pa[i]=get_phys_addr(0xF00000+(i*4096));
+		}
 		mark_user((void *)0xF00000+(i*4096),true);
+	}
+	
+	if (threads[2].pid) {
+		uint32_t *t = get_current_tables();
+		uint32_t c;
+		asm volatile("mov %%cr3,%0":"=r"(c):);
+		use_kernel_map();
+		for (uint8_t i = 0; i < 4; i++) {
+			map_page_secretly(0x0F000000+(i*4096),pa[i]);
+		}
+		switch_tables(t);
+		asm volatile("mov %0,%%cr3"::"r"(c));
 	}
 	
 	//Program arguments 0xF04000 to 0xF05000
@@ -202,9 +221,19 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 			parent->waitpid = retval;
 		}
 	}
+	//Free all the memory to prevent leaks
+	free_page((void *)0x100000,16);
+	free_page((void *)0xF00000,6);
+	use_kernel_map();
+	free_page(current_task->tables-4096,1025);
 	current_task->state = TASK_STATE_NULL;
+	current_task->cr3 = 0;
+	current_task->tables = 0;
+	current_task->waitpid = 0;
+	uint32_t old_pid = current_task->pid;
+	current_task->pid = 0;
 	volatile uint32_t new_pid = 0;
-	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
+	for (uint32_t i = old_pid+1; i < max_threads; i++) {
 		if (threads[i-1].pid!=0) {
 			new_pid = i;
 			break;
@@ -224,17 +253,10 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	}
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
-	printf("====== pid=%d\n",current_task->pid);
+	printf("====== pid=%d\n",old_pid);
 #endif
-	//Free all the memory to prevent leaks
-	free_page((void *)0x100000,16);
-	free_page((void *)0xF00000,6);
-	use_kernel_map();
-	free_page(current_task->tables-4096,1025);
-	switch_tables(current_task->tables);
-	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
-	
-	current_task->pid = 0;
+	//switch_tables(current_task->tables);
+	//asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
 	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
@@ -258,66 +280,65 @@ uint32_t envl_v;
 uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
-	uint32_t *current_tables = get_current_tables();
-	
-	//Process environment variables
-	uint32_t envc = 0;
-	char **envp = alloc_page(1);
-	memset(envp,0,4096);
-	void *eptr = envp;
-	
-	if (environment) {
-		//Count environment variables untill we reach NULL.
-		while(environment[envc]!=NULL)
-			envc++;
-	}
-	
-	eptr+=sizeof(char *)*(envc+1); //Reserve space for the pointers
-	
-	if (environment) {
-		for (uint32_t i = 0; i < envc; i++) {
-			envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xF05000);
-			strcpy(eptr,environment[i]);
-			eptr+=strlen(environment[i]);
-			eptr++;
-		}
-	}
-	
-	envl_v = (uint32_t)get_phys_addr(envp);
-	
-	//Now process arguments
-	uint32_t argc = 0;
-	char **argv = alloc_page(1);
-	memset(argv,0,4096);
-	void *aptr = argv;
-	
-	if (arguments) {
-		//Count arguments until we reach a NULL.
-		while (arguments[argc]!=NULL)
-			argc++;
-	}
-	
-	aptr+=sizeof(char *)*(argc+2); //Reserve space for the pointers
-	argv[0] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
-	strcpy(aptr,name);
-	aptr+=strlen(name);
-	aptr++;
-	argc++;
-	
-	//Make sure arguments are present
-	if (arguments) {
-		for (uint32_t i = 0; i < argc-1; i++) {
-			argv[i+1] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
-			strcpy(aptr,arguments[i]);
-			aptr+=strlen(arguments[i]);
-			aptr++;
-		}
-	}
-	
-	argl_v = (uint32_t)get_phys_addr(argv);
+	uint32_t *current_tables = get_current_tables();	
 	
 	prgm = fopen(name,"r");
 	if (prgm.valid&&!prgm.directory) {
+		//Process environment variables
+		uint32_t envc = 0;
+		char **envp = alloc_page(1);
+		memset(envp,0,4096);
+		void *eptr = envp;
+		
+		if (environment) {
+			//Count environment variables untill we reach NULL.
+			while(environment[envc]!=NULL)
+				envc++;
+		}
+		
+		eptr+=sizeof(char *)*(envc+1); //Reserve space for the pointers
+		
+		if (environment) {
+			for (uint32_t i = 0; i < envc; i++) {
+				envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xF05000);
+				strcpy(eptr,environment[i]);
+				eptr+=strlen(environment[i]);
+				eptr++;
+			}
+		}
+		
+		envl_v = (uint32_t)get_phys_addr(envp);
+		
+		//Now process arguments
+		uint32_t argc = 0;
+		char **argv = alloc_page(1);
+		memset(argv,0,4096);
+		void *aptr = argv;
+		
+		if (arguments) {
+			//Count arguments until we reach a NULL.
+			while (arguments[argc]!=NULL)
+				argc++;
+		}
+		
+		aptr+=sizeof(char *)*(argc+2); //Reserve space for the pointers
+		argv[0] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
+		strcpy(aptr,name);
+		aptr+=strlen(name);
+		aptr++;
+		argc++;
+		
+		//Make sure arguments are present
+		if (arguments) {
+			for (uint32_t i = 0; i < argc-1; i++) {
+				argv[i+1] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
+				strcpy(aptr,arguments[i]);
+				aptr+=strlen(arguments[i]);
+				aptr++;
+			}
+		}
+		
+		argl_v = (uint32_t)get_phys_addr(argv);
 		use_kernel_map();
 		void *buf = alloc_page((prgm.size/4096)+1);
 		memset(buf,0,((prgm.size/4096)+1)*4096);
@@ -332,15 +353,19 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 			trade_vaddr(argv);
+			trade_vaddr(envp);
 			return pid;
 		} else {
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
-			trade_vaddr(argv);
+			free_page(argv,1);
+			free_page(envp,1);
 			return 0;
 		}
 	} else {
+		switch_tables((void *)current_tables);
+		asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 		return 0;
 	}
 }

@@ -112,7 +112,7 @@ void init_paging(multiboot_info_t *mbi) {
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 	
 	//Awesome! Now the default page tables are at vaddr:0xC0400000 and paddr:0x400000
-	//This won't get in the way of programs (which are loaded at vaddr:0x400000) but is still within a low capacity of memory (we only need 8MiB of memory right now)
+	//This won't get in the way of programs (which are loaded at vaddr:0x100000) but is still within a low capacity of memory (we only need 8MiB of memory right now)
 	kprint("[INIT] Paging initialized");
 	
 	//Allow us to read the MBI to find the memory map.
@@ -199,8 +199,11 @@ void *get_phys_addr(void *vaddr) {
 }
 
 void* map_page_to(void *vaddr) {
-	if (kernel_tables[(uint32_t)vaddr/4096].present==1)
+	if (kernel_tables[(uint32_t)vaddr/4096].present==1) {
+		kwarn("[WARN] Page mapped that is already present");
+		printf("===== %#\n",(uint64_t)vaddr);
 		return 0;
+	}
 	for (uint32_t k=0; k<1048576; k++) {
 		if (!check_phys_page((void *)(k*4096))) {
 			map_addr(vaddr,(void *)(k*4096));
@@ -211,9 +214,20 @@ void* map_page_to(void *vaddr) {
 	return 0;
 }
 
+void map_page_secretly(void *vaddr, void *paddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	kernel_tables[vaddr_page].address = paddr_page;
+	kernel_tables[vaddr_page].readwrite = 1;
+	kernel_tables[vaddr_page].present = 1;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
 void* alloc_page(size_t pages) {
 	//First find consecutive virtual pages
-	for(volatile uint32_t i = 1024; i < 1048576; i++) {
+	for(volatile uint32_t i = 4096; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -263,6 +277,7 @@ void use_kernel_map() {
 
 void *clone_tables() {
 	void * new = alloc_page(1025);
+	memset(new,0,4096*1025);
 	page_table_entry * new_page_tables = new+4096;
 	page_dir_entry * new_page_dir = new;
 	memcpy(new_page_tables,kernel_tables,1024*4096);

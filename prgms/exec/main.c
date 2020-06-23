@@ -1,3 +1,5 @@
+#define uint32_t unsigned long
+
 __asm__("jmp main");
 
 static inline void syscall(unsigned int syscall_num) {
@@ -9,9 +11,12 @@ void writestring(char *string) {
 	syscall(0);
 }
 
-void exec(char *name) {
-	asm volatile("mov %0,%%ebx; mov $0,ecx; mov $0,edx"::"r"(name));
+uint32_t exec(char *name) {
+	uint32_t retval;
+	asm volatile("mov %0,%%ebx; mov $0,%%ecx; mov $0,%%edx; mov $0,%%esi; mov $0,%%edi"::"r"(name));
 	syscall(1);
+	asm volatile("mov %%eax,%0":"=m"(retval):);
+	return retval;
 }
 
 void exit(int retval) {

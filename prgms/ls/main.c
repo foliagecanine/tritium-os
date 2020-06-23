@@ -28,7 +28,8 @@ _Noreturn void main(uint32_t argc, char **argv) {
 		strcpy(fname,cd);
 	}
 	f = fopen(fname,"r");
-	FILE r = f;
+	FILE r;
+	r.valid = true;
 	if (f.valid) {
 		if (f.directory) {
 			for (uint8_t i = 0; i<16&&r.valid; i++) {

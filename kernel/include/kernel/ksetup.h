@@ -9,6 +9,7 @@
 #include <kernel/tss.h>
 
 void init_gdt();
+void serial_init();
 void install_tss();
 void init_paging(multiboot_info_t *mbi);
 void identity_map(void *addr);

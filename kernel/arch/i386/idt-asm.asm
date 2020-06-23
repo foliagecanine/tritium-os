@@ -54,6 +54,7 @@ extern irq14_handler
 extern irq15_handler
 
 extern unhandled_interrupt
+extern exception_page_fault
 
 extern temp_tss
 
@@ -66,6 +67,29 @@ extern yield_esp
  
 global switch_task
 global run_syscall_asm
+
+temp_eax1 dw 0
+temp_eax2 dw 0
+temp_eax3 dw 0
+
+global page_fault
+
+page_fault:
+  mov dword [temp_eax1],eax
+  pop eax
+  mov dword [temp_eax2],eax
+  pop eax
+  mov dword [temp_eax3],eax
+  push eax
+  mov eax, dword [temp_eax1]
+  pusha
+  mov eax, dword [temp_eax2]
+  push eax
+  mov eax, dword [temp_eax3]
+  push eax
+  call exception_page_fault
+  popa
+  iret
 
 switch_task:
   mov esp,dword [ready_esp]

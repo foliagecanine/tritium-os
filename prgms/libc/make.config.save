@@ -1,0 +1,16 @@
+LIB_OBJS=\
+$(LIBDIR)/string/printf.o \
+$(LIBDIR)/string/putchar.o \
+$(LIBDIR)/string/strlen.o \
+$(LIBDIR)/string/strcut.o \
+$(LIBDIR)/string/strcpy.o \
+(LIBDIR)/string/strchr.o \
+$(LIBDIR)/string/strcmp.o \
+$(LIBDIR)/string/memcmp.o \
+$(LIBDIR)/string/memcpy.o \
+$(LIBDIR)/string/memmove.o \
+$(LIBDIR)/string/memset.o \
+$(LIBDIR)/io/tty.o \
+$(LIBDIR)/io/getchar.o \
+$(LIBDIR)/io/env.o \
+$(LIBDIR)/file/file.o \

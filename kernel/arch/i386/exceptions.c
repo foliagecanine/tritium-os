@@ -73,27 +73,38 @@ void exception_general_protection_fault() {
 }
 
 uint32_t address;
-uint32_t temp_pre_esp;
-uint32_t temp_post_esp;
 
-void exception_page_fault(/*uint32_t *regs,*/ uint32_t error) {
-	//asm volatile("mov %%esp,%0;pusha;mov %%esp,%1":"=m"(temp_pre_esp),"=m"(temp_post_esp):);
-	//asm volatile("mov %0,%%esp"::"m"(temp_pre_esp));
+void exception_page_fault(uint32_t retaddr, uint32_t error) {
+	disable_tasking();
 	asm volatile("mov %%cr2, %0":"=a"(address):);
+	terminal_setcolor(0x1F);
+	terminal_refresh();
 	if(error&4) {
 		//Try to correct the error by giving it a blank page. 
 		//We'll clear this so it doesn't see any other process data.
 		if (!map_page_to((void *)(address&0xFFFFF000))) {
 			kerror("[Exception.Fault] Usermode Page Privelage Fault!");
 			printf("Fault address: 0x%#\n",(uint64_t)address);
+			printf("Return address: 0x%#\n",(uint64_t)retaddr);
+			printf("Current PID: %d\n",getpid());
 			printf("Error: 0x%#\n",(uint64_t)error&7);
+			kprint("\n    If you are a user seeing this, your computer has crashed.");
+			kprint("    Reboot your computer. If the error happens again...");
+			kprint("    try to not do the thing that made it happen.\n");
+			abort();
 			for(;;);
 		}
-		asm("mov %0,%%esp; popa; iret"::"m"(temp_post_esp));
+		//asm("mov %0,%%esp; popa; mov %1,%%esp; add $4,%%esp; iret"::"m"(temp_post_esp),"m"(a_err));
+		return;
 	} else {
 		kerror("[Exception.Fault] Kernel Page Fault!");
 		printf("Fault address: 0x%#\n",(uint64_t)address);
+		printf("Return address: 0x%#\n",(uint64_t)retaddr);
 		printf("Error: 0x%#\n",(uint64_t)error&7);
+		kprint("\nIf you are a user seeing this, your computer has crashed.");
+		kprint("Reboot your computer. If the error happens again...");
+		kprint("just don't to the thing that made it happen.\n");
+		abort();
 		for(;;);
 	}
 }
@@ -131,6 +142,8 @@ void exception_security_exception() {
 	kerror("[Exception.General] Security Exception!");
 	for (;;);
 }
+
+extern void page_fault();
 
 void init_exceptions() {
 	uint32_t exception_addr = (uint32_t)exception_div_by_zero;
@@ -175,7 +188,7 @@ void init_exceptions() {
 	exception_addr = (uint32_t)exception_general_protection_fault;
 	idt_new_int(13, exception_addr);
 	
-	exception_addr = (uint32_t)exception_page_fault;
+	exception_addr = (uint32_t)page_fault;
 	idt_new_int(14, exception_addr);
 	
 	exception_addr = (uint32_t)exception_x87_floating_point_exception;

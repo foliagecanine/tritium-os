@@ -20,17 +20,17 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		printf("%#\n",(uint64_t)magic);
 		abort();
 	}
-	
+	serial_init();
 	terminal_initialize();
 	disable_cursor();
 	printf("Hello, kernel World!\n");
 	kprint("[INIT] Mapped memory");
-	
 	init_gdt();
 	init_idt();
 	init_pit(1000);
 	mbi = (multiboot_info_t *)ebx;
 	init_paging(mbi);
+	printf("VMEM: %#\n",mbi->framebuffer_addr);
 	init_ahci();
 	init_file();
 	init_syscalls();
@@ -65,7 +65,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 	
-	start_program("A:/bin/SHELL.SYS");
+	start_program("A:/bin/GUI.SYS");
 	//start_program("A:/bin/MEM.PRG");
 	//Idle program to prevent errors if the program above exits without any active children.
 	FILE prgm = fopen("A:/bin/IDLE.SYS","r");

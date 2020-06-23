@@ -8,6 +8,7 @@ MEM.PRG \
 CAT.PRG \
 ADVNTURE.PRG \
 LS.PRG \
+GUI.SYS \
 
 all: $(PRGMS)
 
@@ -18,7 +19,7 @@ mount:
 	@-sudo mount -o loop,rw ../floppy.flp /mnt/F1
 
 $(PRGMS):
-	cd $(basename $(shell echo $@ | tr A-Z a-z)) && $(MAKE) install -s
+	@cd $(basename $(shell echo $@ | tr A-Z a-z)) && $(MAKE) install --no-print-directory
 
 umount:
 	@sudo umount /mnt/F1
