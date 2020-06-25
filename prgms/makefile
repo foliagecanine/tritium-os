@@ -9,6 +9,7 @@ CAT.PRG \
 ADVNTURE.PRG \
 LS.PRG \
 GUI.SYS \
+EDIT.PRG \
 
 all: $(PRGMS)
 

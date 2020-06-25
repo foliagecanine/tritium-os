@@ -48,6 +48,15 @@ _Bool numlck = false;
 _Bool scrlck = false;
 _Bool capslck = false;
 
+unsigned int getkey_a() {
+	if (!special_read) {
+		special_read = true;
+		return last_scancode;
+	} else {
+		return 0;
+	}
+}
+
 unsigned int getkey() {
 	if (!special_read) {
 		special_read = true;
@@ -136,6 +145,7 @@ void kbd_handler() {
 		} else if (last_scancode==NUMLCK+KEY_RELEASED) {
 			toggle_numlck();
 		}
+		special_read = false;
 	} else {
 		key_read = false;
 		special_read = false;

@@ -14,7 +14,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&exit_program,			// 2
 	&terminal_putentryat,	// 3
 	&getchar,				// 4
-	&getkey,				// 5
+	&getkey_a,				// 5
 	&yield,					// 6
 	&getpid,				// 7
 	&free_pages,			// 8

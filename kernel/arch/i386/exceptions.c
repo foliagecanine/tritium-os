@@ -82,6 +82,7 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 	if(error&4) {
 		//Try to correct the error by giving it a blank page. 
 		//We'll clear this so it doesn't see any other process data.
+		kwarn("[WARN] Pre-Pagefault: Attempt to access unavailable page.");
 		if (!map_page_to((void *)(address&0xFFFFF000))) {
 			kerror("[Exception.Fault] Usermode Page Privelage Fault!");
 			printf("Fault address: 0x%#\n",(uint64_t)address);
@@ -93,6 +94,8 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 			kprint("    try to not do the thing that made it happen.\n");
 			abort();
 			for(;;);
+		} else {
+			kwarn("[WARN] A page was given to a process after a page fault.");
 		}
 		//asm("mov %0,%%esp; popa; mov %1,%%esp; add $4,%%esp; iret"::"m"(temp_post_esp),"m"(a_err));
 		return;

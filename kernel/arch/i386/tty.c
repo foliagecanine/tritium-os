@@ -18,6 +18,12 @@ static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
 static bool scroll = true;
 
+void disable_blink() {
+	inb(0x3DA);
+	outb(0x3C0,0x30);
+	outb(0x3C0,inb(0x3C1)&0xF7);
+}
+
 void terminal_initialize(void) {
 	terminal_row = 0;
 	terminal_column = 0;
@@ -29,6 +35,7 @@ void terminal_initialize(void) {
 			terminal_buffer[index] = vga_entry(' ', terminal_color);
 		}
 	}
+	disable_blink();
 }
 
 void terminal_setcolor(uint8_t color) {
@@ -151,6 +158,16 @@ uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
 	}
 	if (command==2) {
 		terminal_scroll();
+	}
+	if (command==3) {
+		
+		cursor_position((size_t)x,(size_t)y);
+	}
+	if (command==4) {
+		disable_cursor();
+	}
+	if (command==5) {
+		enable_cursor((size_t)x,(size_t)y);
 	}
 	return 1;
 }

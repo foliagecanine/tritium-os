@@ -45,5 +45,10 @@ void terminal_setcolor(uint8_t color);
 uint8_t terminal_getcolor();
 void terminal_goto(size_t x, size_t y);
 void terminal_putentryat(unsigned char c, unsigned char color, unsigned int x, unsigned int y);
+size_t terminal_getcolumn();
+size_t terminal_getrow();
+void terminal_setcursor(uint8_t x, uint8_t y);
+void terminal_clearcursor();
+void terminal_enablecursor(uint8_t start, uint8_t end);
 
 #endif

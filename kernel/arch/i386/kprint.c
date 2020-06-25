@@ -11,6 +11,8 @@ void kerror(const char* str) {
 	terminal_setcolor((prev_trm_color|0xc)&0xfc);
 	printf(str);
 	printf("\n");
+	serial_write(str);
+	serial_write("\n");
 	terminal_setcolor(prev_trm_color);
 }
 
@@ -19,6 +21,8 @@ void kprint(const char* str) {
 	terminal_setcolor((prev_trm_color|0xe)&0xfe);
 	printf(str);
 	printf("\n");
+	serial_write(str);
+	serial_write("\n");
 	terminal_setcolor(prev_trm_color);
 }
 
@@ -27,5 +31,7 @@ void kwarn(const char* str) {
 	terminal_setcolor((prev_trm_color|0x5)&0xf5);
 	printf(str);
 	printf("\n");
+	serial_write(str);
+	serial_write("\n");
 	terminal_setcolor(prev_trm_color);
 }

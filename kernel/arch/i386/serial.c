@@ -1,7 +1,7 @@
 #include <kernel/stdio.h>
 #include <kernel/ksetup.h>
 
-void serial_write(char *msg) {
+void serial_write(const char *msg) {
 	for (size_t l = 0; l< strlen(msg); l++) {
 		while (!(inb(0x3fd)&0x20))
 			;

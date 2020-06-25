@@ -30,7 +30,7 @@ void terminal_getcursor() {
 	terminal_column = (o>>8)&0xFF;
 }
 
-void terminal_setcursor() {
+void terminal_setlocation() {
 	terminal_options(0,(uint8_t)terminal_column,(uint8_t)terminal_row);
 }
 
@@ -39,7 +39,7 @@ void terminal_init() {
 	terminal_column = 0;
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);;
 	terminal_clear();
-	terminal_setcursor();
+	terminal_setlocation();
 }
 
 void terminal_setcolor(uint8_t color) {
@@ -87,7 +87,7 @@ void terminal_putchar(char c) {
 			terminal_scroll();
 		}
 	}
-	terminal_setcursor();
+	terminal_setlocation();
 }
 
 void terminal_write(const char* data, size_t size) {
@@ -111,7 +111,7 @@ void terminal_backup() {
 		terminal_row--;
 		terminal_column = VGA_WIDTH-1;
 	}
-	terminal_setcursor();
+	terminal_setlocation();
 }
 
 void terminal_clear_line(size_t y)   //clear given line
@@ -126,13 +126,33 @@ void terminal_clear(void)    //clear all screen and set prompt to up left corner
 	terminal_clear_line(y);
   terminal_row = 0;
   terminal_column = 0;
-  terminal_setcursor();
+  terminal_setlocation();
 }
 
 void terminal_goto(size_t x, size_t y) {
 	terminal_column = x;
 	terminal_row = y;
-	terminal_setcursor();
+	terminal_setlocation();
+}
+
+terminal_enablecursor(uint8_t start, uint8_t end) {
+	terminal_options(5,start,end);
+}
+
+void terminal_setcursor(uint8_t x, uint8_t y) {
+	terminal_options(3,x,y);
+}
+
+void terminal_clearcursor() {
+	terminal_options(4,0,0);
+}
+
+size_t terminal_getcolumn() {
+	return terminal_column;
+}
+
+size_t terminal_getrow() {
+	return terminal_row;
 }
 
 void exit(uint32_t code) {

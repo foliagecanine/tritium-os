@@ -119,6 +119,8 @@ bool diskselector() {
 	}
 }
 
+bool resetselection = true;
+
 bool programselector() {
 	for (uint8_t i = min; i < min+12; i++) {
 		if (i==selected) {
@@ -143,21 +145,21 @@ bool programselector() {
 	}
 	while(1){
 		uint8_t g = getkey();
-		if (g==0x50||g==0xD0) {
+		if (g==0x50) {
 			if (selected<count-1)
 				selected++;
 			if (selected>=min+12)
 				min++;
 			return false;
 		}
-		if (g==0xC8||g==0x48) {
+		if (g==0x48) {
 			if (selected>0)
 				selected--;
 			if (selected<min)
 				min--;
 			return false;
 		}
-		if (g==0x1C||g==0x9C) {
+		if (g==0x1C) {
 			getchar();
 			if (strcmp(name[selected],"../                           ")) {
 				*strrchr(cd,'/')=0;
@@ -187,8 +189,9 @@ bool programselector() {
 					waitpid(pid);
 					printf("Press a key to return to file manager...");
 					getkey();
-					while(!getkey())
-						;
+					unsigned int g;
+					while(g=getkey(),g==0||g>128)
+						yield();
 					return true;
 				} else if (strcmp(prgm+strlen(prgm)-4,".TXT")||strcmp(prgm+strlen(prgm)-4,".RTF")) {
 					char *p_argv[2];
@@ -202,11 +205,12 @@ bool programselector() {
 					strcpy(program+strlen(program),prgm);
 					terminal_setcolor(0x0F);
 					terminal_clear();
-					uint32_t pid = exec_args("A:/BIN/CAT.PRG",p_argv,p_envp);
+					uint32_t pid = exec_args("A:/BIN/EDIT.PRG",p_argv,p_envp);
 					waitpid(pid);
 					printf("Press a key to return to file manager...");
 					getkey();
-					while(!getkey())
+					unsigned int g;
+					while(g=getkey(),g==0||g>128)
 						yield();
 					return true;
 				} else {
@@ -214,14 +218,14 @@ bool programselector() {
 				}
 			}
 		}
-		if (g==0x01||g==0x81) {
+		if (g==0x01) {
 			if (g_argc>0) {
 				terminal_setcolor(0x0F);
 				terminal_clear();
 				exit(0);
 			}
 		}
-		if (g==0x3B||g==0xBB) {
+		if (g==0x3B) {
 			drawrect(15,5,50,16,0x0F);
 			drawrect(17,6,46,14,0xF0);
 			terminal_goto(24,7);
@@ -242,6 +246,31 @@ bool programselector() {
 			}
 			return true;
 		}
+		
+		if (g==0x3C) {
+			drawrect(27,9,25,7,0x0F);
+			drawrect(29,10,21,5,0xF0);
+			strcpy(program,cd);
+			strcpy(program+strlen(program),name[selected]);
+			char *a = strchr(program,' ');
+			if (a)
+				*a = 0;
+			FILE f = fopen(program,"r");
+			terminal_goto(32,11);
+			terminal_setcolor(0xF0);
+			if (f.valid) 
+				printf("Size: %d bytes",f.size);
+			else
+				printf("Could not open file.\n%s",program);
+			terminal_goto(38,13);
+			terminal_setcolor(0x9F);
+			printf(" OK ");
+			g = 0;
+			while(g!=0x1C&&g!=0x9C)
+				g = getkey();
+			resetselection = false;
+			return true;
+		}
 	}
 }
 
@@ -253,7 +282,7 @@ void gui() {
 	terminal_setcolor(0x70);
 	terminal_writestring("                             TritiumOS File Browser                             ");
 	terminal_goto(0,24);
-	terminal_writestring(" Esc = exit | F1 = Change disk                                                 ");
+	terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size                           ");
 	terminal_putentryat(' ',0x70,79,24);
 	drawrect(20,2,40,21,0x0F);
 	terminal_setcolor(0xF0);
@@ -279,7 +308,10 @@ _Noreturn void main(uint32_t argc, char **argv) {
 	getkey();
 	for (;;) {
 		count = 0;
-		selected = 0;
+		if (resetselection)
+			selected = 0;
+		else
+			resetselection = true;
 		min = 0;
 		currdir = fopen(cd,"r");
 		memset(name,0,sizeof(char)*16*31);

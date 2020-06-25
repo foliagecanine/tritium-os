@@ -18,6 +18,6 @@
 #define bool _Bool
 
 void debug_console(); //Hopefully temporary
-void serial_write(char *msg);
+void serial_write(const char *msg);
 
 #endif

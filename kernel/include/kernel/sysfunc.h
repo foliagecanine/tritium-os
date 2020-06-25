@@ -3,7 +3,7 @@
 
 void terminal_putentryat(unsigned char c, uint8_t color, size_t x, size_t y);
 char getchar();
-unsigned int getkey();
+unsigned int getkey_a();
 void yield();
 uint32_t exec_syscall(char *name, char **arguments, char **environment);
 uint32_t getpid();
