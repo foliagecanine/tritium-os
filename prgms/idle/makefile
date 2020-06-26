@@ -1,6 +1,8 @@
 GCC=gcc
 
-all: idle.asm
+all: IDLE.SYS
+
+IDLE.SYS:
 	nasm -fbin idle.asm -o IDLE.SYS
 
 upload: IDLE.SYS

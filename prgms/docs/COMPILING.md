@@ -68,7 +68,7 @@ Virtual Memory Map (for programs):
 
 |      Memory       |      Description      |
 | ----------------- | --------------------- |
-| 0x100000-0x110000 | Program code and data |
+| 0x100000-0x140000 | Program code and data |
 | 0xF00000-0xF04000 | Stack                 |
 | 0xF04000-0xF05000 | Arguments             |
 | 0xF05000-0xF06000 | Environment variables |

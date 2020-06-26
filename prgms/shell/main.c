@@ -12,45 +12,6 @@ static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
 }
 
-void writestring(char *string) {
-	asm volatile("mov %0,%%ebx"::"r"(string));
-	syscall(0);
-}
-
-/*uint32_t exec(char *name) {
-	uint32_t retval;
-	asm volatile("mov %0,%%ebx; mov $0,%%ecx"::"r"(name));
-	syscall(1);
-	asm volatile("mov %%eax,%0":"=m"(retval):);
-	return retval;
-}*/
-
-uint32_t exec_args(char *name, char **arguments, char **environment) {
-	asm volatile("mov $1,%%eax; int $0x80; pop %%ebx; pop %%ebp; ret;"::"b"(name),"c"(arguments),"d"(environment));
-}
-
-void yield() {
-	syscall(6);
-}
-
-uint32_t waitpid(uint32_t pid) {
-	uint32_t retval = 1;
-	asm volatile("mov %0,%%ebx"::"r"(pid));
-	syscall(10); //waitpid
-	//syscall(6); //yield
-	//syscall(6); //yield
-	syscall(11); //get_retval
-	asm volatile("mov %%eax,%0":"=m"(retval):);
-	return retval;
-}
-
-uint32_t getpid() {
-	uint32_t retval;
-	syscall(7);
-	asm volatile("mov %%eax,%0":"=m"(retval):);
-	return retval;
-}
-
 char cmd[256] = "";
 char args[256] = "";
 char temp[256] = "";

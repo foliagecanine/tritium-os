@@ -27,4 +27,6 @@ umount:
 	@sudo rmdir /mnt/F1
 
 clean:
-	
+	rm */*.SYS
+	rm */*.PRG
+	rm */*.o

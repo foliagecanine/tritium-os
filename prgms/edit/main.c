@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <tty.h>
+#include <gui.h>
 extern char **envp;
 extern uint32_t envc;
 asm ("push %ecx;\
@@ -13,59 +14,10 @@ static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
 }
 
-void writestring(char *string) {
-	asm volatile("mov %0,%%ebx"::"r"(string));
-	syscall(0);
-}
-
-uint32_t exec(char *name) {
-	uint32_t retval;
-	asm volatile("mov %0,%%ebx; mov $0,%%ecx; mov $0,%%edx"::"r"(name));
-	syscall(1);
-	asm volatile("mov %%eax,%0":"=m"(retval):);
-	return retval;
-}
-
-uint32_t exec_args(char *name, char **arguments, char **environment) {
-	uint32_t retval;
-	asm volatile("pusha; mov %0,%%ebx; mov %1,%%ecx; mov %2,%%edx"::"m"(name),"m"(arguments),"m"(environment));
-	syscall(1);
-	asm volatile("mov %%eax,%0; popa":"=m"(retval):);
-	return retval;
-}
-
-void yield() {
-	syscall(6);
-}
-
-uint32_t waitpid(uint32_t pid) {
-	uint32_t retval = 1;
-	asm volatile("pusha; mov %0,%%ebx"::"r"(pid));
-	syscall(10); //waitpid
-	syscall(11); //get_retval
-	asm volatile("mov %%eax,%0; popa":"=m"(retval):);
-	return retval;
-}
-
-uint32_t getpid() {
-	uint32_t retval;
-	syscall(7);
-	asm volatile("mov %%eax,%0":"=m"(retval):);
-	return retval;
-}
-
-void drawrect(size_t x, size_t y, size_t w, size_t h, uint8_t color) {
-	for (uint8_t _y = y; _y < y + h; _y++) {
-	terminal_goto(x,_y);
-		for (uint8_t _x = x; _x < x + w; _x++) {
-			terminal_putentryat(' ',color,_x,_y);
-		}
-	}
-}
-
-char file[1024*16]; //Reserve 16KiB for file. That is max size.
-char decode[1024*16]; //Reserve 16KiB for decoding. That is max size.
+char file[1024*32]; //Reserve 32KiB for file. That is max size.
+char decode[1024*32]; //Reserve 32KiB for decoding. That is max size.
 char *lines[4096]; //Max 4096 lines.
+char fname[4096];
 
 char *ctext_cursor = file;
 uint32_t text_cursor_x = 0;
@@ -90,7 +42,7 @@ void redraw() {
 	terminal_setcolor(0x70);
 	terminal_writestring("elp\263                  TritiumOS File Viewer                              ");
 	terminal_goto(0,24);
-	terminal_writestring("                                                                               ");
+	terminal_writestring(" Hold Alt to access menus                                                      ");
 	terminal_putentryat(' ',0x70,79,24);
 	terminal_setcolor(0xF0);
 	for (uint32_t i = 1; i < 23; i++) {
@@ -168,8 +120,13 @@ void gui() {
 				char c = getchar();
 				if (c=='f') {
 					redraw();
-					drawrect(0,1,10,1,0x70);
+					drawrect(0,1,10,2,0x70);
 					terminal_goto(0,1);
+					terminal_setcolor(0x78);
+					terminal_putchar('O');
+					terminal_setcolor(0x70);
+					printf("pen");
+					terminal_goto(0,2);
 					terminal_setcolor(0x70);
 					terminal_putchar('E');
 					terminal_setcolor(0x78);
@@ -195,6 +152,18 @@ void gui() {
 					terminal_clear();
 					terminal_clearcursor();
 					exit(0);
+				}
+				if (c=='o') {
+					memset(fname,0,4096);
+					char *fs = fileselector(fname);
+					FILE f = fopen(fs,"r");
+					if (f.valid) {
+						memset(file,0,1024*32);
+						fread(&f,file,0,f.size<1024*32?f.size:1024*32);
+					}
+					parse(file,decode,lines);
+					redraw();
+					break;
 				}
 			}
 			terminal_enablecursor(0,15);
@@ -222,7 +191,6 @@ void parse(char *f, char *o, char *l[4096]) {
 	}
 }
 
-char fname[4096];
 
 _Noreturn void main(uint32_t argc, char **argv) {
 	getkey();
@@ -230,15 +198,15 @@ _Noreturn void main(uint32_t argc, char **argv) {
 	memset(fname,0,4096);
 	terminal_enablecursor(0,15);
 	terminal_setcursor(0,1);
+	char *env_cd = getenv("CD");
 	if (argc>1) {
-		char *cd = getenv("CD");
 		memset(fname,0,4096);
 		FILE f;
 		if (argv[1][1]==':')
 			strcpy(fname,argv[1]);
 		else {
-			memcpy(fname,cd,strlen(cd));
-			memcpy(fname+strlen(cd),argv[1],strlen(argv[1]));
+			memcpy(fname,env_cd,strlen(env_cd));
+			memcpy(fname+strlen(env_cd),argv[1],strlen(argv[1]));
 		}
 		f = fopen(fname,"r");
 		if (f.valid)

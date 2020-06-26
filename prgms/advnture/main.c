@@ -7,10 +7,6 @@ static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
 }
 
-void yield() {
-	syscall(6);
-}
-
 typedef struct {
 	uint8_t x;
 	uint8_t y;

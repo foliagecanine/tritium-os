@@ -3,6 +3,7 @@
 
 #include <sys/cdefs.h>
 #include <stdint.h>
+#include <sys.h>
 
 #define EOF (-1)
 

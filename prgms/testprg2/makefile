@@ -1,4 +1,6 @@
-all: testprg2.asm
+all: TESTPRG2.PRG
+
+TESTPRG2.PRG:
 	nasm -fbin testprg2.asm -o TESTPRG2.PRG
 
 upload: TESTPRG2.PRG
