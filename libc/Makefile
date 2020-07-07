@@ -42,6 +42,7 @@ string/strcmp.o \
 string/tolower.o \
 string/toupper.o \
 string/strchr.o \
+string/strrchr.o \
 string/strcpy.o \
 string/strcut.o \
 

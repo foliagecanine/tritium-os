@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <tty.h>
+#include <gui.h>
 extern char **envp;
 extern uint32_t envc;
 asm ("push %ecx;\
@@ -45,17 +46,17 @@ bool diskselector() {
 	terminal_goto(24,20);
 	while(1){
 		uint8_t g = getkey();
-		if (g==0x50||g==0xD0) {
+		if (g==0x50) {
 			if (diskselected<numdisks-1)
 				diskselected++;
 			return false;
 		}
-		if (g==0xC8||g==0x48) {
+		if (g==0xC8) {
 			if (diskselected>0)
 				diskselected--;
 			return false;
 		}
-		if (g==0x1C||g==0x9C) {
+		if (g==0x1C) {
 			getchar();
 			cd[0] = 65+disks[diskselected];
 			cd[1] = ':';
@@ -63,7 +64,7 @@ bool diskselector() {
 			cd[3] = 0;
 			return true;
 		}
-		if (g==0x01||g==0x81) {
+		if (g==0x01) {
 			return true;
 		}
 	}
@@ -216,8 +217,36 @@ bool programselector() {
 			terminal_setcolor(0x9F);
 			printf(" OK ");
 			g = 0;
-			while(g!=0x1C&&g!=0x9C)
+			while(g!=0x1C)
 				g = getkey();
+			resetselection = false;
+			return true;
+		}
+		
+		if (g==0x3C) {
+			drawrect(27,9,25,7,0x0F);
+			drawrect(29,10,21,5,0xF0);
+			strcpy(program,cd);
+			strcpy(program+strlen(program),name[selected]);
+			char *a = strchr(program,' ');
+			if (a)
+				*a = 0;
+			FILE f = fopen(program,"r");
+			terminal_goto(32,11);
+			terminal_setcolor(0xF0);
+			if (f.valid) 
+				printf("Size: %d bytes",f.size);
+			else
+				printf("Could not open file.\n%s",program);
+			terminal_goto(38,13);
+			terminal_setcolor(0x9F);
+			printf(" OK ");
+			g = 0;
+			while(g!=0x1C&&g!=0x53)
+				g = getkey();
+			if (g==0x53) {
+				
+			}
 			resetselection = false;
 			return true;
 		}

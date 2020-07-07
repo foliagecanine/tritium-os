@@ -112,6 +112,70 @@ FILE readdir(FILE *file, char* buf, uint32_t n) {
 	return retfile;
 }
 
+FILE fcreate(char *filename) {
+	FILE retfile;
+	memset(&retfile,0,sizeof(FILE));
+	FILE f = fopen(filename,"r");
+	if (f.valid)
+		return retfile;
+	if (filename) {
+		uint8_t device;
+		//Validate and convert to drive number
+		if (filename[1]==':'&&filename[2]=='/') {
+			device = tolower(filename[0])-'a';
+			//Filename without drive prefix
+			char* flongname = (char*) filename+2;
+			if (flongname&&device<9) {
+				if (mounts[device].mountEnabled) {
+					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
+						//Notimplemented
+					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
+						retfile = FAT16_fcreate(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);						
+					}
+				}
+			}
+		}
+	}
+	return retfile;
+}
+
+// Codes:
+// 0 = Success
+// 1 = Not found
+// 2 = Directory
+// 3 = Invalid Filename
+// 4 = Unknown Error
+// 8+ = Drive error = (error_code - 8) (see ahci.c)
+
+uint8_t fdelete(char *filename) {
+	FILE f = fopen(filename,"w");
+	if (!f.valid) {
+		return 1;
+	}
+	if (f.directory) {
+		return 2;
+	}
+	if (filename) {
+		uint8_t device;
+		//Validate and convert to drive number
+		if (filename[1]==':'&&filename[2]=='/') {
+			device = tolower(filename[0])-'a';
+			//Filename without drive prefix
+			char* flongname = (char*) filename+2;
+			if (flongname&&device<9) {
+				if (mounts[device].mountEnabled) {
+					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
+						//Notimplemented
+					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
+						return FAT16_fdelete(filename,device);						
+					}
+				}
+			}
+		}
+	}
+	return 4;
+}
+
 FSMOUNT getDiskMount(uint8_t drive) {
 	return mounts[drive];
 }

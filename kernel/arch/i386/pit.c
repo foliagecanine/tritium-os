@@ -17,19 +17,14 @@ uint64_t get_ticks() {
 void init_pit(uint32_t freq) {
 	frequency = freq;
 	uint32_t pitfreq = 3579545/ (freq*3);
-	outb(0x43, 0x36);
+	outb(0x43, 0x34);
 	outb(0x40, (uint8_t)(pitfreq&0xFF));
 	outb(0x40, (uint8_t)((pitfreq>>8)&0xFF));
-}
-
-void dontoptimize() {
-	asm volatile("nop");
 }
 
 void sleep(uint32_t ms) {
 	uint64_t endTicks = ticks+((ms*frequency)/1000);
 	while (ticks<endTicks) {
-		//printf("Ticks left: %d\n",endTicks-ticks);
-		dontoptimize(); // It doesn't like if we don't have something here
+		asm volatile("nop");
 	}
 }

@@ -8,6 +8,9 @@ Original Author: foliagecanine
 TritiumOS is an open-source operating system, successor to an 
 unpublished, expiremental test OS named Rogue2OS
 
+Demo:
+![Demo GIF of TririumOS](https://github.com/foliagecanine/tritium-os/kernel/docs/TritiumOS.gif)
+
 ## How do you build this?
 Before you start I will warn you: this will take a LOT of space (~4-5GB)  
 If you don't neccesarily want to build this, you can see the "What if I just want to use the ISO..." section below.

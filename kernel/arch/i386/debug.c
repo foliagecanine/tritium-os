@@ -7,10 +7,12 @@ char commandPart[256];
 
 void graphicstest();
 
+bool breakcode = false;
+
 bool check_command(char* command) {
 	bool cmdAck = false;
 	bool usingNewline = true;
-	bool breakcode = false;
+	
 	if (strcmp(command, "help")||strcmp(command, "?")) {
 		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsmnt - list all mounts\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
 		cmdAck=true;
@@ -219,7 +221,7 @@ void debug_console() {
 	memset(thisCommand,0,256);
 
 	
-	while (true) {
+	while (!breakcode) {
 		printf("%s>",currentDirectory);
 		char command[256];
 		memset(command,0,255);
@@ -387,7 +389,7 @@ void graphicstest() {
 	
 	//Get access to 0xA0000-0xBFFFF (VGA memory)
 	for (uint32_t i = 0xA0000; i < 0xBFFFF; i+=4096) {
-		identity_map(i);
+		identity_map((void *)i);
 	}
 	
 	//Unlock CRTC registers (disable bit 8)
@@ -468,12 +470,12 @@ void graphicstest() {
 	//Start sequencer
 	VGA_write_register(VGAReg.Sequencer,3);
 
-	memset(0xA0000,0,0x20000);
+	memset((void *)0xA0000,0,0x20000);
 
 	while(1) {
 		//for (uint8_t i = 0; i != 255; i++) {
 			for (uint32_t j = 0; j < 0xFA00; j++) {
-				memset(0xA0000+j,j%256,1);
+				memset((void *)0xA0000+j,j%256,1);
 				if (!(j%20))
 					sleep(1);
 			}

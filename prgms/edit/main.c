@@ -162,6 +162,9 @@ void gui() {
 						fread(&f,file,0,f.size<1024*32?f.size:1024*32);
 					}
 					parse(file,decode,lines);
+					text_cursor_y = 1;
+					text_cursor_x = 0;
+					terminal_setcursor(0,1);
 					redraw();
 					break;
 				}

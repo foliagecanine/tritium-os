@@ -35,6 +35,12 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 		return;
 	}
 	
+	//Next check if it is already a short filename
+	if (!strchr(longfn,'.')&&strlen(longfn)==11) {
+		strcpy(shortfn,longfn);
+		return;
+	}
+	
 	//Then do the rest
 	int locOfDot = findCharInArray(longfn,'.');
 	if (locOfDot>8) {

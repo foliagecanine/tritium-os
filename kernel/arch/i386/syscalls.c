@@ -1,11 +1,13 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	17
+#define NUM_SYSCALLS	19
 
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n);
+void fcreate_usermode(char *filename, FILE *o);
+uint8_t fdelete_usermode(char *filename);
 void debug_break();
 
 static void *syscalls[NUM_SYSCALLS] = {
@@ -26,6 +28,8 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&readdir_usermode,		// 14
 	&debug_break,			// 15
 	&get_ticks,				// 16
+	&fcreate_usermode,		// 17
+	&fdelete_usermode,		// 18
 };
 
 extern bool ts_enabled;
@@ -90,8 +94,12 @@ void init_syscalls() {
 	kprint("[INIT] Initialized Syscalls.");
 }
 
+bool check_range(void *addr, uint32_t size, uint32_t start, uint32_t end) {
+	return (uint32_t)addr>start&&(uint32_t)addr+size<end;
+}
+
 void fopen_usermode(FILE *f, const char* filename, const char* mode) {
-	if ((uint32_t)f>0x100000&&(uint32_t)f+sizeof(FILE)<0xF04000) {
+	if (check_range(f,sizeof(FILE),0x100000,0xF04000)) {
 		*f = fopen(filename,mode);
 	}
 }
@@ -99,7 +107,7 @@ void fopen_usermode(FILE *f, const char* filename, const char* mode) {
 void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
 	uint64_t start = (((uint64_t)starth)<<32)|startl;
 	uint64_t len = (uint64_t)lenl;
-	if ((uint32_t)buf>0x100000&&(uint32_t)buf+len<0xF04000) {
+	if (check_range(buf,len,0x100000,0xF04000)) {
 		fread(f,buf,start,len);
 	}
 }
@@ -107,9 +115,22 @@ void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
 	if (!f->directory)
 		return;
-	if ((uint32_t)buf>0x100000&&(uint32_t)buf+256<0xF04000&&(uint32_t)f>0x100000&&(uint32_t)f+256<0xF04000) {
+	if (check_range(buf,256,0x100000,0xF04000)&&check_range(f,sizeof(FILE),0x100000,0xF04000)) {
 		*o = readdir(f, buf, n);
 	}
+}
+
+void fcreate_usermode(char *filename, FILE *o) {
+	if (check_range(filename,strlen(filename),0x100000,0xF04000)&&check_range(o,sizeof(FILE),0x100000,0xF04000)) {
+		*o = fcreate(filename);
+	}
+}
+
+uint8_t fdelete_usermode(char *filename) {
+	if (check_range(filename,strlen(filename),0x100000,0xF04000)) {
+		return fdelete(filename);
+	}
+	return 4;
 }
 
 void debug_break() {

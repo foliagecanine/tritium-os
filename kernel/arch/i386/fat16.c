@@ -171,6 +171,10 @@ uint16_t f16_getClusterValue(uint8_t * FAT, uint32_t cluster) {
 	return ((uint16_t *)FAT)[cluster];
 }
 
+uint16_t f16_setClusterValue(uint8_t * FAT, uint32_t cluster, uint16_t value) {
+	((uint16_t *)FAT)[cluster] = value;
+}
+
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
 	uint8_t *read = alloc_page(((numEntries*32)/4096)+1);
 	memset(read,0,numEntries*32);
@@ -372,6 +376,116 @@ FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
 			*ptr++ = dir_entry.Extension[i];
 		if (dir_entry.FileAttributes&0x10&&i==2)
 			*ptr++ = '/';
+	}
+	return retfile;
+}
+
+uint8_t FAT16_fdelete(char *name, uint8_t drive_num) {
+	char *s = (strrchr(name,'/'));
+	if (!s)
+		return 3;
+	char c = s[1];
+	s[1]=0;
+	FILE d = fopen(name,"w");
+	s[1] = c;
+	char read[512];
+	ahci_read_sector(drive_num,d.location/512,(uint8_t *)read);
+	for (uint8_t i = 0; i < 16; i++) {
+		PFAT16DIR dir_entry = (PFAT16DIR)(read+(32*i));
+		if (dir_entry->Filename[0]) {
+			char testfn[12];
+			memset(testfn,0,12);
+			char shortfn[12];
+			memset(shortfn,0,12);
+			memcpy(testfn,dir_entry->Filename,11);
+			LongToShortFilename(s+1,shortfn);
+			if (strcmp(testfn,shortfn)) {
+				dir_entry->Filename[0]=0xe5;
+				uint8_t dr = ahci_write_sector(drive_num,d.location/512,(uint8_t *)read);
+				if (dr!=0)
+					return dr+8;
+				return 0;
+			}
+		}
+	}
+	return 4;
+}
+
+uint8_t FAT16_fullremove(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
+	uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize*512)/4096)+1);
+	for (uint8_t i = 0; i < fm.FATSize; i++)
+		ahci_read_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
+	char *s = (strrchr(name,'/'));
+	if (!s)
+		return 3;
+	char c = s[1];
+	s[1]=0;
+	FILE d = fopen(name,"w");
+	s[1] = c;
+	char read[512];
+	ahci_read_sector(drive_num,d.location/512,(uint8_t *)read);
+	for (uint8_t i = 0; i < 16; i++) {
+		PFAT16DIR dir_entry = (PFAT16DIR)(read+(32*i));
+		if (dir_entry->Filename[0]) {
+			char testfn[12];
+			memset(testfn,0,12);
+			char shortfn[12];
+			memset(shortfn,0,12);
+			memcpy(testfn,dir_entry->Filename,11);
+			LongToShortFilename(s+1,shortfn);
+			if (strcmp(testfn,shortfn)) {
+				uint16_t fatentry = dir_entry->FirstClusterLocation; //Store the FAT cluster number
+				memset(dir_entry->Filename,0,32); //Wipe out the file entry
+				if (fatentry) {
+					while (fatentry<0xFFF0) {
+						uint16_t fat_entry_location = fatentry;
+						fatentry = f16_getClusterValue(FAT,fat_entry_location);
+						printf("Marking %# as free. Next is %#\n",(uint64_t)fat_entry_location,fatentry);
+						f16_setClusterValue(FAT,fat_entry_location,0);
+						if (!fatentry)
+							return 4;
+					}
+				}
+				uint8_t dr = ahci_write_sector(drive_num,d.location/512,(uint8_t *)read);
+				if (dr!=0)
+					return dr+8;
+				for (uint8_t i = 0; i < fm.FATSize; i++) {
+					dr = ahci_write_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
+					if (dr!=0)
+						return dr+8;
+				}
+				return 0;
+			}
+		}
+	}
+}
+
+FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
+	FILE retfile;
+	memset(&retfile,0,sizeof(FILE));
+	char *s = (strrchr(name,'/'));
+	if (!s)
+		return retfile;
+	char c = s[1];
+	//Delete any already existing (deleted) entry
+	s[1]=0xe5;
+	FAT16_fullremove(name, fm, drive_num);
+	//Continue to create file
+	s[1]=0;
+	FILE d = fopen(name,"w");
+	s[1] = c;
+	char read[512];
+	ahci_read_sector(drive_num,d.location/512,(uint8_t *)read);
+	for (uint8_t i = 0; i < 16; i++) {
+		PFAT16DIR dir_entry = (PFAT16DIR)(read+(32*i));
+		if (!dir_entry->Filename[0]) {
+			char shortfn[12];
+			memset(shortfn,0,12);
+			LongToShortFilename(s+1,shortfn);
+			memcpy(dir_entry->Filename,shortfn,11);
+			retfile.valid = !ahci_write_sector(drive_num,d.location/512,(uint8_t *)read);
+			break;
+		}
 	}
 	return retfile;
 }
