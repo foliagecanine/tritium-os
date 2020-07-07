@@ -9,7 +9,7 @@ TritiumOS is an open-source operating system, successor to an
 unpublished, expiremental test OS named Rogue2OS
 
 Demo:  
-![Demo GIF of TririumOS](https://github.com/foliagecanine/tritium-os/blob/master/kernel/docs/TritiumOS.gif)  
+![Demo GIF of TritiumOS](https://github.com/foliagecanine/tritium-os/blob/master/kernel/docs/TritiumOS.gif)  
 Demo made on 07/06/20 with commit b406b609857eab945c813f9d93f506bcf30133fe
 
 ## How do you build this?
