@@ -56,7 +56,7 @@ bool check_command(char* command) {
 		if (!f.valid) {
 			printf("Create failed.\n");
 		}
-		char text[] = "Hello world.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nHey buddy! I'm speaking in an accent that's beyond her range of hearing!\nLook metal ball, I CAN hear you.\nRUN! *unintelligable* RUN!!!\nLorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.";
+		char text[] = "Hello world.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n";
 		uint32_t len = strlen(text)+1;
 		printf("Writing %d bytes...\n",len);
 		uint8_t r = fwrite(&f,text,0,(uint64_t)len);
