@@ -171,8 +171,25 @@ uint16_t f16_getClusterValue(uint8_t * FAT, uint32_t cluster) {
 	return ((uint16_t *)FAT)[cluster];
 }
 
-uint16_t f16_setClusterValue(uint8_t * FAT, uint32_t cluster, uint16_t value) {
+void f16_setClusterValue(uint8_t * FAT, uint32_t cluster, uint16_t value) {
 	((uint16_t *)FAT)[cluster] = value;
+}
+
+uint16_t f16_getNextFreeCluster(uint8_t * FAT) {
+	uint32_t retCluster;
+	for (retCluster = 3; ((uint16_t *)FAT)[retCluster]; retCluster++)
+		;
+	return retCluster;
+}
+
+uint8_t f16_wipecluster(uint32_t clusterNum,FAT16_MOUNT fm,uint8_t drive_num) {
+	char read[512];
+	memset(read,0,512); 
+	for (uint8_t i = 0; i < fm.SectorsPerCluster; i++) {
+		uint8_t r = ahci_write_sector(drive_num,(f16_getLocationFromCluster(clusterNum,fm)+(i*512))/512,read);
+		if (r)
+			return r;
+	}
 }
 
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
@@ -275,6 +292,7 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 			testname[11] = 0;
 			if (strcmp(testname,shortfn)) {
 				success = true;
+				retFile.dir_entry = location+(i*32);
 				break;
 			}
 		}
@@ -337,6 +355,7 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 			curDiskLoc+=512;
 		}
 		rCluster = f16_getClusterValue(FAT,rCluster);
+		//printf("Next cluster is %# or %#. %d read, %d remaining.\n",(uint64_t)rCluster,(uint64_t)f16_getLocationFromCluster(rCluster,fm),curLoc-start,curLen);
 		if (rCluster>=0xFFF0) {
 			break;
 		}
@@ -358,6 +377,7 @@ FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
 	memset(read,0,512);
 	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
 	FAT16DIR dir_entry = *(PFAT16DIR)(read+(32*n));
+	retfile.dir_entry = file->location+(32*n);
 	
 	if (dir_entry.FileAttributes&0x08||dir_entry.FileAttributes&0x02||dir_entry.Filename[0]==0||dir_entry.Filename[0]==0xE5) {
 		return retfile;
@@ -416,8 +436,10 @@ uint8_t FAT16_fullremove(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
 	for (uint8_t i = 0; i < fm.FATSize; i++)
 		ahci_read_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
 	char *s = (strrchr(name,'/'));
-	if (!s)
+	if (!s) {
+		free_page(FAT,((fm.FATSize*512)/4096)+1);
 		return 3;
+	}
 	char c = s[1];
 	s[1]=0;
 	FILE d = fopen(name,"w");
@@ -440,20 +462,27 @@ uint8_t FAT16_fullremove(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
 					while (fatentry<0xFFF0) {
 						uint16_t fat_entry_location = fatentry;
 						fatentry = f16_getClusterValue(FAT,fat_entry_location);
-						printf("Marking %# as free. Next is %#\n",(uint64_t)fat_entry_location,fatentry);
+						//printf("Marking %# as free. Next is %#\n",(uint64_t)fat_entry_location,fatentry);
 						f16_setClusterValue(FAT,fat_entry_location,0);
-						if (!fatentry)
+						if (!fatentry) {
+							free_page(FAT,((fm.FATSize*512)/4096)+1);
 							return 4;
+						}
 					}
 				}
 				uint8_t dr = ahci_write_sector(drive_num,d.location/512,(uint8_t *)read);
-				if (dr!=0)
+				if (dr!=0) {
+					free_page(FAT,((fm.FATSize*512)/4096)+1);
 					return dr+8;
+				}
 				for (uint8_t i = 0; i < fm.FATSize; i++) {
 					dr = ahci_write_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
-					if (dr!=0)
+					if (dr!=0) {
+						free_page(FAT,((fm.FATSize*512)/4096)+1);
 						return dr+8;
+					}
 				}
+				free_page(FAT,((fm.FATSize*512)/4096)+1);
 				return 0;
 			}
 		}
@@ -474,18 +503,117 @@ FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
 	s[1]=0;
 	FILE d = fopen(name,"w");
 	s[1] = c;
+	uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize*512)/4096)+1);
+	for (uint8_t i = 0; i < fm.FATSize; i++)
+		ahci_read_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
 	char read[512];
 	ahci_read_sector(drive_num,d.location/512,(uint8_t *)read);
 	for (uint8_t i = 0; i < 16; i++) {
 		PFAT16DIR dir_entry = (PFAT16DIR)(read+(32*i));
 		if (!dir_entry->Filename[0]) {
+			memset(dir_entry->Filename,0,32);
 			char shortfn[12];
 			memset(shortfn,0,12);
 			LongToShortFilename(s+1,shortfn);
 			memcpy(dir_entry->Filename,shortfn,11);
+			retfile.dir_entry = d.location+(i*32);
+			retfile.clusterNumber = 0;
+			retfile.location = 0;
 			retfile.valid = !ahci_write_sector(drive_num,d.location/512,(uint8_t *)read);
+			for (uint8_t i = 0; i < fm.FATSize; i++) {
+				if (ahci_write_sector(drive_num,i+fm.FATOffset,&FAT[i*512]))
+					retfile.valid = false;
+			}
 			break;
 		}
 	}
+	free_page(FAT,((fm.FATSize*512)/4096)+1);
 	return retfile;
 }
+
+uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
+	if (!len)
+		return 0;
+	FAT16_MOUNT fm = *(FAT16_MOUNT *)getDiskMount(file->mountNumber).mount;
+	uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize*512)/4096)+1);
+	for (uint8_t i = 0; i < fm.FATSize; i++)
+		ahci_read_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
+	
+	char read[512];
+	//Check if it has any clusters. If not, give it a cluster.
+	if (!file->location||!file->clusterNumber) {
+		uint16_t tCluster = (uint16_t)f16_getNextFreeCluster(FAT);
+		f16_setClusterValue(FAT,tCluster,0xFFFF);
+		f16_wipecluster(tCluster,fm,drive_num);
+		file->clusterNumber = (uint32_t)tCluster;
+		file->location = f16_getLocationFromCluster((uint32_t)tCluster,fm);
+		ahci_read_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
+		PFAT16DIR fde = read+(file->dir_entry%512)-1;
+		fde->FirstClusterLocation = tCluster;
+		//printf("Cluster code: %#\n", fde->FirstClusterLocation);
+		ahci_write_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
+		for (uint8_t i = 0; i < fm.FATSize; i++) {
+			ahci_write_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
+		}
+	}
+	uint32_t curLen = len;
+	uint32_t curLoc = start;
+	uint32_t curDiskLoc = 0;
+	uint32_t rCluster = file->clusterNumber;
+	while (curLen) {
+		if (curDiskLoc>start+len)
+			break;
+		curDiskLoc+=fm.SectorsPerCluster*512;
+		//printf("Currently scanning %d to %d. Start is %d. Len is %d. Total is %d\n",curDiskLoc-512,curDiskLoc,start,len,start+len);
+		if (curDiskLoc>=start) {
+			uint32_t tLocation = f16_getLocationFromCluster(rCluster,fm);
+			for (uint8_t i = 0; i < fm.SectorsPerCluster; i++) {
+				ahci_read_sector(drive_num,tLocation/512,(uint8_t *)read);
+				uint32_t amt = curLen>512?512:curLen%512;
+				memcpy(read+(curLoc%512),buf+(len-curLen),amt);
+				//printf("Writing %s at %# (%d bytes)\n",read,(uint64_t)tLocation,amt);
+				ahci_write_sector(drive_num,tLocation/512,(uint8_t *)read);
+				curLoc+=amt;
+				curLen-=amt;
+				tLocation+=512;
+			}
+			if (curDiskLoc>start+len)
+				break;
+		}
+		if (f16_getClusterValue(FAT,rCluster)>=0xFFF8) {
+			uint32_t tCluster = f16_getNextFreeCluster(FAT);
+			//printf("RC %#\n",(uint64_t)rCluster);
+			f16_setClusterValue(FAT,rCluster,(uint16_t)tCluster);
+			f16_setClusterValue(FAT,tCluster,0xFFFF);
+			f16_wipecluster(tCluster,fm,drive_num);
+			rCluster = tCluster;
+			memset(read,0,512);
+			ahci_write_sector(drive_num,f16_getLocationFromCluster(rCluster,fm),(uint8_t *)read);
+		} else if (rCluster>=0xFFF0) {
+			free_page(FAT,((fm.FATSize*512)/4096)+1);
+			return 3;
+		} else
+			rCluster = f16_getClusterValue(FAT,rCluster);
+		//printf("Next cluster is %#, or %#\n",(uint64_t)rCluster,(uint64_t)f16_getLocationFromCluster(rCluster,fm));
+	}
+	if (start+len>file->size) {
+		ahci_read_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
+		PFAT16DIR fde = read+(file->dir_entry%512)-1;
+		fde->FileSize = start+len;
+		ahci_write_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
+		file->size = start+len;
+	}
+	for (uint8_t i = 0; i < fm.FATSize; i++) {
+		ahci_write_sector(drive_num,i+fm.FATOffset,&FAT[i*512]);
+	}
+	free_page(FAT,((fm.FATSize*512)/4096)+1);
+	return 0;
+}
+
+//TODO
+//
+// ADD ERROR CHECKING IN
+// fread
+// fwrite
+// ...more?
+//

@@ -259,7 +259,7 @@ void gui() {
 	terminal_setcolor(0x70);
 	terminal_writestring("                             TritiumOS File Browser                             ");
 	terminal_goto(0,24);
-	terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size                           ");
+	terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size | F3 = Delete File        ");
 	terminal_putentryat(' ',0x70,79,24);
 	drawrect(20,2,40,21,0x0F);
 	terminal_setcolor(0xF0);

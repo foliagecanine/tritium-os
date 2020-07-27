@@ -89,11 +89,22 @@ FILE fopen(const char *filename, const char *mode) {
 
 uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	if (!file)
-		return 1;
+		return 3;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
 		return FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
+	}
+	return 1;
+}
+
+uint8_t fwrite(FILE *file, char *buf, uint64_t start, uint64_t len) {
+	if (!file)
+		return 3;
+	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
+		return 3;
+	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
+		return FAT16_fwrite(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
 	return 1;
 }

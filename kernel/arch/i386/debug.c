@@ -34,6 +34,36 @@ bool check_command(char* command) {
 		for(;;);
 	}
 	
+	if (strcmp(command, "fsinfo")) {
+		print_fat16_values(0);
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "fdelete")) {
+		printf("Return: %d\n",fdelete("A:/TESTFILE.TXT"));
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "fcreate")) {
+		printf("Return: %d\n",fcreate("A:/TESTFILE.TXT").valid);
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "fwrite")) {
+		printf("Deleting. Return value: %d\n",fdelete("A:/TESTFILE.TXT"));
+		FILE f = fcreate("A:/TESTFILE.TXT");
+		//FILE f = fopen("A:/TESTFILE.TXT","w");
+		if (!f.valid) {
+			printf("Create failed.\n");
+		}
+		char text[] = "Hello world.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nHey buddy! I'm speaking in an accent that's beyond her range of hearing!\nLook metal ball, I CAN hear you.\nRUN! *unintelligable* RUN!!!\nLorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.";
+		uint32_t len = strlen(text)+1;
+		printf("Writing %d bytes...\n",len);
+		uint8_t r = fwrite(&f,text,0,(uint64_t)len);
+		printf("Return value: %d\n",r);
+		cmdAck = true;
+	}
+	
 	if (strcmp(command,"lsmnt")) {
 		for (uint8_t i = 0; i < 8; i++) {
 				if (getDiskMount(i).mountEnabled) printf("mnt%d (%c): %s%d, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", getDiskMount(i).drive, getDiskMount(i).type);
@@ -273,6 +303,7 @@ void debug_console() {
 		printf("\n");
 		check_command(command);
 	}
+	free_page(currentDirectory,1);
 }
 
 

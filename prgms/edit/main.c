@@ -16,7 +16,7 @@ static inline void syscall(unsigned int syscall_num) {
 
 char file[1024*32]; //Reserve 32KiB for file. That is max size.
 char decode[1024*32]; //Reserve 32KiB for decoding. That is max size.
-char *lines[4096]; //Max 4096 lines.
+char *lines[4096]; //Max 4096 lines. Pointers cost 128KiB!
 char fname[4096];
 
 char *ctext_cursor = file;
