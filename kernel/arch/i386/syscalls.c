@@ -86,7 +86,7 @@ void new_syscall(uint8_t inum, uint32_t irq_fn) {
 	idt_new_int_flags(inum,irq_fn, 0x60);
 }
 
-extern void run_syscall_asm;
+extern uint32_t run_syscall_asm;
 
 void init_syscalls() {
 	//Install all the syscalls we need

@@ -186,10 +186,11 @@ uint8_t f16_wipecluster(uint32_t clusterNum,FAT16_MOUNT fm,uint8_t drive_num) {
 	char read[512];
 	memset(read,0,512); 
 	for (uint8_t i = 0; i < fm.SectorsPerCluster; i++) {
-		uint8_t r = ahci_write_sector(drive_num,(f16_getLocationFromCluster(clusterNum,fm)+(i*512))/512,read);
+		uint8_t r = ahci_write_sector(drive_num,(f16_getLocationFromCluster(clusterNum,fm)+(i*512))/512,(uint8_t *)read);
 		if (r)
 			return r;
 	}
+	return 0;
 }
 
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
@@ -487,6 +488,7 @@ uint8_t FAT16_fullremove(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
 			}
 		}
 	}
+	return 4;
 }
 
 FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
@@ -531,6 +533,7 @@ FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint8_t drive_num) {
 	return retfile;
 }
 
+//TODO: Stress test this function by writing data > SectorsPerCluster*512
 uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t drive_num) {
 	if (!len)
 		return 0;
@@ -548,7 +551,7 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_
 		file->clusterNumber = (uint32_t)tCluster;
 		file->location = f16_getLocationFromCluster((uint32_t)tCluster,fm);
 		ahci_read_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
-		PFAT16DIR fde = read+(file->dir_entry%512)-1;
+		PFAT16DIR fde = (PFAT16DIR)(read+(file->dir_entry%512)-1);
 		fde->FirstClusterLocation = tCluster;
 		//printf("Cluster code: %#\n", fde->FirstClusterLocation);
 		ahci_write_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
@@ -598,7 +601,7 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_
 	}
 	if (start+len>file->size) {
 		ahci_read_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
-		PFAT16DIR fde = read+(file->dir_entry%512)-1;
+		PFAT16DIR fde = (PFAT16DIR)(read+(file->dir_entry%512)-1);
 		fde->FileSize = start+len;
 		ahci_write_sector(drive_num,file->dir_entry/512,(uint8_t *)read);
 		file->size = start+len;

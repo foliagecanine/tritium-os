@@ -208,7 +208,7 @@ void *get_phys_addr(void *vaddr) {
 void* map_page_to(void *vaddr) {
 	if (kernel_tables[(uint32_t)vaddr/4096].present==1) {
 		kwarn("[WARN] Page mapped that is already present");
-		printf("===== %#\n",(uint64_t)vaddr);
+		printf("===== %#\n",(uint64_t)(uint32_t)vaddr);
 		return 0;
 	}
 	for (uint32_t k=0; k<1048576; k++) {
