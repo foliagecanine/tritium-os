@@ -3,6 +3,13 @@
 
 #include <kernel/stdio.h>
 
+#define SUCCESS 			0
+#define FILE_NOT_FOUND		1
+#define IS_DIRECTORY 		2
+#define INVALID_FNAME		3
+#define UNKNOWN_ERROR		4
+#define INCORRECT_FS_TYPE 	5
+
 typedef struct {
 	uint64_t location;
 	uint64_t size;

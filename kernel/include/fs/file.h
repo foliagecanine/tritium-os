@@ -16,6 +16,7 @@ uint8_t fwrite(FILE *file, char *buf, uint64_t start, uint64_t len);
 FILE readdir(FILE *file, char* buf, uint32_t n);
 FILE fcreate(char *filename);
 uint8_t fdelete(char *filename);
+uint8_t ferase(char *filename);
 void init_file();
 
 #endif

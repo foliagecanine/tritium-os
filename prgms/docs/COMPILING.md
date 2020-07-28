@@ -223,3 +223,102 @@ eax = uint32_t retval : Program's return value
 
 Get return value of program. Must be used after waitpid.
 ```
+
+```C
+int 0x80, eax=12: fopen
+Arguments:
+ebx = FILE *f		  : Return value pointer
+ecx = char *filename  : Full filename of file to open
+edx = char *mode	  : Mode; currently is only "r" or "w"
+Return:
+FILE f will be the resulting file. See kernel/include/fs/fs.h for information on the file structure.
+
+Open a file. 
+```
+
+```C
+int 0x80, eax=13: fread
+Arguments:
+ebx = FILE *f		  : Pointer to FILE structure
+ecx = char *buf  	  : Buffer to read into
+edx = uint32_t starth : High 32 bits of the start address in the file.
+esi = uint32_t startl : Low 32 bits of the start address in the file.
+edi = uint32_t lenl	  : Length of read. Can only read a buffer up to 4 GiB at a time.
+Return:
+al = return value. See kernel/arch/i386/file.c for details on return values.
+
+Read bytes from a file. 
+```
+
+```C
+int 0x80, eax=14: fwrite
+Arguments:
+ebx = FILE *f		  : Pointer to FILE structure
+ecx = char *buf  	  : Buffer to write from
+edx = uint32_t starth : High 32 bits of the start address in the file.
+esi = uint32_t startl : Low 32 bits of the start address in the file.
+edi = uint32_t lenl	  : Length of write. Can only write a buffer up to 4 GiB at a time.
+Return:
+al = return value. See kernel/arch/i386/file.c for details on return values.
+
+Write bytes from a file. 
+```
+
+```C
+int 0x80, eax=15: fcreate
+Arguments:
+ebx = char *filename  : Full name of file to create.
+ecx = FILE *o		  : Output file pointer
+Return:
+FILE o will be the resulting file. See kernel/include/fs/fs.h for information on the file structure.
+
+Create a new file.
+```
+
+```C
+int 0x80, eax=16: fdelete
+Arguments:
+ebx = char *filename  : Full name of file to delete.
+Return:
+al = return value. See kernel/arch/i386/file.c for details on return values.
+
+"Recycle" a file. Deletes it, but allows it to be recovered.
+```
+
+```C
+int 0x80, eax=17: ferase
+Arguments:
+ebx = char *filename  : Full name of file to erase.
+Return:
+al = return value. See kernel/arch/i386/file.c for details on return values.
+
+Erase a file. Deletes a file as well as its reserved space, freeing up space to be used. This is not secure, however, as the data will still be on the hard drive.
+```
+
+```C
+int 0x80, eax=18: readdir
+Arguments:
+ebx = FILE *f		  : File pointer to directory to read.
+ecx = FILE *o		  : Output pointer of file read
+edx = char *buf		  : Output buffer of filename. Should be 256 characters long.
+esi = uint32_t n	  : Entry number to read.
+Return:
+buf will contain the name of the file.
+FILE o will be the resulting file. See kernel/include/fs/fs.h for information on the file structure.
+
+Read a file from a directory entry. 
+```
+
+```C
+int 0x80, eax=23: debug_break
+
+Does nothing. Gives an accessible place to debug programs when using GDB + QEMU.
+```
+
+```C
+int 0x80, eax=24: get_ticks (untested)
+Return:
+eax = return value of ticks (low 32 bits).
+edx = return value of ticks (high 32 bits)?
+
+```

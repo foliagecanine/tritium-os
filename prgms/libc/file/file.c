@@ -41,7 +41,7 @@ FILE readdir(FILE *d, char* buf, uint32_t n) {
 				mov %1,%%ecx;\
 				mov %2, %%edx;\
 				mov %3, %%esi;\
-				mov $14,%%eax;\
+				mov $18,%%eax;\
 				int $0x80;\
 				popa"::"m"(fp),"m"(d),"m"(buf),"m"(n));
 	return f;

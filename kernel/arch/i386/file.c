@@ -1,9 +1,13 @@
 #include <fs/file.h>
 
-#define SUCCESS 					0
-#define INCORRECT_FS_TYPE 1
-#define DRIVE_IN_USE 			2
-#define UNKNOWN_ERROR		3
+// Codes:
+// 0 = Success
+// 1 = Not found
+// 2 = Directory
+// 3 = Invalid Filename
+// 4 = Unknown Error
+// 5 = Invalid Filesystem
+// 8+ = Drive error = (error_code - 8) (see ahci.c)
 
 FSMOUNT *mounts;
 uint32_t numActiveMounts = 0;
@@ -22,7 +26,7 @@ uint8_t unmountDrive(uint8_t drive) {
 	memset(&newMount,0,sizeof(FSMOUNT));
 	newMount.mountEnabled = false;
 	mounts[numActiveMounts] = newMount;
-	return 0;
+	return SUCCESS;
 }
 
 uint8_t mountDrive(uint8_t drive) {
@@ -89,24 +93,24 @@ FILE fopen(const char *filename, const char *mode) {
 
 uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	if (!file)
-		return 3;
+		return UNKNOWN_ERROR;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
 		return FAT12_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_fread(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
-	return 1;
+	return INCORRECT_FS_TYPE;
 }
 
 uint8_t fwrite(FILE *file, char *buf, uint64_t start, uint64_t len) {
 	if (!file)
-		return 3;
+		return UNKNOWN_ERROR;
 	if (strcmp(mounts[file->mountNumber].type,"FAT12")) {
-		return 3;
+		return INCORRECT_FS_TYPE;
 	} else if (strcmp(mounts[file->mountNumber].type,"FAT16")) {
 		return FAT16_fwrite(file,buf,(uint32_t)start,(uint32_t)len,mounts[file->mountNumber].drive);
 	}
-	return 1;
+	return INCORRECT_FS_TYPE;
 }
 
 //We expect buf to be 256 characters long
@@ -150,21 +154,14 @@ FILE fcreate(char *filename) {
 	return retfile;
 }
 
-// Codes:
-// 0 = Success
-// 1 = Not found
-// 2 = Directory
-// 3 = Invalid Filename
-// 4 = Unknown Error
-// 8+ = Drive error = (error_code - 8) (see ahci.c)
 
 uint8_t fdelete(char *filename) {
 	FILE f = fopen(filename,"w");
 	if (!f.valid) {
-		return 1;
+		return FILE_NOT_FOUND;
 	}
 	if (f.directory) {
-		return 2;
+		return IS_DIRECTORY;
 	}
 	if (filename) {
 		uint8_t device;
@@ -178,13 +175,42 @@ uint8_t fdelete(char *filename) {
 					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
 						//Notimplemented
 					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
-						return FAT16_fdelete(filename,device);						
+						return FAT16_fdelete(filename,mounts[device].drive);						
 					}
 				}
 			}
 		}
 	}
-	return 4;
+	return UNKNOWN_ERROR;
+}
+
+uint8_t ferase(char *filename) {
+	FILE f = fopen(filename,"w");
+	if (!f.valid) {
+		return FILE_NOT_FOUND;
+	}
+	if (f.directory) {
+		return IS_DIRECTORY;
+	}
+	if (filename) {
+		uint8_t device;
+		//Validate and convert to drive number
+		if (filename[1]==':'&&filename[2]=='/') {
+			device = tolower(filename[0])-'a';
+			//Filename without drive prefix
+			char* flongname = (char*) filename+2;
+			if (flongname&&device<9) {
+				if (mounts[device].mountEnabled) {
+					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
+						//Notimplemented
+					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
+						return FAT16_ferase(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);						
+					}
+				}
+			}
+		}
+	}
+	return UNKNOWN_ERROR;
 }
 
 FSMOUNT getDiskMount(uint8_t drive) {

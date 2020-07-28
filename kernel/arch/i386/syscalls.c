@@ -1,14 +1,17 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	19
+#define NUM_SYSCALLS	25
 
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
-void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
+uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
+uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n);
 void fcreate_usermode(char *filename, FILE *o);
 uint8_t fdelete_usermode(char *filename);
+uint8_t ferase_usermode(char *filename);
 void debug_break();
+void null_function();
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -25,11 +28,17 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&get_retval,			// 11
 	&fopen_usermode,		// 12
 	&fread_usermode,		// 13
-	&readdir_usermode,		// 14
-	&debug_break,			// 15
-	&get_ticks,				// 16
-	&fcreate_usermode,		// 17
-	&fdelete_usermode,		// 18
+	&fwrite_usermode,		// 14
+	&fcreate_usermode,		// 15
+	&fdelete_usermode,		// 16
+	&ferase_usermode,		// 17
+	&readdir_usermode,		// 18
+	&null_function,			// 19 (reserved for future file-related functions)
+	&null_function,			// 20 (reserved for future file-related functions)
+	&null_function,			// 21 (reserved for future file-related functions)
+	&null_function,			// 22 (reserved for future file-related functions)
+	&debug_break,			// 23
+	&get_ticks,				// 24
 };
 
 extern bool ts_enabled;
@@ -104,11 +113,19 @@ void fopen_usermode(FILE *f, const char* filename, const char* mode) {
 	}
 }
 
-void fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
+uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
 	uint64_t start = (((uint64_t)starth)<<32)|startl;
 	uint64_t len = (uint64_t)lenl;
 	if (check_range(buf,len,0x100000,0xF04000)) {
-		fread(f,buf,start,len);
+		return fread(f,buf,start,len);
+	}
+}
+
+uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
+	uint64_t start = (((uint64_t)starth)<<32)|startl;
+	uint64_t len = (uint64_t)lenl;
+	if (check_range(buf,len,0x100000,0xF04000)) {
+		return fwrite(f,buf,start,len);
 	}
 }
 
@@ -130,9 +147,20 @@ uint8_t fdelete_usermode(char *filename) {
 	if (check_range(filename,strlen(filename),0x100000,0xF04000)) {
 		return fdelete(filename);
 	}
-	return 4;
+	return UNKNOWN_ERROR;
+}
+
+uint8_t ferase_usermode(char *filename) {
+	if (check_range(filename,strlen(filename),0x100000,0xF04000)) {
+		return ferase(filename);
+	}
+	return UNKNOWN_ERROR;
 }
 
 void debug_break() {
 	asm volatile("nop");
+}
+
+void null_function() {
+
 }
