@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-__asm__("jmp main");
-
 static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
 }
@@ -393,7 +391,7 @@ uint8_t run() {
 	}
 }
 
-_Noreturn void main() {
+void main() {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	printf("Welcome to Text Adventure!\n");
 	printf("This game is distributed with TritiumOS under the MIT license.\n");

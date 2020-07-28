@@ -5,6 +5,7 @@ CFLAGS=-m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefa
 include $(LIBDIR)/make.config
 
 OBJS=\
+../libc/sys/sys.o\
 main.o \
 $(LIB_OBJS)\
 

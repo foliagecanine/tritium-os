@@ -2,13 +2,6 @@
 #include <string.h>
 #include <tty.h>
 #include <gui.h>
-extern char **envp;
-extern uint32_t envc;
-asm ("push %ecx;\
-		push %eax;\
-		mov %ebx,(envc);\
-		mov %edx,(envp);\
-		call main");
 
 static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
@@ -195,7 +188,7 @@ void parse(char *f, char *o, char *l[4096]) {
 }
 
 
-_Noreturn void main(uint32_t argc, char **argv) {
+void main(uint32_t argc, char **argv) {
 	getkey();
 	memset(file,0,1024*16);
 	memset(fname,0,4096);

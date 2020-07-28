@@ -26,27 +26,42 @@ nasm -fbin input.asm -o OUTPUT.PRG
   
 ### Compiling C
 For C programs, it's a little more complicated.
-It is recommended to use a program like GNU Make for automation of the compilation.
+It is recommended to use a program like GNU Make for automation of the compilation.  
+
+When linking, you MUST LINK *libc_directory*/sys/sys.o **FIRST**! This provides the initialization code to launch the "main" function.  
+Here's an example:  
+```bash
+ld -T linker.ld $(LIBCDIR)/sys/sys.o main.o -o OUTPUT.PRG
+```
+
+Alternatively, you can use one of the following methods:  
 
 In the main c file, make sure you put code such as
 ```C
 extern char **envp;
 extern uint32_t envc;
 asm ("push %ecx;\
-	push %eax;\
-	mov %ebx,(envc);\
-	mov %edx,(envp);\
-	call main");
+		push %eax;\
+		mov %ebx,(envc);\
+		mov %edx,(envp);\
+		call main;\
+		mov %eax,%ebx;\
+		mov $2,%eax;\
+		int $0x80;\
+		jmp .");
 ```
 		
-This will save all arguments and environment variables then launch your code.
-Or at a minimum
+This will save all arguments and environment variables then launch your code.  
+When it is done, it will return the return value from the main function. This happens even if the "main" function is type void.  
+
+At a minimum, you must have
 
 ```C
 asm("jmp main");
 ```
 
 The code doesn't know where to start, so by adding this you direct it to launch the "main" function.
+Also remember to exit your program with syscall 2. Otherwise your program will experience an error when it returns from the main function.
 
 Compile with the following flags (GCC):  
 ```bash
@@ -58,7 +73,15 @@ Note: The -m32 flag is only required when using a 64 bit compiler
 This effectively disables all of gcc's built in libraries and files and prepares it for linking.
 
 Link the program with the following flags (LD):  
-`ld -T linker.ld obj1.o obj2.o -o OUTPUT.PRG`
+```bash
+ld -T linker.ld $(LIBCDIR)/sys/sys.o obj1.o obj2.o -o OUTPUT.PRG
+```
+
+or if you aren't using the startfile
+
+```bash
+ld -T linker.ld obj1.o obj2.o -o OUTPUT.PRG
+```
 
 The linker.ld file is provided in the prgms/docs folder.
 

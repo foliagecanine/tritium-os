@@ -1,18 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 
-extern char **envp;
-extern uint32_t envc;
-asm ("push %ecx;\
-		push %eax;\
-		mov %ebx,(envc);\
-		mov %edx,(envp);\
-		call main");
-
 uint8_t buf[513];
 char fname[4096];
 
-_Noreturn void main(uint32_t argc, char **argv) {
+void main(uint32_t argc, char **argv) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	char *cd = getenv("CD");
 	memset(fname,0,4096);

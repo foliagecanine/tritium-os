@@ -1,5 +1,22 @@
 #include <stdio.h>
 
+extern void main();
+extern char **envp;
+extern uint32_t envc;
+
+void __internal_start() {
+	__asm__ volatile ("\
+		push %ecx;\
+		push %eax;\
+		mov %ebx,(envc);\
+		mov %edx,(envp);\
+		call main;\
+		mov %eax,%ebx;\
+		mov $2,%eax;\
+		int $0x80;\
+		jmp .");
+}
+
 static inline void syscall(unsigned int syscall_num) {
 	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
 }
