@@ -18,10 +18,10 @@
 .long 0
 .long 0
 .long 0
-.long 1#0
-.long 1024
-.long 768
-.long 8
+.long 1
+.long 0
+.long 0
+.long 0
 
 # Allocate the initial stack.
 .section .bootstrap_stack, "aw", @nobits
@@ -46,6 +46,7 @@ boot_page_table1:
 .global _start
 .type _start, @function
 _start:
+	#jmp bios32
 	# Physical address of boot_page_table1.
 	movl $(boot_page_table1 - 0xC0000000), %edi
 	# First address to map is address 0.

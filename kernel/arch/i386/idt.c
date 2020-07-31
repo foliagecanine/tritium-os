@@ -95,7 +95,7 @@ void init_idt() {
 	
 	//Initialize all interrupts with default handler
 	uint32_t default_handler_addr = (uint32_t)default_handler;
-	for (uint16_t i = 0; i < 7; i++) {
+	for (uint16_t i = 0; i < 16; i++) {
 		set_idt_values(i,default_handler_addr);
 	}
 	
@@ -249,7 +249,7 @@ void irq11_handler(void) {
 	outb(0x20, 0x20); //EOI
 	irq_finished[11] = true;
 }
- 
+
 void irq12_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI

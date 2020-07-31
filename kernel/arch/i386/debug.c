@@ -1,6 +1,7 @@
 #include <kernel/stdio.h>
 #include <fs/file.h>
 #include <kernel/mem.h>
+#include <kernel/multiboot.h>
 
 char *currentDirectory;
 char commandPart[256];
@@ -339,6 +340,7 @@ typedef struct {
 	uint32_t EnableSetReset;
 	uint32_t SetReset;
 	uint32_t DataRotate;
+	uint32_t Plane;
 	uint32_t Bitmask;
 	uint32_t HorizontalTotal;
 	uint32_t EndHorizontalDisplay;
@@ -378,6 +380,7 @@ void VGA_default_values() {
 	VGAReg.SetReset 				= 0x03CE0000;
 	VGAReg.EnableSetReset 			= 0x03CE0001;
 	VGAReg.DataRotate 				= 0x03CE0003;
+	VGAReg.Plane					= 0x03CE0004;
 	VGAReg.GraphicsMode 			= 0x03CE0005;
 	VGAReg.Misc						= 0x03CE0006;
 	VGAReg.Bitmask 					= 0x03CE0008;
@@ -415,7 +418,12 @@ void color_palette_set(uint8_t id, uint8_t r, uint8_t g, uint8_t b) {
 	outb(0x3C9,b);
 }
 
-void graphicstest() {
+void switch_plane(uint8_t plane) {
+	VGA_write_register(VGAReg.Plane,plane);
+	VGA_write_register(VGAReg.MapMask,1<<plane);
+}
+
+void _300x240x256() {
 	VGA_default_values();
 	
 	//Get access to 0xA0000-0xBFFFF (VGA memory)
@@ -514,12 +522,385 @@ void graphicstest() {
 	}
 }
 
+void _640x480x16() {
+	VGA_default_values();
+	
+	//Get access to 0xA0000-0xBFFFF (VGA memory)
+	for (uint32_t i = 0xA0000; i < 0xBFFFF; i+=4096) {
+		identity_map((void *)i);
+	}
+	
+	//Unlock CRTC registers (disable bit 8)
+	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)&0x7F);
+	//Stop sequencer
+	VGA_write_register(VGAReg.Sequencer,1);
 
+	//
+	//Load all registers (values from https://wiki.osdev.org/VGA_Hardware)
+	//
 
+	//Misc Out Register
+	outb(0x3C2,0xE3);
 
+	//Sequencer
+	VGA_write_register(VGAReg.ClockingMode,0x01);
+	//VGA_write_register(VGAReg.MapMask,0x0F);
+	VGA_write_register(VGAReg.CharacterSelect,0x00);
+	VGA_write_register(VGAReg.SeqMemoryMode,0x02);
+	
+	//CRTC Horizontal
+	VGA_write_register(VGAReg.HorizontalTotal,0x5F);
+	VGA_write_register(VGAReg.EndHorizontalDisplay,0x4F);
+	VGA_write_register(VGAReg.StartHorizontalBlanking,0x50);
+	VGA_write_register(VGAReg.EndHorizontalBlanking,0x82);
+	VGA_write_register(VGAReg.StartHorizontalRetrace,0x54);
+	VGA_write_register(VGAReg.EndHorizontalRetrace,0x80);
+	VGA_write_register(VGAReg.LogicalWidth,0x28);
+	
+	//CRTC Vertical
+	VGA_write_register(VGAReg.VerticalTotal,0x0B);
+	VGA_write_register(VGAReg.Overflow,0x3E);
+	VGA_write_register(VGAReg.MaxScanLine,0x40);
+	VGA_write_register(VGAReg.StartVerticalRetrace,0xEA);
+	VGA_write_register(VGAReg.EndVerticalRetrace,0x8C);
+	VGA_write_register(VGAReg.EndVerticalDisplay,0xDF);
+	VGA_write_register(VGAReg.StartVerticalBlanking,0xE7);
+	VGA_write_register(VGAReg.PresetRowScan,0x00);
+	VGA_write_register(VGAReg.EndVerticalBlanking,0x04);
+	VGA_write_register(VGAReg.UnderlineLocation,0x00);
+	VGA_write_register(VGAReg.ModeControl,0xE3);
+	
+	//Grapics Controller
+	VGA_write_register(VGAReg.GraphicsMode,0x00);
+	VGA_write_register(VGAReg.Misc,0x05);
+	
+	//Attributes Controller
+	//Mode control
+	inb(0x3DA);
+	outb(0x3C0,0x10);
+	outb(0x3C0,0x01);
+	//Overscan
+	inb(0x3DA);
+	outb(0x3C0,0x11);
+	outb(0x3C0,0x00);
+	//ColorPlaneEnable
+	inb(0x3DA);
+	outb(0x3C0,0x12);
+	outb(0x3C0,0x0F);
+	//Horizontal Panning
+	inb(0x3DA);
+	outb(0x3C0,0x13);
+	outb(0x3C0,0x00);
+	//ColorSelect
+	inb(0x3DA);
+	outb(0x3C0,0x14);
+	outb(0x3C0,0x00);
+	
+	for (uint16_t i = 0; i < 16; i++) {
+		//color_palette_set(i,i,i,i);
+	}
+	
+	//Lock CRTC registers (enable bit 8)
+	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)|0x80);
+	//Enable display
+	inb(0x3DA);
+	outb(0x3C0,0x20);
+	//Start sequencer
+	VGA_write_register(VGAReg.Sequencer,3);
 
+	switch_plane(0);
+	memset((void *)0xA0000,0,0x20000);
+	switch_plane(1);
+	memset((void *)0xA0000,0,0x20000);
+	switch_plane(2);
+	memset((void *)0xA0000,0,0x20000);
+	switch_plane(3);
+	memset((void *)0xA0000,0,0x20000);
+}
 
+uint8_t doublebuffer[640*480/2];
 
+/* void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
+	uint32_t dataloc = (640*y)+x;
+	uint8_t shift = 1<<(7-(dataloc%8));
+	switch_plane(0);
+	uint8_t *pixel = (uint8_t *)(0xA0000+(dataloc/8));
+	*pixel ^= (-((c&1))^*pixel)&shift;
+	switch_plane(1);
+	*pixel ^= (-((c&2)>>1)^*pixel)&shift;
+	switch_plane(2);
+	*pixel ^= (-((c&4)>>2)^*pixel)&shift;
+	switch_plane(3);
+	*pixel ^= (-((c&8)>>3)^*pixel)&shift;
+} */
 
+void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
+	uint32_t dataloc = (640*y)+x;
+	uint8_t shift = 1<<(7-(dataloc%8));
+	uint8_t *pixel = (uint8_t *)(doublebuffer+(dataloc/8));
+	*pixel ^= (-((c&1))^*pixel)&shift;
+	pixel+=640*480/8;
+	*pixel ^= (-((c&2)>>1)^*pixel)&shift;
+	pixel+=640*480/8;
+	*pixel ^= (-((c&4)>>2)^*pixel)&shift;
+	pixel+=640*480/8;
+	*pixel ^= (-((c&8)>>3)^*pixel)&shift;
+}
 
+void fastmemcpy32(uint32_t *dst, uint32_t *src, size_t size) {
+	size/=4;
+	for (size_t i = 0; i < size; i++)
+		dst[i] = src[i];
+}
 
+void double_buffer() {
+	switch_plane(0);
+	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer,640*480/8);
+	switch_plane(1);
+	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer+(640*480/32),640*480/8);
+	switch_plane(2);
+	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer+((640*480/32)*2),640*480/8);
+	switch_plane(3);
+	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer+((640*480/32)*3),640*480/8);
+	
+	//memcpy(0xA0000,doublebuffer+(640*480/8),640*480/8);
+	//memcpy(0xA0000,doublebuffer+((640*480/8)*2),640*480/8);
+	//memcpy(0xA0000,doublebuffer+((640*480/8)*3),640*480/8);
+}
+
+extern multiboot_info_t *mbi;
+
+typedef struct {
+	uint8_t b;
+	uint8_t g;
+	uint8_t r;
+} __attribute__((packed)) color24;
+
+void setpixel24(uint32_t x, uint32_t y, color24 c) {
+	color24 *pixels = mbi->framebuffer_addr;
+	pixels[(mbi->framebuffer_width*y)+x]=c;
+}
+
+void graphicstest() {
+	/*_640x480x16();
+	uint8_t j = 1;
+	while(1) {
+		for (uint32_t i = 0; i < 640*480; i++) {
+			p16pixel(i%640,i/640,(j+(i/(640/16))%16));
+			//if (!(i%20)) {
+				//sleep(100);
+			//}
+		}
+		j = (j + 1) & 0xF;
+		sleep(500);
+		double_buffer();
+	}*/
+	for (uint32_t i = mbi->framebuffer_addr; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height*mbi->framebuffer_bpp/8); i+=4096) {
+		identity_map((void *)i);
+	}
+	
+	//color24 *pixels = (color24 *)mbi->framebuffer_addr;
+	
+	/*for (uint32_t i = 0; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height); i++) {
+		color24 pixel;
+		pixel.r = i&0x000000FF;
+		pixel.g = (i>>8)&0x000000FF;
+		pixel.b = (i>>16)&0x000000FF;
+		pixels[i]=pixel;
+	}*/
+	kprint("Running graphics test");
+	if (mbi->framebuffer_bpp==24) {
+		for (uint32_t y = 0; y < mbi->framebuffer_height; y++) {
+			for (uint32_t x = 0; x < mbi->framebuffer_width; x++) {
+				color24 c;
+				c.r = x/(mbi->framebuffer_width/256);
+				c.g = y/(mbi->framebuffer_height/256);
+				c.b = 0;
+				setpixel24(x,y,c);
+			}
+		}
+		for(;;);
+	}
+	extern void vesa32();
+	identity_map(0x7000);
+	identity_map(0x8000);
+	uint8_t error;
+	uint32_t framebuffer;
+	asm("\
+		mov $1024,%%ax;\
+		mov $768,%%bx;\
+		mov $24,%%cl;\
+		call vesa32;\
+		mov %%al,%0;\
+		mov %%ebx,%1;\
+	":"=m"(error),"=m"(framebuffer));
+	
+	kprint("Done with BIOS!");
+	
+	if (!error) {
+		kprint("Error is zero");
+	} else {
+		kerror("Error is NONZERO!!!");
+	}
+	if (!framebuffer) {
+		kerror("Framebuffer is zero!");
+	} else {
+		kprint("Framebuffer seems ok");
+	}
+	
+	init_pit(1000);
+	
+	mbi->framebuffer_addr = framebuffer;
+	mbi->framebuffer_height = 768;
+	mbi->framebuffer_width = 1024;
+	mbi->framebuffer_bpp = 24;
+	mbi->framebuffer_pitch = 1024*3;
+	
+	for (uint32_t i = mbi->framebuffer_addr; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height*mbi->framebuffer_bpp/8); i+=4096) {
+		identity_map((void *)i);
+	}
+	
+	if (mbi->framebuffer_bpp==24) {
+		for (uint32_t y = 0; y < mbi->framebuffer_height; y++) {
+			for (uint32_t x = 0; x < mbi->framebuffer_width; x++) {
+				color24 c;
+				c.r = x/(mbi->framebuffer_width/256);
+				c.g = y/(mbi->framebuffer_height/256);
+				c.b = 0;
+				setpixel24(x,y,c);
+			}
+		}
+	}
+	
+	color24 back;
+	memset(&back,0,3);
+	color24 front;
+	memset(&front,0xFF,3);
+	
+	print_string(10,10,"Hello World!",back,front);
+	print_string(10,26," !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",back,front);
+}
+
+uint64_t font_table[] = {
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //first 16 are just extra codes (nonprintable)
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //next 16 are too
+  0x0000000000000000, //' ' char
+  0x1010101010001000, //'!'
+  0x1414000000000000, //See ascii reference for more (this one is value 34)
+  0x00143E14143E1400, //These are raw binary encoded
+  0x103C503814781000,
+  0x7152740817254700, // as shown for this one (37='%') see below
+  0x1C24182542463900,
+  0x0808000000000000,
+  0x0408101010080400, // 0 1 1 1 0 0 0 1 = 0x71
+  0x1008040404081000, // 0 1 0 1 0 0 1 0 = 0x52
+                      // 0 1 1 1 0 1 0 0 = 0x74
+                      // 0 0 0 0 1 0 0 0 = 0x08
+                      // 0 0 0 1 0 1 1 1 = 0x17
+                      // 0 0 1 0 0 1 0 1 = 0x25
+                      // 0 1 0 0 0 1 1 1 = 0x47
+                      // 0 0 0 0 0 0 0 0 = 0x00
+
+                      //When printed it should look like this:
+  0x0000140814000000, //   # # #       #
+  0x0008083E08080000, //   #   #     #
+  0x0000000000081000, //   # # #   #
+  0x0000003E00000000, //         #
+  0x0000000000000800, //       #   # # #
+  0x0102040810204000, //     #     #   #
+  0x3844445444443800, //   #       # # #
+  0x0818080808081C00, //
+  0x3C42040810207E00, //The leftmost and bottommost sides are all 0's for spacing
+  0x3C42021C02423C00, //Max chars on a 320x200 mode can be 40 horizontal and 25 vertical
+  0x0C14247C04040400, //If you can figure out a mode bigger than 320x200 then good for you
+  0x7E40407C02423C00, //Font made with scratch program at https://scratch.mit.edu/projects/298710977/
+  0x3844407844443800,
+  0x7E02040810204000,
+  0x3844443844443800,
+  0x3844443C04443800,
+  0x0000200000200000,
+  0x0000200000202000,
+  0x030C3040300C0300,
+  0x00003E00003E0000,
+  0x6018060106186000,
+  0x3844040810001000,
+  0x3E41474947403E00,
+  0x102844447C444400,
+  0x7844447844447800,
+  0x3844404040443800,
+  0x7048444444487000,
+  0x7C40407840407C00,
+  0x7C40407840404000,
+  0x3C4240404E423C00,
+  0x4444447C44444400,
+  0x7C10101010107C00,
+  0x7C04040404443800,
+  0x4448506050484400,
+  0x4040404040407C00,
+  0x4163554941414100,
+  0x4161514945434100,
+  0x3C42424242423C00,
+  0x7844447840404000,
+  0x3C42424242443A00,
+  0x7844447844444400,
+  0x3844403804443800,
+  0x7F08080808080800,
+  0x4444444444443800,
+  0x4444444444281000,
+  0x4141414149552200,
+  0x4122140814224100,
+  0x4444281010101000,
+  0x7F02040810207F00,
+  0x1C10101010101C00,
+  0x4020100804020100,
+  0x1C04040404041C00,
+  0x0814220000000000,
+  0x0000000000007F00,
+  0x1010080000000000,
+  0x0000700838483400,
+  0x4040407048487000,
+  0x0000003040403000,
+  0x0808083848483800,
+  0x0000304878403800,
+  0x3048407040404000,
+  0x0000384838087000,
+  0x4040407048484800,
+  0x0010001010101000,
+  0x0008000808483000,
+  0x4040485060504800,
+  0x6020202020202000,
+  0x000000446C545400,
+  0x0000004070484800,
+  0x0000003048483000,
+  0x0000704870404000,
+  0x0000384838080C00,
+  0x0000007048404000,
+  0x0000384078087000,
+  0x0020702020201000,
+  0x0000004848483000,
+  0x0000004444281000,
+  0x0000004444542800,
+  0x0000442810284400,
+  0x0000484838087000,
+  0x0000007810207800,
+  0x0C10102010100C00,
+  0x0808080808080800,
+  0x1804040204041800,
+  0x324C000000000000
+};
+
+void print_string(uint32_t x, uint32_t y, char *s, color24 back_color, color24 front_color) {
+	for (size_t i = 0; i < strlen(s); i++) {
+		draw_char(((i*16)+x)%mbi->framebuffer_width,y+((((i*16)+x)/mbi->framebuffer_width)*16),s[i],back_color,front_color);
+		sleep(100);
+	}
+}
+
+void draw_char(uint32_t x,uint32_t y,char c,color24 back_color, color24 front_color) {
+	uint8_t *charval = &font_table[c];
+	for (uint8_t _y = 0; _y < 16; _y++) {
+		for (uint8_t _x = 0; _x < 16; _x++) {
+			setpixel24(x+_x,y+_y,(charval[7-(_y/2)]>>(7-(_x/2)))&1?front_color:back_color);
+		}
+	}
+}

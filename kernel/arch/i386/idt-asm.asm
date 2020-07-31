@@ -305,3 +305,392 @@ test_int:
 	xor eax, eax
 	int 0x80
 	ret
+	
+; The following was modified from Omarrx024's VESA tutorial on the OSDev Wiki
+; (https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial)
+; This code is used under CC0 1.0 (see https://wiki.osdev.org/OSDev_Wiki:Copyrights for details)
+
+; VESA32 function:
+; Switch to realmode, change resolution, and return to protected mode.
+; 
+; Inputs:
+;	ax - Resolution width
+;	bx - Resolution height
+;	cl - Bit depth (bpp)
+; 
+; Outputs:
+;	al - Error code
+;		0 = success
+;		1 = mode not found
+;		2 = BIOS error
+;	ebx - Framebuffer address (physical)
+;
+; Note: you will most likely have to reload the PIT
+
+; Macros to make it easier to access data and code copied to 0x7C00
+%define INT32_LENGTH (_int32_end-_int32)
+%define FIXADDR(addr) (((addr)-_int32)+0x7C00)
+
+; Macros for the storevars at 0x7C00
+%define sv_width FIXADDR(storevars.width)
+%define sv_height FIXADDR(storevars.height)
+%define sv_bpp FIXADDR(storevars.bpp)
+%define sv_segment FIXADDR(storevars.segment)
+%define sv_offset FIXADDR(storevars.offset)
+%define sv_mode FIXADDR(storevars.mode)
+
+global vesa32
+vesa32:
+	cli
+	
+	; Store registers so we can use them
+	mov [storevars.width],ax
+	mov [storevars.height],bx
+	mov [storevars.bpp],cl
+	
+	; Copy the _int32 function (et al) to 0x7C00 (below 1MiB)
+	mov esi,_int32
+	mov edi,0x7C00
+	mov ecx,INT32_LENGTH
+	cld
+	rep movsb
+	
+	; Relocate the stored variables to where the rest of the data is
+	mov ax,[storevars.width]
+	mov [sv_width],ax
+	mov ax,[storevars.height]
+	mov [sv_height],ax
+	mov al,[storevars.bpp]
+	mov [sv_bpp],al
+	
+	; Jump to code under 1MiB so we can run in 16 bit mode
+	jmp 0x00007C00
+[BITS 32]
+_int32:
+	; Store any remaining registers so we don't mess anything up in C
+	mov [store32.edx],edx
+	mov [store32.esi],esi
+	mov [store32.edi],edi
+	mov [store32.esp],esp
+	mov [store32.ebp],ebp
+	
+	; Store the cr3 in case the BIOS messes it up
+	mov eax,cr3
+	mov [store32.cr3],eax
+	
+	; Disable paging
+	mov eax,cr0
+	and eax,0x7FFFFFFF
+	mov cr0,eax
+	
+	; Store existing GDTs and IDTs and load temporary ones
+	sgdt [FIXADDR(gdt32)]
+	sidt [FIXADDR(idt32)]
+	lgdt [FIXADDR(gdt16)]
+	lidt [FIXADDR(idt16)]
+	
+	; Switch to 16 bit protected mode
+	jmp word 0x08:FIXADDR(_intp16)
+[BITS 16]
+_intp16:
+	; Load all the segment registers with the data segment
+	mov ax,0x10
+	mov ds,ax
+	mov es,ax
+	mov fs,ax
+	mov gs,ax
+	mov ss,ax
+	
+	; Disable protected mode
+	mov eax,cr0
+	and al, 0xFE
+	mov cr0,eax
+	
+	; Jump to realmode
+	jmp word 0x0000:FIXADDR(_intr16)
+_intr16:
+	; Load all the data segments with 0
+	mov ax,0
+	mov ss,ax
+	mov ds,ax
+	mov es,ax
+	mov fs,ax
+	mov gs,ax
+	; Set a temporary stack
+	mov sp,0x7B00
+	
+	; Get a list of modes
+	push es
+	mov ax,0x4F00
+	mov edi,FIXADDR(vbe_info)
+	int 0x10
+	pop es
+	
+	; Check for error
+	cmp ax, 0x4F
+	jne .error
+
+	; Set up the registers with the segment:offset of the modes
+	mov ax, word[FIXADDR(vbe_info.vmodeoff)]
+	mov [sv_offset],ax
+	mov ax, word[FIXADDR(vbe_info.vmodeseg)]
+	mov [sv_segment],ax
+	
+	mov ax, [sv_segment]
+	mov fs,ax
+	mov si, [sv_offset]
+
+.find_mode:
+	; Increment the mode
+	mov dx,[fs:si]
+	add si,2
+	mov [sv_offset],si
+	mov [sv_mode], dx
+	mov ax,0
+	mov fs,ax
+	
+	; Make sure we haven't run out of modes
+	cmp word[sv_mode],0xFFFF
+	je .error2
+	
+	; List the values for the selected mode
+	push es
+	mov ax,0x4f01
+	mov cx,[sv_mode]
+	mov di, FIXADDR(vbe_screen)
+	int 0x10
+	pop es
+	
+	; Check for error
+	cmp ax, 0x4F
+	jne .error
+	
+	; Check width
+	mov ax, [sv_width]
+	cmp ax, [FIXADDR(vbe_screen.width)]
+	jne .next_mode
+	
+	; Check height
+	mov ax, [sv_height]
+	cmp ax, [FIXADDR(vbe_screen.height)]
+	jne .next_mode
+	
+	; Check bpp
+	mov al, [sv_bpp]
+	cmp al, [FIXADDR(vbe_screen.bpp)]
+	jne .next_mode
+
+	; We've found our mode. Now switch to it
+	push es
+	mov ax, 0x4F02
+	mov bx, [sv_mode]
+	or bx, 0x4000
+	mov di,0
+	int 0x10
+	pop es
+	
+	; Check for any errors
+	cmp ax, 0x4F
+	jne .error
+
+	; Set up return values
+	mov ax,0
+	mov ebx,[FIXADDR(vbe_screen.buffer)]
+	; Start the transition back to protected mode
+	jmp .returnpm
+
+; Any BIOS errors use this function
+.error:
+	mov ax,2
+	jmp .returnpm
+	
+; This error is only for if the requested mode could not be found
+.error2:
+	mov ax,1
+	jmp .returnpm
+
+; Get the address for the next mode
+.next_mode:
+	mov ax, [sv_segment]
+	mov fs,ax
+	mov si, [sv_offset]
+	jmp .find_mode
+	
+; Return to protected mode!
+.returnpm:
+	; Store the return values
+	mov [FIXADDR(storevars.error)],ax
+	mov [FIXADDR(storevars.buffer)],ebx
+	
+	; Turn on protected mode (this is same as "or cr0,1")
+	mov eax,cr0
+	inc eax
+	mov cr0,eax
+	
+	; Load 32 bit GDT
+	lgdt [FIXADDR(gdt32)]
+	; Jump to 32 bit protected mode
+	jmp 0x08:FIXADDR(returnpm32)
+	
+[BITS 32]
+; We're back in 32 bit protected mode land!
+returnpm32:
+	; Load all the data segments
+	mov ax,0x10
+	mov ss,ax
+	mov ds,ax
+	mov es,ax
+	mov fs,ax
+	mov gs,ax
+	; Use the protected mode IDT
+	lidt [FIXADDR(idt32)]
+	
+	; Re-enable paging
+	mov eax,cr0
+	or eax,0x80000000
+	mov cr0,eax
+	; Restore cr3
+	mov eax,[store32.cr3]
+	mov cr3,eax
+	
+	; Reload GDT with paging enabled (otherwise we will triple fault on sti)
+	lgdt [FIXADDR(gdt32)]
+	
+	; Restore PIC (see idt.c for values)
+	mov al,0x11
+	out 0x20,al
+	out 0xA0,al
+	mov al,0x20
+	out 0x21,al
+	mov al,40
+	out 0xA1,al
+	mov al,4
+	out 0x21,al
+	sub al,2
+	out 0xA1,al
+	dec al
+	out 0x21,al
+	out 0xA1,al
+	xor al,al
+	out 0x21,al
+	out 0xA1,al
+	
+	; Restore all registers except output registers (which will have their output values)
+	mov eax,[FIXADDR(storevars.error)]
+	mov ebx,[FIXADDR(storevars.buffer)]
+	mov edx,[store32.edx]
+	mov esi,[store32.esi]
+	mov edi,[store32.edi]
+	mov esp,[store32.esp]
+	mov ebp,[store32.ebp]
+	
+	; Re-enable interrupts
+	sti
+	; Finally, return to the callee
+	ret
+
+gdt32:
+	dw 0
+	dd 0
+	
+idt32:
+	dw 0
+	dd 0
+	
+idt16:
+	dw 0x03FF
+	dd 0
+	
+gdt16_struct:
+	dq 0
+	
+	dw 0xFFFF
+	dw 0
+	db 0
+	db 10011010b
+	db 10001111b
+	db 0
+	
+	dw 0xFFFF
+	dw 0
+	db 0
+	db 10010010b
+	db 10001111b
+	db 0
+	
+gdt16:
+	dw gdt16 - gdt16_struct - 1
+	dd FIXADDR(gdt16_struct)
+
+storevars:
+	.width 		dw 0
+	.height 	dw 0
+	.bpp 		db 0
+	.segment	dw 0
+	.offset 	dw 0
+	.mode		dw 0
+	.buffer		dd 0
+	.error		db 0
+
+vbe_screen:
+	.attr		dw 0
+	.unused0	db 0
+	.unused1	db 0
+	.unused2	dw 0
+	.unused3	dw 0
+	.unused4	dw 0
+	.unused5	dw 0
+	.unused7	dd 0
+	.pitch		dw 0
+	.width		dw 0
+	.height		dw 0
+	.unused8	db 0
+	.unused9	db 0
+	.unusedA	db 0
+	.bpp		db 0
+	.unusedB	db 0
+	.unusedC	db 0
+	.unusedD	db 0
+	.unusedE	db 0
+	.reserved0	db 0
+	
+	.redmask	db 0
+	.redpos		db 0
+	.greenmask	db 0
+	.greenpos	db 0
+	.bluemask	db 0
+	.bluepos	db 0
+	.rmask		db 0
+	.rpos		db 0
+	.cattrs		db 0
+	
+	.buffer		dd 0
+	.sm_off		dd 0
+	.sm_size	dw 0
+	.table times 206 db 0
+	
+vbe_info:
+	.signature	db "VBE2"
+	.version	dw 0
+	.oem		dd 0
+	.cap		dd 0
+	.vmodeoff	dw 0
+	.vmodeseg	dw 0
+	.vmem		dw 0
+	.softrev	dw 0
+	.vendor		dd 0
+	.pname		dd 0
+	.prev		dd 0
+	.reserved 	times 222 db 0
+	.oemdata	times 256 db 0
+	
+_int32_end:
+
+store32:
+	.ecx dd 0
+	.edx dd 0
+	.esi dd 0
+	.edi dd 0
+	.esp dd 0
+	.ebp dd 0
+	.cr3 dd 0

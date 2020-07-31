@@ -44,7 +44,16 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 			printf("Mounted drive %d\n",i);
 		} else if (i==0) {
 			printf("No valid drive found.\n");
-			for(;;);
+			printf("Press shift key to enter Kernel Debug Console.\n");
+			for (;;) {
+				sleep(1);
+				int k = getkey();
+				
+				if (k==42||k==54||k==170||k==182) {
+					printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
+					debug_console();
+				}
+			}
 		}
 	}
 	
