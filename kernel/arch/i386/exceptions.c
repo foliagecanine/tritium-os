@@ -89,6 +89,10 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 			printf("Return address: 0x%#\n",(uint64_t)retaddr);
 			printf("Current PID: %d\n",getpid());
 			printf("Error: 0x%#\n",(uint64_t)error&7);
+			dprintf("Fault address: 0x%#\n",(uint64_t)address);
+			dprintf("Return address: 0x%#\n",(uint64_t)retaddr);
+			dprintf("Current PID: %d\n",getpid());
+			dprintf("Error: 0x%#\n",(uint64_t)error&7);
 			kprint("\n    If you are a user seeing this, your computer has crashed.");
 			kprint("    Reboot your computer. If the error happens again...");
 			kprint("    try to not do the thing that made it happen.\n");
@@ -105,6 +109,9 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		printf("Fault address: 0x%#\n",(uint64_t)address);
 		printf("Return address: 0x%#\n",(uint64_t)retaddr);
 		printf("Error: 0x%#\n",(uint64_t)error&7);
+		dprintf("Fault address: 0x%#\n",(uint64_t)address);
+		dprintf("Return address: 0x%#\n",(uint64_t)retaddr);
+		dprintf("Error: 0x%#\n",(uint64_t)error&7);
 		kprint("\nIf you are a user seeing this, your computer has crashed.");
 		kprint("Reboot your computer. If the error happens again...");
 		kprint("just don't to the thing that made it happen.\n");

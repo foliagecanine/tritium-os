@@ -314,16 +314,25 @@ test_int:
 ; Switch to realmode, change resolution, and return to protected mode.
 ; 
 ; Inputs:
-;	ax - Resolution width
-;	bx - Resolution height
-;	cl - Bit depth (bpp)
+;	ch - Function (0=change resolution, 1=Get resolution of available mode #ax)
+;	mode 0:
+;		ax - Resolution width
+;		bx - Resolution height
+;		cl - Bit depth (bpp)
+;	mode 1:
+;		ax - mode number
 ; 
 ; Outputs:
-;	al - Error code
-;		0 = success
-;		1 = mode not found
-;		2 = BIOS error
-;	ebx - Framebuffer address (physical)
+;	mode 0:
+;		al - Error code
+;			0 = success
+;			1 = mode not found
+;			2 = BIOS error
+;		ebx - Framebuffer address (physical)
+;	mode 1:
+;		ax - Width
+;		bx - Height
+;		cl - BPP
 ;
 ; Note: you will most likely have to reload the PIT
 
@@ -335,6 +344,7 @@ test_int:
 %define sv_width FIXADDR(storevars.width)
 %define sv_height FIXADDR(storevars.height)
 %define sv_bpp FIXADDR(storevars.bpp)
+%define sv_func FIXADDR(storevars.func)
 %define sv_segment FIXADDR(storevars.segment)
 %define sv_offset FIXADDR(storevars.offset)
 %define sv_mode FIXADDR(storevars.mode)
@@ -347,6 +357,7 @@ vesa32:
 	mov [storevars.width],ax
 	mov [storevars.height],bx
 	mov [storevars.bpp],cl
+	mov [storevars.func],ch
 	
 	; Copy the _int32 function (et al) to 0x7C00 (below 1MiB)
 	mov esi,_int32
@@ -419,10 +430,11 @@ _intr16:
 	; Set a temporary stack
 	mov sp,0x7B00
 	
+	
 	; Get a list of modes
 	push es
 	mov ax,0x4F00
-	mov edi,FIXADDR(vbe_info)
+	mov di,FIXADDR(vbe_info)
 	int 0x10
 	pop es
 	
@@ -439,6 +451,12 @@ _intr16:
 	mov ax, [sv_segment]
 	mov fs,ax
 	mov si, [sv_offset]
+	
+	mov al,[sv_func]
+	cmp al,1
+	je .getmode
+	cmp al,0
+	jne .error2
 
 .find_mode:
 	; Increment the mode
@@ -515,6 +533,40 @@ _intr16:
 	mov fs,ax
 	mov si, [sv_offset]
 	jmp .find_mode
+
+; Get the values for mode stored in ax at start
+.getmode:
+	mov ax, [sv_width]
+	add ax,ax
+	add si,ax
+	mov dx, [fs:si]
+	mov [sv_mode],dx
+	mov ax,0
+	mov fs,ax
+	
+	cmp word [sv_mode],0xFFFF
+	je .error2
+	
+	push es
+	mov ax,0x4f01
+	mov cx,[sv_mode]
+	mov di, FIXADDR(vbe_screen)
+	int 0x10
+	pop es
+	
+	cmp ax,0x4F
+	jne .error
+	
+	mov ax,[FIXADDR(vbe_screen.width)]
+	mov [FIXADDR(storevars.width)],ax
+	
+	mov ax,[FIXADDR(vbe_screen.height)]
+	mov [FIXADDR(storevars.height)],ax
+	
+	mov al,[FIXADDR(vbe_screen.bpp)]
+	mov [FIXADDR(storevars.bpp)],al
+	
+	mov ax,0
 	
 ; Return to protected mode!
 .returnpm:
@@ -575,9 +627,22 @@ returnpm32:
 	out 0x21,al
 	out 0xA1,al
 	
-	; Restore all registers except output registers (which will have their output values)
+	mov al,[sv_func]
+	cmp al,1
+	je .mode1
+	
 	mov eax,[FIXADDR(storevars.error)]
 	mov ebx,[FIXADDR(storevars.buffer)]
+	jmp .restore
+
+.mode1:
+	mov ax,[FIXADDR(storevars.width)]
+	mov bx,[FIXADDR(storevars.height)]
+	mov cl,[FIXADDR(storevars.bpp)]
+	mov ch,[FIXADDR(storevars.error)]
+	
+.restore:
+	; Restore all registers except output registers
 	mov edx,[store32.edx]
 	mov esi,[store32.esi]
 	mov edi,[store32.edi]
@@ -626,6 +691,7 @@ storevars:
 	.width 		dw 0
 	.height 	dw 0
 	.bpp 		db 0
+	.func 		db 0
 	.segment	dw 0
 	.offset 	dw 0
 	.mode		dw 0

@@ -20,7 +20,7 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "ver")||strcmp(command, "version")) {
-		printf("TritiumOS Kernel v0.1");
+		printf("TritiumOS Kernel v0.1\n");
 		cmdAck=true;
 	}
 	
@@ -77,6 +77,26 @@ bool check_command(char* command) {
 		terminal_setcolor(0x70);
 		terminal_refresh();
 		usingNewline = false;
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "shutdown")) {
+		extern void bios32();
+		identity_map((void *)0x7000);
+		identity_map((void *)0x8000);
+		kprint("[KMSG] Attempting shutdown using BIOS.");
+		asm("\
+		mov $0x1553,%ax;\
+		call bios32;\
+		");
+		kerror("BIOS shutdown failed.");
+		kprint("It is safe to turn off your computer.");
+		asm("\
+		1:cli;\
+		hlt;\
+		jmp 1\
+		");
+		for(;;);
 		cmdAck=true;
 	}
 	
@@ -283,7 +303,7 @@ void debug_console() {
 				printf(command);
 			}
 			
-			if (numChars<255&&scancode_to_char(k)&&k!=72&&k!=80) {
+			if (k<128&&numChars<255&&scancode_to_char(k)&&k!=72&&k!=80) {
 				printf("%c",scancode_to_char(k));
 				command[numChars]=scancode_to_char(k);
 				numChars++;
@@ -318,7 +338,7 @@ void debug_console() {
 
 //Graphis tests down here
 
-void VGA_write_register(uint32_t reg, uint8_t value) {
+/*void VGA_write_register(uint32_t reg, uint8_t value) {
 	uint16_t port = (reg>>16)&0xFFFF;
 	uint8_t addr = reg&0xFF;
 	//printf("Writing %d to %# index %#\n",(uint32_t)value,(uint64_t)port,(uint64_t)addr);
@@ -520,9 +540,9 @@ void _300x240x256() {
 			}
 		//}
 	}
-}
+}*/
 
-void _640x480x16() {
+/*void _640x480x16() {
 	VGA_default_values();
 	
 	//Get access to 0xA0000-0xBFFFF (VGA memory)
@@ -618,7 +638,7 @@ void _640x480x16() {
 	memset((void *)0xA0000,0,0x20000);
 }
 
-uint8_t doublebuffer[640*480/2];
+uint8_t doublebuffer[640*480/2];*/
 
 /* void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
 	uint32_t dataloc = (640*y)+x;
@@ -634,7 +654,7 @@ uint8_t doublebuffer[640*480/2];
 	*pixel ^= (-((c&8)>>3)^*pixel)&shift;
 } */
 
-void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
+/*void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
 	uint32_t dataloc = (640*y)+x;
 	uint8_t shift = 1<<(7-(dataloc%8));
 	uint8_t *pixel = (uint8_t *)(doublebuffer+(dataloc/8));
@@ -645,15 +665,26 @@ void p16pixel(uint32_t x, uint32_t y, uint16_t c) {
 	*pixel ^= (-((c&4)>>2)^*pixel)&shift;
 	pixel+=640*480/8;
 	*pixel ^= (-((c&8)>>3)^*pixel)&shift;
-}
+}*/
+
+uint32_t _size;
+uint32_t _dst;
+uint32_t _src;
 
 void fastmemcpy32(uint32_t *dst, uint32_t *src, size_t size) {
-	size/=4;
-	for (size_t i = 0; i < size; i++)
-		dst[i] = src[i];
+	_size=size/4;
+	_dst=(uint32_t)dst;
+	_src=(uint32_t)src;
+	asm("\
+	mov _dst,%%edi;\
+	mov _src,%%esi;\
+	mov _size,%%ecx;\
+	cld;\
+	rep movsd;\
+	":::"edi","esi","ecx");
 }
 
-void double_buffer() {
+/* void double_buffer() {
 	switch_plane(0);
 	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer,640*480/8);
 	switch_plane(1);
@@ -666,120 +697,7 @@ void double_buffer() {
 	//memcpy(0xA0000,doublebuffer+(640*480/8),640*480/8);
 	//memcpy(0xA0000,doublebuffer+((640*480/8)*2),640*480/8);
 	//memcpy(0xA0000,doublebuffer+((640*480/8)*3),640*480/8);
-}
-
-extern multiboot_info_t *mbi;
-
-typedef struct {
-	uint8_t b;
-	uint8_t g;
-	uint8_t r;
-} __attribute__((packed)) color24;
-
-void setpixel24(uint32_t x, uint32_t y, color24 c) {
-	color24 *pixels = mbi->framebuffer_addr;
-	pixels[(mbi->framebuffer_width*y)+x]=c;
-}
-
-void graphicstest() {
-	/*_640x480x16();
-	uint8_t j = 1;
-	while(1) {
-		for (uint32_t i = 0; i < 640*480; i++) {
-			p16pixel(i%640,i/640,(j+(i/(640/16))%16));
-			//if (!(i%20)) {
-				//sleep(100);
-			//}
-		}
-		j = (j + 1) & 0xF;
-		sleep(500);
-		double_buffer();
-	}*/
-	for (uint32_t i = mbi->framebuffer_addr; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height*mbi->framebuffer_bpp/8); i+=4096) {
-		identity_map((void *)i);
-	}
-	
-	//color24 *pixels = (color24 *)mbi->framebuffer_addr;
-	
-	/*for (uint32_t i = 0; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height); i++) {
-		color24 pixel;
-		pixel.r = i&0x000000FF;
-		pixel.g = (i>>8)&0x000000FF;
-		pixel.b = (i>>16)&0x000000FF;
-		pixels[i]=pixel;
-	}*/
-	kprint("Running graphics test");
-	if (mbi->framebuffer_bpp==24) {
-		for (uint32_t y = 0; y < mbi->framebuffer_height; y++) {
-			for (uint32_t x = 0; x < mbi->framebuffer_width; x++) {
-				color24 c;
-				c.r = x/(mbi->framebuffer_width/256);
-				c.g = y/(mbi->framebuffer_height/256);
-				c.b = 0;
-				setpixel24(x,y,c);
-			}
-		}
-		for(;;);
-	}
-	extern void vesa32();
-	identity_map(0x7000);
-	identity_map(0x8000);
-	uint8_t error;
-	uint32_t framebuffer;
-	asm("\
-		mov $1024,%%ax;\
-		mov $768,%%bx;\
-		mov $24,%%cl;\
-		call vesa32;\
-		mov %%al,%0;\
-		mov %%ebx,%1;\
-	":"=m"(error),"=m"(framebuffer));
-	
-	kprint("Done with BIOS!");
-	
-	if (!error) {
-		kprint("Error is zero");
-	} else {
-		kerror("Error is NONZERO!!!");
-	}
-	if (!framebuffer) {
-		kerror("Framebuffer is zero!");
-	} else {
-		kprint("Framebuffer seems ok");
-	}
-	
-	init_pit(1000);
-	
-	mbi->framebuffer_addr = framebuffer;
-	mbi->framebuffer_height = 768;
-	mbi->framebuffer_width = 1024;
-	mbi->framebuffer_bpp = 24;
-	mbi->framebuffer_pitch = 1024*3;
-	
-	for (uint32_t i = mbi->framebuffer_addr; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height*mbi->framebuffer_bpp/8); i+=4096) {
-		identity_map((void *)i);
-	}
-	
-	if (mbi->framebuffer_bpp==24) {
-		for (uint32_t y = 0; y < mbi->framebuffer_height; y++) {
-			for (uint32_t x = 0; x < mbi->framebuffer_width; x++) {
-				color24 c;
-				c.r = x/(mbi->framebuffer_width/256);
-				c.g = y/(mbi->framebuffer_height/256);
-				c.b = 0;
-				setpixel24(x,y,c);
-			}
-		}
-	}
-	
-	color24 back;
-	memset(&back,0,3);
-	color24 front;
-	memset(&front,0xFF,3);
-	
-	print_string(10,10,"Hello World!",back,front);
-	print_string(10,26," !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",back,front);
-}
+} */
 
 uint64_t font_table[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //first 16 are just extra codes (nonprintable)
@@ -889,18 +807,288 @@ uint64_t font_table[] = {
   0x324C000000000000
 };
 
-void print_string(uint32_t x, uint32_t y, char *s, color24 back_color, color24 front_color) {
-	for (size_t i = 0; i < strlen(s); i++) {
-		draw_char(((i*16)+x)%mbi->framebuffer_width,y+((((i*16)+x)/mbi->framebuffer_width)*16),s[i],back_color,front_color);
-		sleep(100);
-	}
+extern multiboot_info_t *mbi;
+uint16_t framebuffer_width;
+uint16_t framebuffer_height;
+uint32_t framebuffer_pitch;
+uint8_t framebuffer_bpp;
+uint32_t *framebuffer_addr;
+void *doublebuffer;
+
+typedef struct {
+	uint8_t b;
+	uint8_t g;
+	uint8_t r;
+} __attribute__((packed)) color24;
+
+typedef struct {
+	uint8_t b;
+	uint8_t g;
+	uint8_t r;
+	uint8_t a;
+} __attribute__((packed)) color32;
+
+void setpixel24(uint32_t x, uint32_t y, color24 c) {
+	((color24 *)doublebuffer)[(framebuffer_width*y)+x]=c;
 }
 
-void draw_char(uint32_t x,uint32_t y,char c,color24 back_color, color24 front_color) {
-	uint8_t *charval = &font_table[c];
-	for (uint8_t _y = 0; _y < 16; _y++) {
-		for (uint8_t _x = 0; _x < 16; _x++) {
-			setpixel24(x+_x,y+_y,(charval[7-(_y/2)]>>(7-(_x/2)))&1?front_color:back_color);
+void setpixel32(uint32_t x, uint32_t y, color32 c) {
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+	((color32 *)doublebuffer)[(framebuffer_width*y)+x]=c;
+}
+
+void syncvideo() {
+	fastmemcpy32(framebuffer_addr,doublebuffer,(framebuffer_height*framebuffer_pitch));
+}
+
+/*void draw_char(uint32_t x,uint32_t y,char c,color24 back_color, color24 front_color) {
+	uint8_t *charval = (uint8_t *)&font_table[(uint8_t)c];
+	for (uint8_t _y = 0; _y < 8; _y++) {
+		for (uint8_t _x = 0; _x < 8; _x++) {
+			setpixel24(x+_x,y+_y,(charval[7-(_y)]>>(7-(_x)))&1?front_color:back_color);
+		}
+	}
+}*/
+
+void draw_char_a(uint32_t x,uint32_t y,char c,void *front_color) {
+	uint8_t *charval = (uint8_t *)&font_table[(uint8_t)c];
+	for (uint8_t _y = 0; _y < 8; _y++) {
+		for (uint8_t _x = 0; _x < 8; _x++) {
+			if ((charval[7-(_y)]>>(7-(_x)))&1) {
+				if (framebuffer_bpp==24)
+					setpixel24(x+_x,y+_y,*(color24 *)front_color);
+				else
+					setpixel32(x+_x,y+_y,*(color32 *)front_color);
+			}
 		}
 	}
 }
+
+void print_string(uint32_t x, uint32_t y, char *s, color24 front_color) {
+	for (size_t i = 0; i < strlen(s); i++) {
+		draw_char_a(((i*8)+x)%framebuffer_width,y+((((i*8)+x)/framebuffer_width)*8),s[i],&front_color);
+	}
+}
+
+uint16_t resolutions[] = {
+	1920, 1200,
+	1920, 1080,
+	1680, 1250,
+	1600, 1200,
+	1440, 1080,
+	1440, 900,
+	1366, 768,
+	1280, 1024,
+	1280, 960,
+	1280, 854,
+	1280, 768,
+	1280, 720,
+	1152, 864,
+	1024, 768,
+	800 , 600,
+	720 , 480,
+	640 , 480,
+	640 , 350
+};
+
+uint8_t bpp[] = {
+	32,
+	24,
+	16,
+	15,
+	8
+};
+
+extern void vesa32();
+uint8_t error;
+uint32_t *framebuffer;
+// uint8_t i;
+// uint8_t b;
+uint16_t mode_width;
+uint16_t mode_height;
+uint8_t mode_bpp;
+uint8_t mode_err;
+uint32_t i;
+	
+void graphicstest() {
+	/*_640x480x16();
+	uint8_t j = 1;
+	while(1) {
+		for (uint32_t i = 0; i < 640*480; i++) {
+			p16pixel(i%640,i/640,(j+(i/(640/16))%16));
+			//if (!(i%20)) {
+				//sleep(100);
+			//}
+		}
+		j = (j + 1) & 0xF;
+		sleep(500);
+		double_buffer();
+	}*/
+	/*for (uint32_t i = mbi->framebuffer_addr; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height*mbi->framebuffer_bpp/8); i+=4096) {
+		identity_map((void *)i);
+	}*/
+	
+	//color24 *pixels = (color24 *)mbi->framebuffer_addr;
+	
+	/*for (uint32_t i = 0; i < mbi->framebuffer_addr+(mbi->framebuffer_width*mbi->framebuffer_height); i++) {
+		color24 pixel;
+		pixel.r = i&0x000000FF;
+		pixel.g = (i>>8)&0x000000FF;
+		pixel.b = (i>>16)&0x000000FF;
+		pixels[i]=pixel;
+	}*/
+	kprint("Running graphics test");
+	/*if (mbi->framebuffer_bpp==24) {
+		for (uint32_t y = 0; y < mbi->framebuffer_height; y++) {
+			for (uint32_t x = 0; x < mbi->framebuffer_width; x++) {
+				color24 c;
+				c.r = x/(mbi->framebuffer_width/256);
+				c.g = y/(mbi->framebuffer_height/256);
+				c.b = 0;
+				setpixel24(x,y,c);
+			}
+		}
+		for(;;);
+	}*/
+	identity_map((void *)0x7000);
+	identity_map((void *)0x8000);
+	
+	
+	
+	for (i = 0; i < 65534; i++) {
+		asm("\
+			mov i,%%eax;\
+			mov $1,%%ch;\
+			call vesa32;\
+			mov %%ax,mode_width;\
+			mov %%bx,mode_height;\
+			mov %%cl,mode_bpp;\
+			mov %%ch,%0;\
+		":"=m"(mode_err)::"eax","ebx","ecx","edx");
+		if ((mode_err&3)>0)
+			break;
+		if (mode_bpp>23) {
+			printf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
+			dprintf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
+			sleep(1000);
+		}
+	}
+	printf("Encountered error %d\n",(uint32_t)mode_err);
+	
+	for (uint8_t b = 0; b < 5; b++) {
+		for (uint8_t i = 0; i < 18; i++) {
+			framebuffer_width = resolutions[i*2];
+			framebuffer_height = resolutions[(i*2)+1];
+			framebuffer_bpp = bpp[b];
+			
+			printf("Test i%d b%d resolution: %d x %d x %d\n",(uint32_t)i,(uint32_t)b,(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint32_t)framebuffer_bpp);
+			dprintf("Test i%d b%d resolution: %d x %d x %d\n",(uint32_t)i,(uint32_t)b,(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint32_t)framebuffer_bpp);
+			
+			asm("\
+				mov framebuffer_width,%%eax;\
+				mov framebuffer_height,%%ebx;\
+				mov framebuffer_bpp,%%cl;\
+				mov $0,%%ch;\
+				call vesa32;\
+				mov %%al,error;\
+				mov %%ebx,framebuffer;\
+			":::"eax","ebx","ecx");
+			
+			kprint("Done with BIOS!");
+			dprintf("Final resolution: %d x %d x %d\n",(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint8_t)framebuffer_bpp);
+			
+			if (!error) {
+				dprintf("Error is zero\n");
+			} else {
+				kerror("Error is NONZERO!!!");
+				dprintf("%d\n",(uint32_t)error);
+			}
+			if (!framebuffer) {
+				kerror("Framebuffer is zero!");
+			} else {
+				dprintf("Framebuffer seems ok\n");
+			}
+			dprintf("%#\n",(uint64_t)(uint32_t)framebuffer);
+			
+			init_pit(1000);
+			
+			if (!error && framebuffer) {
+				framebuffer_addr = framebuffer;
+				framebuffer_pitch = framebuffer_width*framebuffer_bpp/8;
+				
+				for (uint32_t i = (uint32_t)framebuffer_addr; i < (uint32_t)framebuffer_addr+(framebuffer_height*framebuffer_pitch); i+=4096) {
+					identity_map((void *)i);
+				}
+				
+				doublebuffer = alloc_page(((framebuffer_height*framebuffer_pitch)/4096)+1);
+				
+				if (framebuffer_bpp==24||framebuffer_bpp==32) {
+					if (framebuffer_bpp==24) {
+						for (uint32_t y = 0; y < framebuffer_height; y++) {
+							for (uint32_t x = 0; x < framebuffer_width; x++) {
+								color24 c;
+								c.r = x/(framebuffer_width/256);
+								c.g = y/(framebuffer_height/256);
+								c.b = 0;
+								setpixel24(x,y,c);
+							}
+						}
+					} else if (framebuffer_bpp==32) {
+						for (uint32_t y = 0; y < framebuffer_height; y++) {
+							for (uint32_t x = 0; x < framebuffer_width; x++) {
+								color32 c;
+								c.r = x/(framebuffer_width/256);
+								c.g = y/(framebuffer_height/256);
+								c.b = 0;
+								c.a = 0;
+								setpixel32(x,y,c);
+							}
+						}
+					}
+					
+					syncvideo();
+					
+					if (framebuffer_bpp==24) {
+						for (uint32_t y = 0; y < framebuffer_height; y++) {
+							for (uint32_t x = 0; x < framebuffer_width; x++) {
+								color24 c;
+								c.r = x/(framebuffer_width/256);
+								c.b = y/(framebuffer_height/256);
+								c.g = 0;
+								setpixel24(x,y,c);
+							}
+						}
+					} else if (framebuffer_bpp==32) {
+						for (uint32_t y = 0; y < framebuffer_height; y++) {
+							for (uint32_t x = 0; x < framebuffer_width; x++) {
+								color32 c;
+								c.r = x/(framebuffer_width/256);
+								c.b = y/(framebuffer_height/256);
+								c.g = 0;
+								setpixel32(x,y,c);
+							}
+						}
+					}
+					
+					color24 front;
+					memset(&front,0xFF,3);
+					print_string(10,10,"Hello World!",front);
+					print_string(10,26," !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",front);
+					syncvideo();
+				}
+				
+				//memcpy(framebuffer_addr,doublebuffer,(framebuffer_height*framebuffer_pitch));
+				
+				
+				free_page(doublebuffer,((framebuffer_height*framebuffer_pitch)/4096)+1);
+				for (uint32_t i = (uint32_t)framebuffer_addr; i < (uint32_t)framebuffer_addr+(framebuffer_width*framebuffer_height*framebuffer_bpp/8); i+=4096) {
+					unmap_vaddr((void *)i);
+				}
+			}
+			sleep(1000);
+		}
+	}
+	
+	kprint("All tests are complete");
+}
+

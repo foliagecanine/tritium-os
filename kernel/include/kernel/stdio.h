@@ -19,5 +19,6 @@
 
 void debug_console(); //Hopefully temporary
 void serial_write(const char *msg);
+int dprintf(const char* restrict format, ...);
 
 #endif
