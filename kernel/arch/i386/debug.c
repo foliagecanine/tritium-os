@@ -2,6 +2,7 @@
 #include <fs/file.h>
 #include <kernel/mem.h>
 #include <kernel/multiboot.h>
+#include <kernel/acpi.h>
 
 char *currentDirectory;
 char commandPart[256];
@@ -80,7 +81,21 @@ bool check_command(char* command) {
 		cmdAck=true;
 	}
 	
+	if (strcmp(command, "acpi")) {
+		uint32_t rsdptr = acpi_find_rsdp();
+		printf("ACPI RSD PTR is at %#\n",(uint64_t)rsdptr);
+		uint32_t fadtptr = acpi_find_fadt();
+		printf("ACPI FADT PTR is at %#\n",(uint64_t)fadtptr);
+		acpi_list_tables();
+		cmdAck=true;
+	}
+	
 	if (strcmp(command, "shutdown")) {
+		kprint("It is safe to turn off your computer.");
+		kprint("[KMSG] Attempting shutdown using ACPI.");
+		acpi_shutdown();
+		sleep(1000);
+		kerror("ACPI shutdown failed.");
 		extern void bios32();
 		identity_map((void *)0x7000);
 		identity_map((void *)0x8000);
@@ -90,7 +105,6 @@ bool check_command(char* command) {
 		call bios32;\
 		");
 		kerror("BIOS shutdown failed.");
-		kprint("It is safe to turn off your computer.");
 		asm("\
 		1:cli;\
 		hlt;\

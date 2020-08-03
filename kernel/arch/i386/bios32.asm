@@ -114,18 +114,35 @@ _intr16:
 	jmp .fn_err
 	
 .bios_shutdown:
+	; Connect to realmode BIOS APM interface (if not already)
+	mov ax,0x5301
+	xor bx,bx
+	mov dx,1
+	int 0x15
+	
+	; Set APM to version 1.2 (if not already)
+	mov ax,0x530E
+	xor bx,bx
+	mov cx,0x102
+	int 0x15
+	
+	; Enable BIOS APM (if not already)
+	mov ax, 0x5308
+	mov bx,1
+	mov cx,1
+	int 0x15
+
 	; Use BIOS function 0x5307 to shut down the computer.
-	mov ax,0x1000
-	mov ax,ss
-	mov sp,0xf000
+	;mov ax,0x1000
+	;mov ax,ss
+	;mov sp,0xf000
 	mov ax,0x5307
 	mov bx,1
 	mov cx,3
 	int 0x15
 	
-	; Return to protected and give error 0x1501 if failed.
-	mov ax,0x1501
-	jmp .returnpm
+	; Just do a hlt. Interrupts are already disabled. Tell the user to power off their computer manually.
+	hlt
 
 .fn_err:
 	mov ax,0xFFFF

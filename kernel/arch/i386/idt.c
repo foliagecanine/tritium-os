@@ -251,6 +251,7 @@ void irq11_handler(void) {
 }
 
 void irq12_handler(void) {
+	printf("MOUSE!");
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
 	irq_finished[12] = true;

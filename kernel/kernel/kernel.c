@@ -39,7 +39,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	kprint("[KMSG] Kernel initialized successfully");
 	
 	//Support up to 8 drives (for now)
-	for (uint8_t i = 0; i < 8; i++) {
+	/*for (uint8_t i = 0; i < 8; i++) {
 		if (!mountDrive(i)) {
 			printf("Mounted drive %d\n",i);
 		} else if (i==0) {
@@ -62,6 +62,8 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	
 	if (strcmp(getDiskMount(0).type,"FAT16"))
 		FAT16_print_folder(((FAT16_MOUNT *)getDiskMount(0).mount)->RootDirectoryOffset*512+1,32,0);
+	
+	*/
 	
 	printf("Press shift key to enter Kernel Debug Console.\n");
 	for (uint16_t i = 0; i < 1000; i++) {
