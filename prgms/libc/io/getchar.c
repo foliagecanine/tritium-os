@@ -7,9 +7,10 @@ bool charzero = false;
 bool keyused = true;
 
 char getchar() {
-	if (charzero)
+	if (charzero) {
+		charzero = false;
 		return 0;
-	if (charused) {
+	} if (charused) {
 		uint32_t out;
 		asm volatile ("mov $5,%%eax; int $0x80; mov %%eax, %0":"=r"(out));
 		savekey = (unsigned int)(out&0xFF);
