@@ -63,6 +63,9 @@ typedef struct {
 
 FILE fopen(const char* filename, const char* mode);
 uint8_t fread(FILE *file, char *buf, uint64_t start, uint64_t len);
+uint8_t fwrite(FILE *file, char *buf, uint64_t start, uint64_t len);
+FILE fcreate(char *filename);
+uint8_t fdelete(char *filename);
 FILE readdir(FILE *d, char* buf, uint32_t n);
 
 char *getenv(char *name);

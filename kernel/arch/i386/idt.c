@@ -244,6 +244,7 @@ void irq10_handler(void) {
 	irq_finished[10] = true;
 }
  
+// USB is IRQ 11 on QEMU. Don't know about other platforms...
 void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
@@ -251,7 +252,7 @@ void irq11_handler(void) {
 }
 
 void irq12_handler(void) {
-	printf("MOUSE!");
+	mouse_handler();
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
 	irq_finished[12] = true;

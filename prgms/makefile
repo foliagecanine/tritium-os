@@ -10,6 +10,7 @@ ADVNTURE.PRG \
 LS.PRG \
 GUI.SYS \
 EDIT.PRG \
+KEYREAD.PRG \
 
 all: $(PRGMS)
 

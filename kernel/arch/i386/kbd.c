@@ -48,6 +48,15 @@ _Bool numlck = false;
 _Bool scrlck = false;
 _Bool capslck = false;
 
+uint32_t get_kbddata() {
+	if (!special_read) {
+		special_read = true;
+		return (((ctrl&1) | ((shift&1)<<1) | ((alt&1)<<2) | ((numlck&1)<<3) | ((scrlck&1)<<4) | ((capslck&1)<<5) | (3<<6))<<16) | ((lastkey_char)<<8) | last_scancode;
+	} else {
+		return (((ctrl&1) | ((shift&1)<<1) | ((alt&1)<<2) | ((numlck&1)<<3) | ((scrlck&1)<<4) | ((capslck&1)<<5) | (3<<6))<<16) | 0;
+	}
+}
+
 unsigned int getkey_a() {
 	if (!special_read) {
 		special_read = true;

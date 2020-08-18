@@ -216,31 +216,29 @@ bool programselector() {
 			return true;
 		}
 		
-		if (g==0x3C) {
-			drawrect(27,9,25,7,0x0F);
-			drawrect(29,10,21,5,0xF0);
+		if (g==0x3F) {
+			drawrect(27,9,25,8,0x0F);
+			drawrect(29,10,21,6,0xF0);
 			strcpy(program,cd);
 			strcpy(program+strlen(program),name[selected]);
 			char *a = strchr(program,' ');
 			if (a)
 				*a = 0;
-			FILE f = fopen(program,"r");
-			terminal_goto(32,11);
+			terminal_goto(33,11);
 			terminal_setcolor(0xF0);
-			if (f.valid) 
-				printf("Size: %d bytes",f.size);
-			else
-				printf("Could not open file.\n%s",program);
-			terminal_goto(38,13);
+			printf("Are you sure?");
+			terminal_goto(30,12);
+			printf("Press Esc to cancel");
 			terminal_setcolor(0x9F);
-			printf(" OK ");
+			terminal_goto(35,14);
+			printf(" Delete ");
 			g = 0;
-			while(g!=0x1C&&g!=0x53)
+			while(g!=0x1C&&g!=1)
 				g = getkey();
-			if (g==0x53) {
-				
+			if (g==0x1C) {
+				fdelete(program);
 			}
-			resetselection = false;
+			resetselection = true;
 			return true;
 		}
 	}
@@ -252,8 +250,7 @@ void gui() {
 	terminal_setcolor(0x70);
 	terminal_writestring("                             TritiumOS File Browser                             ");
 	terminal_goto(0,24);
-	terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size                           ");
-	//terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size | F3 = Delete File        ");
+	terminal_writestring(" Esc = exit | F1 = Change disk | F2 = Show file size | F5 = Delete File        ");
 	terminal_putentryat(' ',0x70,79,24);
 	drawrect(20,2,40,21,0x0F);
 	terminal_setcolor(0xF0);

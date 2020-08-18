@@ -1,8 +1,10 @@
 #include <kernel/stdio.h>
+#include <kernel/ksetup.h>
 #include <fs/file.h>
 #include <kernel/mem.h>
 #include <kernel/multiboot.h>
 #include <kernel/acpi.h>
+#include <kernel/pci.h>
 
 char *currentDirectory;
 char commandPart[256];
@@ -81,6 +83,25 @@ bool check_command(char* command) {
 		cmdAck=true;
 	}
 	
+	if (strcmp(command, "pci")) {
+		for (uint16_t i = 0; i < 256; i++) {
+			for (uint8_t j = 0; j < 32; j++) {
+				pci_t pcidevice = getPCIData((uint8_t)i,j,0);
+				if (pcidevice.vendorID!=0xFFFF) {
+					printf("PCI %d.%d: V%# D%# Class %# Subclass %# PIF %# IRQ %d\n",(uint32_t)i,(uint32_t)j,(uint64_t)pcidevice.vendorID,(uint64_t)pcidevice.deviceID,(uint64_t)pcidevice.classCode,(uint64_t)pcidevice.subclass,(uint64_t)pcidevice.progIF,(uint32_t)pcidevice.irq);
+					if (getPCIData((uint8_t)i,j,1).vendorID!=0xFFFF) {
+						for (uint8_t k = 1; k < 8; k++) {
+							pcidevice = getPCIData((uint8_t)i,j,k);
+							if (pcidevice.vendorID!=0xFFFF)
+								printf("    PCI %d.%d.%d: V%# D%# Class %# Subclass %# PIF %# IRQ %d\n",(uint32_t)i,(uint32_t)j,(uint32_t)k,(uint64_t)pcidevice.vendorID,(uint64_t)pcidevice.deviceID,(uint64_t)pcidevice.classCode,(uint64_t)pcidevice.subclass,(uint64_t)pcidevice.progIF,(uint32_t)pcidevice.irq);
+						}
+					}
+				}
+			}
+		}
+		cmdAck=true;
+	}
+	
 	if (strcmp(command, "acpi")) {
 		uint32_t rsdptr = acpi_find_rsdp();
 		printf("ACPI RSD PTR is at %#\n",(uint64_t)rsdptr);
@@ -91,26 +112,7 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "shutdown")) {
-		kprint("It is safe to turn off your computer.");
-		kprint("[KMSG] Attempting shutdown using ACPI.");
-		acpi_shutdown();
-		sleep(1000);
-		kerror("ACPI shutdown failed.");
-		extern void bios32();
-		identity_map((void *)0x7000);
-		identity_map((void *)0x8000);
-		kprint("[KMSG] Attempting shutdown using BIOS.");
-		asm("\
-		mov $0x1553,%ax;\
-		call bios32;\
-		");
-		kerror("BIOS shutdown failed.");
-		asm("\
-		1:cli;\
-		hlt;\
-		jmp 1\
-		");
-		for(;;);
+		power_shutdown();
 		cmdAck=true;
 	}
 	
@@ -843,12 +845,15 @@ typedef struct {
 } __attribute__((packed)) color32;
 
 void setpixel24(uint32_t x, uint32_t y, color24 c) {
-	((color24 *)doublebuffer)[(framebuffer_width*y)+x]=c;
+	if (x < framebuffer_width && y < framebuffer_height)
+		((color24 *)doublebuffer)[(framebuffer_width*y)+x]=c;
 }
 
 void setpixel32(uint32_t x, uint32_t y, color32 c) {
+	if (x < framebuffer_width && y < framebuffer_height) {
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-	((color32 *)doublebuffer)[(framebuffer_width*y)+x]=c;
+		((color32 *)doublebuffer)[(framebuffer_width*y)+x]=c;
+	}
 }
 
 void syncvideo() {
@@ -863,6 +868,17 @@ void syncvideo() {
 		}
 	}
 }*/
+
+void draw_bitmap_alpha(uint32_t x, uint32_t y, uint64_t bitmap, color32 c) {
+	for (uint8_t _y = 0; _y < 8; _y++) {
+		for (uint8_t _x = 0; _x < 8; _x++) {
+			uint8_t bit = 63-(_x+(8*_y));
+			if ((bitmap>>bit)&1) {
+				setpixel32(x+_x,y+_y,c);
+			}
+		}
+	}
+}
 
 void draw_char_a(uint32_t x,uint32_t y,char c,void *front_color) {
 	uint8_t *charval = (uint8_t *)&font_table[(uint8_t)c];
@@ -923,7 +939,25 @@ uint16_t mode_height;
 uint8_t mode_bpp;
 uint8_t mode_err;
 uint32_t i;
-	
+volatile uint32_t gx;
+volatile uint32_t gy;
+
+uint8_t set_resolution(uint32_t width, uint32_t height, uint8_t bits) {
+	framebuffer_width = width;
+	framebuffer_height = height;
+	framebuffer_bpp = bits;
+	asm("\
+		mov framebuffer_width,%%eax;\
+		mov framebuffer_height,%%ebx;\
+		mov framebuffer_bpp,%%cl;\
+		mov $0,%%ch;\
+		call vesa32;\
+		mov %%al,error;\
+		mov %%ebx,framebuffer;\
+	":::"eax","ebx","ecx");
+	return error;
+}
+
 void graphicstest() {
 	/*_640x480x16();
 	uint8_t j = 1;
@@ -967,8 +1001,6 @@ void graphicstest() {
 	identity_map((void *)0x7000);
 	identity_map((void *)0x8000);
 	
-	
-	
 	for (i = 0; i < 65534; i++) {
 		asm("\
 			mov i,%%eax;\
@@ -982,35 +1014,20 @@ void graphicstest() {
 		if ((mode_err&3)>0)
 			break;
 		if (mode_bpp>23) {
-			printf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
+			//printf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
 			dprintf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
-			sleep(1000);
 		}
 	}
-	printf("Encountered error %d\n",(uint32_t)mode_err);
+	//printf("Encountered error %d\n",(uint32_t)mode_err);
 	
-	for (uint8_t b = 0; b < 5; b++) {
+	/*for (uint8_t b = 0; b < 5; b++) {
 		for (uint8_t i = 0; i < 18; i++) {
 			framebuffer_width = resolutions[i*2];
 			framebuffer_height = resolutions[(i*2)+1];
 			framebuffer_bpp = bpp[b];
 			
-			printf("Test i%d b%d resolution: %d x %d x %d\n",(uint32_t)i,(uint32_t)b,(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint32_t)framebuffer_bpp);
-			dprintf("Test i%d b%d resolution: %d x %d x %d\n",(uint32_t)i,(uint32_t)b,(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint32_t)framebuffer_bpp);
-			
-			asm("\
-				mov framebuffer_width,%%eax;\
-				mov framebuffer_height,%%ebx;\
-				mov framebuffer_bpp,%%cl;\
-				mov $0,%%ch;\
-				call vesa32;\
-				mov %%al,error;\
-				mov %%ebx,framebuffer;\
-			":::"eax","ebx","ecx");
-			
-			kprint("Done with BIOS!");
-			dprintf("Final resolution: %d x %d x %d\n",(uint16_t)framebuffer_width,(uint16_t)framebuffer_height,(uint8_t)framebuffer_bpp);
-			
+			set_resolution(framebuffer_width,framebuffer_height,framebuffer_bpp);
+						
 			if (!error) {
 				dprintf("Error is zero\n");
 			} else {
@@ -1100,6 +1117,58 @@ void graphicstest() {
 				}
 			}
 			sleep(1000);
+		}
+	}*/
+	
+	set_resolution(640,480,32);
+	framebuffer_addr = framebuffer;
+	framebuffer_pitch = framebuffer_width*framebuffer_bpp/8;
+	
+	for (uint32_t i = (uint32_t)framebuffer_addr; i < (uint32_t)framebuffer_addr+(framebuffer_height*framebuffer_pitch); i+=4096) {
+		identity_map((void *)i);
+	}
+	dprintf("ok");
+	doublebuffer = alloc_page(((framebuffer_height*framebuffer_pitch)/4096)+1);
+	memset(doublebuffer,0,(framebuffer_height*framebuffer_pitch));
+	syncvideo();
+	init_pit(1000);
+	mouse_set_resolution(640,480);
+	
+	dprintf("ok");
+	color32 c;
+	c.a = 0;
+	c.r = 0;
+	c.g = 0;
+	c.b = 0;
+	color32 o;
+	o.a = 0;
+	o.r = 255;
+	o.g = 255;
+	o.b = 255;
+	uint64_t cursor = 0x80C0E0F0F8301808;
+	while(true) {
+		//sleep(16);
+		draw_bitmap_alpha(gx,gy,cursor,c);
+		gx = mouse_getx();
+		gy = mouse_gety();
+		//dprintf("ok ");
+		draw_bitmap_alpha(gx,gy,cursor,o);
+		syncvideo();
+		//dprintf("%d %d ",mouse_getx(),mouse_gety());
+		uint8_t k = getkey();
+		char c = scancode_to_char(k);
+		if (c=='4'||c=='w') {
+			if (gx>0)
+				mouse_set_override(gx-1,gy);
+		} else if (c=='8'||c=='a') {
+			if (gy>0)
+				mouse_set_override(gx,gy-1);
+		} else if (c=='6'||c=='d') {
+			if (gx<framebuffer_width)
+				mouse_set_override(gx+1,gy);
+		} else if (c=='2'||c=='s') {
+			if (gy<framebuffer_height)
+				mouse_set_override(gx,gy+1);
 		}
 	}
 	

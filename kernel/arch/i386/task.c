@@ -32,9 +32,6 @@ void init_tasking(uint32_t num_pages) {
 	kprint("[INIT] Tasking initialized.");
 }
 
-uint32_t *watchme = (uint32_t*)0x0F003F9C;
-uint32_t pa[4];
-
 uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t envl_paddr) {
 	volatile uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
@@ -52,8 +49,8 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].cr3 = new;
 	threads[pid-1].tables = get_current_tables();
 	
-	//Program code and variables: 0x100000 to 0x140000
-	for (uint32_t i = 0; i < 64; i++) {
+	//Program code and variables: 0x100000 to 0x500000 = 4 MiB
+	for (uint32_t i = 0; i < 1024; i++) {
 		map_page_to((void *)0x100000+(i*4096));
 		mark_user((void *)0x100000+(i*4096),true);
 		memset((void *)0x100000+(i*4096),0,4096);

@@ -26,7 +26,7 @@ dump: HQ9COMP.PRG
 upload: HQ9COMP.PRG
 	sudo mkdir -p /mnt/F1
 	sudo mount -o loop,rw ../../floppy.flp /mnt/F1
-	sudo cp HQ9COMP.PRG /mnt/F1/bin
+	sudo cp HQ9COMP.PRG /mnt/F1/prgms
 	sudo umount /mnt/F1
 	sudo rmdir /mnt/F1
 	
@@ -36,4 +36,4 @@ clean:
 	rm HQ9COMP.PRG
 
 install: HQ9COMP.PRG
-	sudo cp HQ9COMP.PRG /mnt/F1/bin
+	sudo cp HQ9COMP.PRG /mnt/F1/prgms

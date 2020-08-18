@@ -10,7 +10,7 @@ page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
 page_table_entry *kernel_tables = (page_table_entry *)0xC0400000;
 
 //We'll also have a PMEM manager in this file too. This table will determine if a physical page is being used or not.
-char pmem_used[131072] __attribute__((aligned(4096)));
+uint8_t pmem_used[131072] __attribute__((aligned(4096)));
 const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","NVS","Bad RAM"};
 
 #define pagedir_addr 768
@@ -40,6 +40,10 @@ uint8_t check_page_cluster(void *addr) {
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
 	return pmem_used[page/8];
+}
+
+inline page_table_entry get_table_vaddr(void *vaddr) {
+	return kernel_tables[(uint32_t)vaddr/4096];
 }
 
 void init_paging(multiboot_info_t *mbi) {
@@ -312,7 +316,45 @@ uint32_t free_pages() {
 	uint32_t retval = 0;
 	for (uint32_t i = 0; i < 131072; i++) {
 		if (!pmem_used[i])
-			retval++;
+			retval+=8;
+		else if (pmem_used[i]!=(uint8_t)255) {
+			for (uint8_t j = 0; j < 8; j++) {
+				if (!check_phys_page((void *)(i*8*4096)+(j*4096)))
+					retval++;
+			}
+		}
 	}
 	return retval;
+}
+
+void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
+	int64_t amt_pages = (int64_t)new_pages - (int64_t)old_pages;
+	uint32_t ptr_page = (uint32_t)ptr/4096;
+	if (old_pages==new_pages)
+		return ptr;
+	else if (old_pages<new_pages) {
+		bool failed = false;
+		for (uint32_t i = 0; i < (uint32_t)amt_pages; i++) {
+			if (kernel_tables[ptr_page+old_pages+i].present) {
+				failed = true;
+				break;
+			}
+		}
+		if (failed) {
+			void * ret = alloc_page(new_pages);
+			memcpy(ret,ptr,old_pages*4096);
+			free_page(ptr,old_pages);
+			return ret;
+		} else {
+			for (uint32_t i = 0; i < (uint32_t)amt_pages; i++) {
+				map_page_to(ptr+(old_pages*4096)+(i*4096));
+			}
+			return ptr;
+		}
+	} else {
+		for (int64_t i = 0; i < -amt_pages; i++) {
+			unmap_vaddr(ptr+(new_pages*4096)+(i*4096));
+		}
+		return ptr;
+	}
 }

@@ -259,7 +259,7 @@ void main(uint32_t argc, char **argv) {
 	writestring("Hello from SHELL.SYS!\n");
 	terminal_init();
 	printf("ElectronShell online.\n");
-	if (!argc||!argv) { //This only happens when the kernel launches us. User-launched programs always have at least one argument
+	/* if (!argc||!argv) { //This only happens when the kernel launches us. User-launched programs always have at least one argument
 		FILE f = fopen("A:/MOTD.TXT","r");
 		if (f.valid) {
 			if (!f.directory) {
@@ -273,7 +273,7 @@ void main(uint32_t argc, char **argv) {
 		} else {
 			printf("Error: cannot read MOTD.\n");
 		}
-	}
+	} */
 	for(;;) {
 		commandline();
 	}

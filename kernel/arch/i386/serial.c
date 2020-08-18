@@ -23,10 +23,7 @@ void serial_init() {
 }
 
 static bool dprint(const char* data, size_t length) {
-	const unsigned char* bytes = (const unsigned char*) data;
 	for (size_t i = 0; i < length; i++) {
-		if (bytes[i] == EOF)
-			return false;
 		while (!(inb(0x3fd)&0x20))
 			;
 		outb(0x3f8,data[i]);

@@ -7,6 +7,8 @@
 #include <kernel/kbd.h>
 #include <kernel/multiboot.h>
 #include <kernel/tss.h>
+#include <stdbool.h>
+#include <kernel/acpi.h>
 
 void init_gdt();
 void serial_init();
@@ -24,6 +26,8 @@ void *clone_tables();
 void use_kernel_map();
 void switch_tables(void *new);
 uint32_t *get_current_tables();
+void power_shutdown();
+void power_reboot();
 
 typedef struct {
 	uint8_t present:1;

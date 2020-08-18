@@ -91,7 +91,7 @@ Virtual Memory Map (for programs):
 
 |      Memory       |      Description      |
 | ----------------- | --------------------- |
-| 0x100000-0x140000 | Program code and data |
+| 0x100000-0x500000 | Program code and data |
 | 0xF00000-0xF04000 | Stack                 |
 | 0xF04000-0xF05000 | Arguments             |
 | 0xF05000-0xF06000 | Environment variables |
@@ -156,11 +156,25 @@ This function gets a character typed on the keyboard
 ```
 
 ```C
-int 0x80, eax=5: getkey  
+int 0x80, eax=5: get_kbddata  
 Return:
-al  = uint16_t k      : Key id of key pressed on keyboard. NULL if there is none.
+eax  = uint32_t k      : Keyboard packet. See below.
 
-This function gets a character typed on the keyboard
+Keyboard packet:
+
+| Bits |   Description    |
+|-------------------------|
+| 0:7  | Kbd scancode     |
+| 8:15 | Character        |
+| 16   | Ctrl Key Status  |
+| 17   | Shift Status     |
+| 18   | Alt Key Status   |
+| 19   | Numlock Status   |
+| 20   | Scroll Lock Stat |
+| 21   | Capslock Status  |
+|22:31 | Unused           |
+
+This function gets a detailed packet about a key typed on the keyboard, as well as the status of control keys (Alt, Shift, etc.)
 ```
 
 ```C

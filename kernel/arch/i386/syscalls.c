@@ -19,7 +19,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&exit_program,			// 2
 	&terminal_putentryat,	// 3
 	&getchar,				// 4
-	&getkey_a,				// 5
+	&get_kbddata,			// 5
 	&yield,					// 6
 	&getpid,				// 7
 	&free_pages,			// 8
@@ -138,8 +138,10 @@ void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
 }
 
 void fcreate_usermode(char *filename, FILE *o) {
-	if (check_range(filename,strlen(filename),0x100000,0xF04000)&&check_range(o,sizeof(FILE),0x100000,0xF04000)) {
-		*o = fcreate(filename);
+	if (filename) {
+		if (check_range(filename,strlen(filename),0x100000,0xF04000)&&check_range(o,sizeof(FILE),0x100000,0xF04000)) {
+			*o = fcreate(filename);
+		}
 	}
 }
 

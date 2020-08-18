@@ -31,7 +31,7 @@ typedef struct {
 	uint8_t reserved0;
 	uint16_t reserved1;
 	uint32_t reserved2;
-	uint8_t interruptLine;
+	uint8_t irq;
 	uint8_t interruptPIN;
 	uint8_t minGrant;
 	uint8_t maxLatency;
