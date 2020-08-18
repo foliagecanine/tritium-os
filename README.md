@@ -97,18 +97,25 @@ Here's the checklist:
 - [x] Ring 3 Switching
 - [x] Syscalls
 - [x] Program Loading (mostly)
-- [ ] Shell (almost there)
+- [x] Shell
 - [x] FAT16 Filesystem Driver
 - [x] Arguments
 - [x] Environment variables
-- [ ] FAT12/FAT16 file creation and writing
+- [x] FAT12/FAT16 file creation and writing
+- [ ] UHCI USB support (possibly)
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 Programs:
 - [x] Directory listing program
-- [x] Program to display text files
-- [ ] Program to edit text files
+- [x] Program to display and edit text files
 - [x] Text adventure game
+
+## Bugs
+This software is VERY buggy. There are bugs almost everywhere, but most are minor  
+Impactful bugs will most likely get fixed in coming releases, while minor ones may not get fixed at all.
+
+If you would like, you can fork this repository and fix a bug yourself.  
+You can even submit a pull request. No promises about whether it's going to get merged though.
 
 ## DISCLAIMERS
 
