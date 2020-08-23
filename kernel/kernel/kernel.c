@@ -27,7 +27,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_gdt();
 	init_idt();
 	init_mouse();
-	init_pit(1000);
+	init_pit(10000);
 	mbi = (multiboot_info_t *)ebx;
 	init_paging(mbi);
 	set_current_heap(heap_create(32));

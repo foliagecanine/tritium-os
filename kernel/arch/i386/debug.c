@@ -5,6 +5,8 @@
 #include <kernel/multiboot.h>
 #include <kernel/acpi.h>
 #include <kernel/pci.h>
+#include <usb/usb.h>
+#include <usb/uhci.h>
 
 char *currentDirectory;
 char commandPart[256];
@@ -40,6 +42,20 @@ bool check_command(char* command) {
 	
 	if (strcmp(command, "fsinfo")) {
 		print_fat16_values(0);
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "usb")) {
+		init_usb();
+		uhci_controller uc = get_uhci_controller(0);
+		if (inw(uc.iobase+UHCI_PORTSC1)&1) {
+			//printf("Device found on port 0.");
+			//uhci_set_address(uc,1,0);
+			//get_usb_dev_desc(usb_dev_addr(USB_CTRLR_UHCI,0,0,0));
+			//get_usb_dev_desc(usb_dev_addr(USB_CTRLR_UHCI,0,0,1));
+		} else {
+			printf("No device found on port 0. Make sure device is connected.");
+		}
 		cmdAck=true;
 	}
 	

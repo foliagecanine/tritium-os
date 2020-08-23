@@ -60,6 +60,8 @@ void unhandled_interrupt() {
 	for (;;);
 }
 
+void *irq_functions[16][16];
+
 void init_idt() {
 	uint32_t irq0_addr;
     uint32_t irq1_addr;
@@ -185,7 +187,7 @@ void irq0_handler(void) {
 		asm("nop"); //Debug breakpoint
 	outb(0x20, 0x20); //EOI
 	pit_tick();
-	if (ts_enabled)
+	if (ts_enabled&&!(get_ticks()%10))
 		task_switch(temp_tss,ready_esp);
 	irq_finished[0] = true;
 }
@@ -244,10 +246,17 @@ void irq10_handler(void) {
 	irq_finished[10] = true;
 }
  
-// USB is IRQ 11 on QEMU. Don't know about other platforms...
 void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+	dprintf("USB INTERRUPT?!\n");
+	dprintf("USBCMD : %#\n",(uint64_t)inw(0xC040));
+	dprintf("USBSTS : %#\n",(uint64_t)inw(0xC042));
+	dprintf("USBINTR: %#\n",(uint64_t)inw(0xC044));
+	dprintf("FRNUM  : %#\n",(uint64_t)inw(0xC046));
+	dprintf("PORTSC1: %#\n",(uint64_t)inw(0xC050));
+	dprintf("PORTSC2: %#\n",(uint64_t)inw(0xC052));
+	abort();
 	irq_finished[11] = true;
 }
 
