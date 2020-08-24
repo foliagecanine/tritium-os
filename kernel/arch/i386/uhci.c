@@ -82,6 +82,16 @@ bool uhci_port_reset(uint16_t iobase, uint8_t port) {
 	return false;
 }
 
+void dump_ioregs(uint16_t iobase) {
+	dbgprintf("USBCMD: %#\n",(uint64_t)inw(iobase+UHCI_USBCMD));
+	dbgprintf("USBSTS: %#\n",(uint64_t)inw(iobase+UHCI_USBSTS));
+	dbgprintf("USBINTR: %#\n",(uint64_t)inw(iobase+UHCI_USBINTR));
+	dbgprintf("FRNUM: %#\n",(uint64_t)inw(iobase+UHCI_FRNUM));
+	dbgprintf("FRBASEADD: %#\n",(uint64_t)inl(iobase+UHCI_FRBASEADD));
+	dbgprintf("PORTSC1: %#\n",(uint64_t)inw(iobase+UHCI_PORTSC1));
+	dbgprintf("PORTSC2: %#\n",(uint64_t)inw(iobase+UHCI_PORTSC2));
+}
+
 uint8_t data_table[] = {0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,7};
 
 bool init_uhci_ctrlr(uint16_t iobase) {
@@ -191,8 +201,8 @@ uhci_controller get_uhci_controller(uint8_t id) {
 }
 
 // Set the address of a usb device.
-bool uhci_set_address(uhci_controller uc, uint8_t dev_address, uint8_t port) {
-	dbgprintf("usa(uc,%d,%d)\n",(uint32_t)dev_address,(uint32_t)port);
+bool uhci_set_address(uhci_controller uc, uint8_t port, uint8_t dev_address) {
+	dbgprintf("usa(uc,%d,%d)\n",(uint32_t)port,(uint32_t)dev_address);
 	
 	// Allocate a page and define where all our structures will be
 	void *data_vaddr = alloc_page(1);
@@ -291,7 +301,7 @@ usb_dev_desc uhci_get_usb_descriptor(uhci_controller uc, uint8_t port, uint8_t d
 	
 	// Generate a setup packet
 	uint8_t setup_pkt_template[8] = {0x80,6,0,1,0,0,0,0};
-	*(uint16_t *)&setup_pkt_template[6] = size;
+	*((uint16_t *)&setup_pkt_template[6]) = size;
 	memcpy(setup_pkt,setup_pkt_template,8);
 	
 	// Clear the output buffer
