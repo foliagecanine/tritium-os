@@ -527,7 +527,7 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	sp.request = 6;
 	sp.value = 0x300;
 	sp.index = 0;
-	sp.length = 8;
+	sp.length = 2;
 	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
 		return false;
 	sp.length = header.length;
@@ -550,16 +550,18 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	
 	sp.index = strdesc->langid[i];
 	sp.value = 0x300 | index;
+	sp.length = 2;
 	memset(buffer,0,256);
 	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
 		return false;
+	sp.length = header.length;
 	if (!uhci_usb_get_desc(buffer,sp,uc,port,dev_address,pkt_size,header.length))
 		return false;
 	for (uint16_t j = 2; j < header.length; j++) {
 		putchar(buffer[j]);
 		j++;
 	}
-	printf("*\n");
+	printf("\n");
 	
 	dbgprintf("Successfully got USB string descriptor.\n");
 	return true;
