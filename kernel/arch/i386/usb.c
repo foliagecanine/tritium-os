@@ -20,7 +20,7 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 			printf("Detected USB %s Controller on port %#:%#.%d\n", name, (uint64_t)i,(uint64_t)j,(uint32_t)k);
 		
 		if (strcmp(name,"UHCI")) {
-			bool rval = init_uhci_ctrlr(pci.BAR4&~3);
+			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3);
 			if (rval) {
 				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1).num_ports);
 			}
@@ -75,7 +75,7 @@ uint32_t usb_dev_addr(uint8_t ctrlrtype, uint8_t ctrlrID, uint8_t portID, uint8_
 usb_dev_desc get_usb_dev_desc(uint32_t dev_addr) {
 	if (!(dev_addr&0x0F000000)) {
 		dprintf("Attempting to get USB Device Descriptor from UHCI %d.%d.%d\n",(uint32_t)((dev_addr&0x00FF0000)>>16),(uint32_t)((dev_addr&0x0000FF00)>>8),(uint32_t)(dev_addr&0x7F));
-		return uhci_get_usb_descriptor(get_uhci_controller((dev_addr&0x00FF0000)>>16),dev_addr&0x7F,(dev_addr&0x0000FF00)>>8,8,8);
+		return uhci_get_usb_dev_descriptor(get_uhci_controller((dev_addr&0x00FF0000)>>16),dev_addr&0x7F,(dev_addr&0x0000FF00)>>8,8,8);
 	} else {
 		usb_dev_desc retnull;
 		memset(&retnull,0,sizeof(usb_dev_desc));

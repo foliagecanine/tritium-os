@@ -128,9 +128,10 @@ typedef struct {
 	uint8_t num_ports;
 } uhci_controller;
 
-bool init_uhci_ctrlr(uint16_t iobase);
 uhci_controller get_uhci_controller(uint8_t id);
 bool uhci_set_address(uhci_controller uc, uint8_t dev_address, uint8_t port);
-usb_dev_desc uhci_get_usb_descriptor(uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size, uint16_t size);
+usb_dev_desc uhci_get_usb_dev_descriptor(uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size, uint16_t size);
+bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size);
+uint8_t init_uhci_ctrlr(uint16_t iobase);
 
 #endif

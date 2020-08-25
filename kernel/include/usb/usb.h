@@ -23,6 +23,12 @@ typedef struct {
 
 typedef struct {
 	uint8_t length;
+	uint8_t type;
+	uint16_t unused;
+} __attribute__((packed)) usb_desc_header;
+
+typedef struct {
+	uint8_t length;
 	uint8_t desc_type;
 	uint16_t usbver_bcd;
 	uint8_t dev_class;
@@ -37,6 +43,12 @@ typedef struct {
 	uint8_t sernum_index;
 	uint8_t num_configs;
 } __attribute__((packed)) usb_dev_desc;
+
+typedef struct {
+	uint8_t length;
+	uint8_t type;
+	uint16_t langid[];
+} __attribute__((packed)) usb_str_desc;
 
 #include <usb/uhci.h>
 #include <usb/ehci.h>
