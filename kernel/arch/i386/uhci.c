@@ -187,11 +187,14 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 						printf("ProductID: %#\n",(uint64_t)usbdev.productID);
 						printf("Manufacturer: ");
 						char buffer[256];
-						uhci_get_string_desc(buffer,usbdev.manuf_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size);
+						if (!uhci_get_string_desc(buffer,usbdev.manuf_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
+							printf("Error\n");
 						printf("ProductID: ");
-						uhci_get_string_desc(buffer,usbdev.product_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size);
+						if (!uhci_get_string_desc(buffer,usbdev.product_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
+							printf("Error\n");
 						printf("Serial Number: ");
-						uhci_get_string_desc(buffer,usbdev.sernum_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size);
+						if (!uhci_get_string_desc(buffer,usbdev.sernum_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
+							printf("Error\n");
 					} else {
 						dbgprintf("Failed to get descriptor.\n");
 					}
@@ -525,7 +528,7 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	sp.value = 0x300;
 	sp.index = 0;
 	sp.length = 8;
-	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,4))
+	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
 		return false;
 	sp.length = header.length;
 	char buffer[256];
@@ -548,7 +551,7 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	sp.index = strdesc->langid[i];
 	sp.value = 0x300 | index;
 	memset(buffer,0,256);
-	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,4))
+	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
 		return false;
 	if (!uhci_usb_get_desc(buffer,sp,uc,port,dev_address,pkt_size,header.length))
 		return false;

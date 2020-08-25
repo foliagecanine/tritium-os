@@ -24,7 +24,6 @@ typedef struct {
 typedef struct {
 	uint8_t length;
 	uint8_t type;
-	uint16_t unused;
 } __attribute__((packed)) usb_desc_header;
 
 typedef struct {
