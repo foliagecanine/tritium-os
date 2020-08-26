@@ -49,6 +49,20 @@ typedef struct {
 	uint16_t langid[];
 } __attribute__((packed)) usb_str_desc;
 
+#define USB_CONFIG_ATTR_REMOTEWAKE 	(1<<5)
+#define USB_CONFIG_ATTR_SELFPOWER 	(1<<6)
+
+typedef struct {
+	uint8_t length;
+	uint8_t type;
+	uint16_t total_len;
+	uint8_t num_interfaces;
+	uint8_t config_value;
+	uint8_t config_index;
+	uint8_t attributes;
+	uint8_t max_power;
+} __attribute__((packed)) usb_config_desc;
+
 #include <usb/uhci.h>
 #include <usb/ehci.h>
 
