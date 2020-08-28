@@ -6,6 +6,7 @@
 #include <kernel/exceptions.h>
 #include <kernel/pit.h>
 #include <kernel/task.h>
+#include <stdbool.h>
 
 void init_idt();
 void clear_irq_status(uint8_t irq);

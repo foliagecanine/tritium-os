@@ -40,10 +40,11 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	
 	//Support up to 8 drives (for now)
 	for (uint8_t i = 0; i < 8; i++) {
-		if (!mountDrive(i)) {
+		if (false){//!mountDrive(i)) {
 			printf("Mounted drive %d\n",i);
 		} else if (i==0) {
 			printf("No valid drive found.\n");
+			init_usb();
 			printf("Press shift key to enter Kernel Debug Console.\n");
 			for (;;) {
 				sleep(1);

@@ -6,6 +6,12 @@ uint16_t pci_read_config_word(uint8_t bus,uint8_t num, uint8_t function, uint8_t
 	return (uint16_t)((inl(0xCFC) >> ((offset & 2) * 8)) & 0xffff);
 }
 
+void pci_write_config_byte(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint16_t value) {
+	uint32_t address = (1<<31) | (bus<<16) | (num<<11) | (function<<8) | (offset & 0xfc);
+	outl(0xCF8,address);
+	outl(0xCFC,(inl(0xCF8)&~(0xFF<<((offset&3)*8)) | (value << ((offset&3)*8)))); 
+}
+
 pci_t getPCIData(uint8_t bus, uint8_t num, uint8_t function) {
 	pci_t pciData;
 	uint16_t *p = (uint16_t *)&pciData;

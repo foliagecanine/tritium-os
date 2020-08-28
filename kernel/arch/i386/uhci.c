@@ -1,6 +1,7 @@
 #include <usb/uhci.h>
 
 #define DEBUG
+#define DEBUG_TERMINAL
 
 #ifdef DEBUG
 #ifdef DEBUG_TERMINAL
@@ -124,6 +125,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 	//Setup controller structure
 	uint8_t this_ctrlr_id = num_ctrlrs;
 	uhci_controller *this_ctrlr = &uhci_controllers[this_ctrlr_id];
+	memset(this_ctrlr,0,sizeof(uhci_controller));
 	num_ctrlrs++;
 	this_ctrlr->iobase = iobase;
 	
@@ -162,49 +164,29 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 	dbgprintf("Enabled USB stack for controller\n");
 	
 	uint8_t current_port = 0;
-	uint8_t devaddr = 1;
 	
 	while (uhci_port_reset(iobase,current_port)) {
 		dbgprintf("Reset port %d\n",(uint32_t)current_port);
 		if (inw(iobase+UHCI_PORTSC1+(current_port*2))&1) {
 			dbgprintf("Found device at port %d, geting descriptor...\n",current_port);
-			usb_dev_desc usbdev;
-			usbdev = uhci_get_usb_dev_descriptor(*this_ctrlr,current_port,0,8,8);
-			if (usbdev.length) {
+			usb_device usbdev;
+			memset(&usbdev,0,sizeof(usb_device));
+			usbdev.valid = true;
+			usbdev.controller = this_ctrlr;
+			usbdev.ctrlr_type = USB_CTRLR_UHCI;
+			usbdev.address = 0;
+			usbdev.port = current_port;
+			usbdev.lowspeed = (inw(this_ctrlr->iobase+UHCI_PORTSC1+(current_port*2))&UHCI_PORTSC_LS) ? 1 : 0;
+			usbdev.max_pkt_size = 8;
+			usb_dev_desc devdesc;
+			devdesc = uhci_get_usb_dev_descriptor(&usbdev,8);
+			if (devdesc.length) {
+				usbdev.max_pkt_size = devdesc.max_pkt_size;
 				uhci_port_reset(iobase,current_port);
-				if (uhci_set_address(*this_ctrlr,current_port,devaddr)) {
-					usbdev = uhci_get_usb_dev_descriptor(*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size,usbdev.length);
-					if (usbdev.length) {
-						printf("----USB-DEVICE----\n");
-						printf("Length: %d\n",(uint32_t)usbdev.length);
-						printf("Descriptor: %#\n",(uint64_t)usbdev.desc_type);
-						printf("USB Version (BCD): %#\n",(uint64_t)usbdev.usbver_bcd);
-						printf("Device Class: %#\n",(uint64_t)usbdev.dev_class);
-						printf("Device Subclass: %#\n",(uint64_t)usbdev.dev_subclass);
-						printf("Device Protocol: %#\n",(uint64_t)usbdev.dev_protocol);
-						printf("Max Packet Size: %d\n",(uint32_t)usbdev.max_pkt_size);
-						printf("VendorID: %#\n",(uint64_t)usbdev.vendorID);
-						printf("ProductID: %#\n",(uint64_t)usbdev.productID);
-						printf("Device Revision (BCD): %#\n",(uint64_t)usbdev.releasever_bcd);
-						char buffer[256];
-						memset(buffer,0,256);
-						if (uhci_get_string_desc(buffer,usbdev.manuf_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
-							printf("Manufacturer: %s\n",buffer);
-						memset(buffer,0,256);
-						if (uhci_get_string_desc(buffer,usbdev.product_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
-							printf("Product: %s\n",buffer);
-						memset(buffer,0,256);
-						if (uhci_get_string_desc(buffer,usbdev.sernum_index,0x409,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size))
-							printf("Serial Number: %s\n",buffer);
-						usb_config_desc config = uhci_get_config_desc(0,*this_ctrlr,current_port,devaddr,usbdev.max_pkt_size);
-						if (config.length) {
-							printf("Power Required: %dmA\n",config.max_power);
-							printf("Self-powered: %s\n",config.attributes&USB_CONFIG_ATTR_SELFPOWER ? "true" : "false");
-						}
-					} else {
-						dbgprintf("Failed to get descriptor.\n");
-					}
-					devaddr++;
+				uint8_t devaddr = uhci_get_unused_device(this_ctrlr);
+				if (uhci_set_address(&usbdev,devaddr)) {
+					this_ctrlr->devices[devaddr] = usbdev;
+					dbgprintf("Added device at address %d\n",(uint32_t)devaddr);
 				} else {
 					dbgprintf("Failed to set address\n");
 				}
@@ -221,14 +203,19 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 	return num_ctrlrs;
 }
 
-uhci_controller get_uhci_controller(uint8_t id) {
-	return uhci_controllers[id];
+uhci_controller *get_uhci_controller(uint8_t id) {
+	return &uhci_controllers[id];
 }
 
-// Set the address of a usb device.
-bool uhci_set_address(uhci_controller uc, uint8_t port, uint8_t dev_address) {
-	dbgprintf("usa(uc,%d,%d)\n",(uint32_t)port,(uint32_t)dev_address);
-	
+uint8_t uhci_get_unused_device(uhci_controller *uc) {
+	for (uint8_t i = 1; i; i++) {
+		if (!(uc->devices[i].valid))
+			return i;
+	}
+	return 0;
+}
+
+bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	// Allocate a page and define where all our structures will be
 	void *data_vaddr = alloc_page(1);
 	void *data_paddr = get_phys_addr(data_vaddr);
@@ -238,6 +225,79 @@ bool uhci_set_address(uhci_controller uc, uint8_t port, uint8_t dev_address) {
 	uhci_usb_xfr_desc *p_td = data_paddr+sizeof(uhci_usb_queue);
 	uint8_t *setup_pkt = data_vaddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*2);
 	uint8_t *p_setup_pkt = data_paddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*2);
+	uhci_controller *uc = device->controller;
+	memcpy(setup_pkt,&setup_pkt_template,8);
+	
+	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
+	queue->elemlinkptr = (uint32_t)p_td;
+	
+	// Create a TD that points the the setup packet.
+	uint8_t i = 0;
+	td[i].linkptr = (uint32_t)&p_td[i+1];
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_SETUP;
+	td[i].bufferptr = (uint32_t)p_setup_pkt;
+	i++;
+	
+	// Create a status TD
+	td[i].linkptr = UHCI_XFRDESC_TERM;
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_IN;
+	td[i].bufferptr = 0;
+	i++;
+	
+	// Clear the interrupt bit
+	outw(uc->iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT);
+	
+	// Add our queue to the framelist
+	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
+	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	
+	// Wait until the TDs are executed (USBINT bit comes on)
+	uint16_t timeout = 2000;
+	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+		timeout--;
+		sleep(1);
+	}
+	
+	// Check to make sure we didn't time out
+	if (!timeout) {
+		dbgprintf("USB timed out.\n");
+		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		return false;
+	}
+	
+	// Clear the interrupt bit and remove our queue from the list
+	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
+	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	
+	// Check for any errors in the TDs
+	for (uint8_t j = 0; j < i; j++) {
+		if (td[j].flags0 & UHCI_XFRDESC_STATUS) {
+			dbgprintf("TD Error.\n");
+			return false;
+		}
+	}
+	
+	// Free the data
+	free_page(data_vaddr,1);
+	
+	dbgprintf("Successfully processed setup packet.\n");
+	return true;
+}
+
+// Set the address of a usb device.
+bool uhci_set_address(usb_device *device, uint8_t dev_address) {
+	// Allocate a page and define where all our structures will be
+	void *data_vaddr = alloc_page(1);
+	void *data_paddr = get_phys_addr(data_vaddr);
+	uhci_usb_queue *queue = (uhci_usb_queue *)data_vaddr;
+	uhci_usb_queue *p_queue = data_paddr;
+	uhci_usb_xfr_desc *td = data_vaddr+sizeof(uhci_usb_queue);
+	uhci_usb_xfr_desc *p_td = data_paddr+sizeof(uhci_usb_queue);
+	uint8_t *setup_pkt = data_vaddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*2);
+	uint8_t *p_setup_pkt = data_paddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*2);
+	uhci_controller *uc = device->controller;
 	
 	// Generate a setup packet to change the address
 	uint8_t setup_pkt_template[8] = {0,5,0,0,0,0,0,0};
@@ -247,54 +307,45 @@ bool uhci_set_address(uhci_controller uc, uint8_t port, uint8_t dev_address) {
 	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
 	queue->elemlinkptr = (uint32_t)p_td;
 	
-	// Check whether the device is low-speed
-	bool lowspeed = 0;
-	if (inw(uc.iobase+UHCI_PORTSC1+(port*2)) & UHCI_PORTSC_LS)
-		lowspeed = 1;
-	
 	// Create a TD that points the the setup packet.
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_PID_SETUP;
 	td[i].bufferptr = (uint32_t)p_setup_pkt;
 	i++;
 	
 	// Create a status TD
 	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_PID_IN;
 	td[i].bufferptr = 0;
 	i++;
 	
-	dump_queue(*queue);
-	dump_xfr_desc(td[0],0);
-	dump_xfr_desc(td[1],1);
-	
 	// Clear the interrupt bit
-	outw(uc.iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT);
+	outw(uc->iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT);
 	
 	// Add our queue to the framelist
-	queue->headlinkptr = uc.queues_vaddr[0].elemlinkptr;
-	uc.queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
+	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
-	uint16_t timeout = 10000;
-	while (!(inw(uc.iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+	uint16_t timeout = 2000;
+	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
 		timeout--;
 		sleep(1);
 	}
 	
 	// Check to make sure we didn't time out
 	if (!timeout) {
-		printf("USB timed out.\n");
-		uc.queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		dbgprintf("USB timed out.\n");
+		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
 		return false;
 	}
 	
 	// Clear the interrupt bit and remove our queue from the list
-	outw(uc.iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
-	uc.queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
+	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
 	
 	// Check for any errors in the TDs
 	for (uint8_t j = 0; j < i; j++) {
@@ -309,15 +360,32 @@ bool uhci_set_address(uhci_controller uc, uint8_t port, uint8_t dev_address) {
 	
 	dbgprintf("Successfully set address.\n");
 	
+	device->address = dev_address;
 	return true;
 }
 
-bool uhci_usb_get_desc(void *out, usb_setup_pkt setup_pkt_template, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size, uint16_t size) {
-	dbgprintf("uugd(%#,%#,%d,%d,%d,%d)\n",(uint64_t)(uint32_t)out,(uint64_t)(uint32_t)&setup_pkt_template,(uint32_t)port,(uint32_t)dev_address,(uint32_t)pkt_size,(uint32_t)size);
-	
+bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed) {
+	uhci_controller *uc = get_uhci_controller(ctrlrID);
+	uint8_t dev_addr = uhci_get_unused_device(uc);
+	usb_device usbdev;
+	usbdev.valid = true;
+	usbdev.controller = uc;
+	usbdev.ctrlr_type = USB_CTRLR_UHCI;
+	usbdev.address = 0;
+	usbdev.port = port;
+	usbdev.lowspeed = lowspeed;
+	usbdev.max_pkt_size = 8;
+	if (!(uhci_set_address(&usbdev,dev_addr)))
+		return false;
+	uc->devices[dev_addr] = usbdev;
+	return true;
+}
+
+bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
 	// Calculate the number of TDs needed
-	uint16_t num_tds = (size/pkt_size)+3;
+	uint16_t num_tds = (size/device->max_pkt_size)+3;
 	
+	if (setup_pkt_template.length==2) dbgprintf("Prior to Alloc.\n");
 	// Allocate a page and define where all our structures will be
 	void *data_vaddr = alloc_page(1);
 	void *data_paddr = get_phys_addr(data_vaddr);
@@ -329,6 +397,7 @@ bool uhci_usb_get_desc(void *out, usb_setup_pkt setup_pkt_template, uhci_control
 	uint8_t *p_setup_pkt = data_paddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*num_tds);
 	uint8_t *buffer = data_vaddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*num_tds)+8;
 	uint8_t *p_buffer = data_paddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*num_tds)+8;
+	uhci_controller *uc = device->controller;
 	
 	// Generate a setup packet
 	memcpy(setup_pkt,&setup_pkt_template,8);
@@ -340,64 +409,61 @@ bool uhci_usb_get_desc(void *out, usb_setup_pkt setup_pkt_template, uhci_control
 	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
 	queue->elemlinkptr = (uint32_t)p_td;
 	
-	// Check whether the device is low-speed
-	bool lowspeed = 0;
-	if (inw(uc.iobase+UHCI_PORTSC1+(port*2)) & UHCI_PORTSC_LS)
-		lowspeed = 1;
+	if (setup_pkt_template.length==2) dbgprintf("Prior to TDs.\n");
 	
 	// Create the setup TD
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
-	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(dev_address) | UHCI_PID_SETUP;
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_SETUP;
 	td[i].bufferptr = (uint32_t)p_setup_pkt;
 	
 	// Create the number of TDs required to transfer the data
 	uint16_t size_remaining = size;
 	for (i = 1; i < num_tds-1 && size_remaining; i++) {
 		td[i].linkptr = (uint32_t)&p_td[i+1];
-		td[i].flags0 = (lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
-		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= pkt_size ? size_remaining-1 : pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(dev_address) | UHCI_PID_IN;
+		td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= device->max_pkt_size ? size_remaining-1 : device->max_pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_IN;
 		td[i].bufferptr = (uint32_t)p_buffer+((i-1)*8);
-		size_remaining -= (size_remaining <= pkt_size ? size_remaining : pkt_size);
+		size_remaining -= (size_remaining <= device->max_pkt_size ? size_remaining : device->max_pkt_size);
 	}
 	
 	// Create a status TD
 	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
-	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(dev_address) | UHCI_PID_OUT;
+	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_OUT;
 	td[i].bufferptr = 0;
 	i++;
 	
-	dump_queue(*queue);
-	for (uint8_t k = 0; k < i; k++) {
-		dump_xfr_desc(td[k],k);
-	}
-	
 	// Clear the interrupt bit
-	outw(uc.iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT);
+	outw(uc->iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT);
 	
 	// Add our queue to the list
-	queue->headlinkptr = uc.queues_vaddr[0].elemlinkptr;
-	uc.queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
+	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	
+	if (setup_pkt_template.length==2) dbgprintf("Prior to timer.\n");
 	
 	// Wait until we recieve the IOC
-	uint16_t timeout = 10000;
-	while (!(inw(uc.iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+	uint16_t timeout = 2000;
+	if (setup_pkt_template.length==2) dbgprintf("Timer: %d\n",(uint32_t)timeout);
+	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
 		timeout--;
+		if (setup_pkt_template.length==2) dbgprintf("Timer: %d\n",(uint32_t)timeout);
 		sleep(1);
 	}
 	
 	// Make sure we didn't time out
 	if (!timeout) {
-		printf("USB timed out.\n");
-		uc.queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		dbgprintf("USB timed out.\n");
+		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
 		return false;
 	}
 	// Clear the interupt bit and remove our queue from the list
-	outw(uc.iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
-	uc.queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
+	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
 	
+	if (setup_pkt_template.length==2) dbgprintf("Prior to errors.\n");
 	// Check to make sure there's no errors with any of the TDs
 	for (uint8_t j = 0; j < i; j++) {
 		if (td[j].flags0 & UHCI_XFRDESC_STATUS) {
@@ -406,9 +472,11 @@ bool uhci_usb_get_desc(void *out, usb_setup_pkt setup_pkt_template, uhci_control
 		}
 	}
 	
+	if (setup_pkt_template.length==2) dbgprintf("Prior to memcpy.\n");
 	// Copy our data over to the return value
 	memcpy(out,buffer,size);
 	
+	if (setup_pkt_template.length==2) dbgprintf("Prior to Free.\n");
 	// Free the data page
 	free_page(data_vaddr,1);
 	
@@ -416,9 +484,7 @@ bool uhci_usb_get_desc(void *out, usb_setup_pkt setup_pkt_template, uhci_control
 	return true;
 }
 
-usb_dev_desc uhci_get_usb_dev_descriptor(uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size, uint16_t size) {
-	dbgprintf("ugudd(uc,%d,%d,%d,%d)\n",(uint32_t)port,(uint32_t)dev_address,(uint32_t)pkt_size,(uint32_t)size);
-	
+usb_dev_desc uhci_get_usb_dev_descriptor(usb_device *device, uint16_t size) {	
 	usb_dev_desc retval;
 	memset(&retval,0,sizeof(usb_dev_desc));
 	
@@ -430,15 +496,14 @@ usb_dev_desc uhci_get_usb_dev_descriptor(uhci_controller uc, uint8_t port, uint8
 	setup_pkt_template.index = 0;
 	setup_pkt_template.length = size;
 	
-	uhci_usb_get_desc(&retval,setup_pkt_template,uc,port,dev_address,pkt_size,size);
+	uhci_usb_get_desc(device,&retval,setup_pkt_template,size);
 	
 	dbgprintf("Successfully got USB device descriptor.\n");
 	
 	return retval;
 }
 
-bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size) {
-	dbgprintf("ugsd(%#,%d,%#,uc,%d,%d,%d)\n",(uint64_t)(uint32_t)out,(uint32_t)index,(uint64_t)targetlang,(uint32_t)port,(uint32_t)dev_address,(uint32_t)pkt_size);
+bool uhci_get_usb_str_desc(usb_device *device, char *out, uint8_t index, uint16_t targetlang) {
 	usb_desc_header header;
 	usb_setup_pkt sp;
 	sp.type = 0x80;
@@ -446,13 +511,13 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	sp.value = 0x300;
 	sp.index = 0;
 	sp.length = 2;
-	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
+	if (!uhci_usb_get_desc(device,&header,sp,2))
 		return false;
 	sp.length = header.length;
 	char buffer[256];
 	memset(buffer,0,256);
 	usb_str_desc *strdesc = (usb_str_desc *)buffer;
-	if (!uhci_usb_get_desc(buffer,sp,uc,port,dev_address,pkt_size,header.length))
+	if (!uhci_usb_get_desc(device,buffer,sp,header.length))
 		return false;
 	dbgprintf("Length: %d\n",(uint32_t)(strdesc->length));
 	uint8_t i;
@@ -470,10 +535,10 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	sp.value = 0x300 | index;
 	sp.length = 2;
 	memset(buffer,0,256);
-	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
+	if (!uhci_usb_get_desc(device,&header,sp,2))
 		return false;
 	sp.length = header.length;
-	if (!uhci_usb_get_desc(buffer,sp,uc,port,dev_address,pkt_size,header.length))
+	if (!uhci_usb_get_desc(device,buffer,sp,header.length))
 		return false;
 	uint16_t k = 0;
 	for (uint16_t j = 2; j < header.length; j++)
@@ -483,9 +548,7 @@ bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_co
 	return true;
 }
 
-usb_config_desc uhci_get_config_desc(uint8_t index, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size) {
-	dbgprintf("ugcd(%d,uc,%d,%d,%d,%d)\n",(uint32_t)index,(uint32_t)port,(uint32_t)dev_address,(uint32_t)pkt_size);
-	
+usb_config_desc uhci_get_config_desc(usb_device *device, uint8_t index) {	
 	usb_desc_header header;
 	usb_setup_pkt sp;
 	memset(&sp,0,sizeof(usb_setup_pkt));
@@ -496,12 +559,130 @@ usb_config_desc uhci_get_config_desc(uint8_t index, uhci_controller uc, uint8_t 
 	sp.value = 0x200 | index;
 	sp.index = 0;
 	sp.length = 2;
-	if (!uhci_usb_get_desc(&header,sp,uc,port,dev_address,pkt_size,2))
+	if (!uhci_usb_get_desc(device,&header,sp,2))
 		return config;
 	sp.length = header.length;
-	if (!uhci_usb_get_desc(&config,sp,uc,port,dev_address,pkt_size,header.length))
+	if (!uhci_usb_get_desc(device,&config,sp,header.length))
 		return config;
 	
 	dbgprintf("Successfully got USB config descriptor\n");
 	return config;
+}
+
+void *uhci_get_next_desc(uint8_t type, void *start, void *end) {
+	void *bufferptr = start;
+	while (bufferptr<end) {
+		usb_desc_header *header = bufferptr;
+		if (header->type==type)
+			break;
+		if (header->length)
+			bufferptr += header->length;
+		else
+			bufferptr = end;
+	}
+	if (bufferptr>=end) {
+		for(;;);
+		return 0;
+	} else
+		return bufferptr;
+}
+
+usb_interface_desc uhci_get_interface_desc(usb_device *device, uint8_t config_index, uint8_t interface_index) {	
+	usb_config_desc config = uhci_get_config_desc(device,config_index);
+	usb_interface_desc interface;
+	memset(&interface,0,sizeof(usb_interface_desc));
+	
+	if (config.num_interfaces<interface_index)
+		return interface;
+	
+	usb_setup_pkt sp;
+	sp.type = 0x80;
+	sp.request = 6;
+	sp.value = 0x200 | config_index;
+	sp.index = 0;
+	sp.length = config.total_len;
+	uint16_t num_pages = (config.total_len/4096)+1;
+	void *buffer = alloc_page(num_pages);
+	void *buffer_end = buffer+(num_pages*4096);
+	memset(buffer,0,num_pages*4096);
+	if (!uhci_usb_get_desc(device,buffer,sp,config.total_len)) {
+		free_page(buffer,num_pages);
+		return interface;
+	}
+	void *bufferptr = buffer+sizeof(usb_config_desc);
+	for (uint8_t i = 0; i < interface_index; i++) {
+		bufferptr = uhci_get_next_desc(USB_DESC_INTERFACE,bufferptr,buffer_end);
+		if (!bufferptr) {
+			free_page(buffer,num_pages);
+			return interface;
+		}
+	}
+	bufferptr = uhci_get_next_desc(USB_DESC_INTERFACE,bufferptr,buffer_end);
+	if (!bufferptr) {
+		free_page(buffer,num_pages);
+		return interface;
+	}
+	
+	interface = *(usb_interface_desc *)bufferptr;
+	
+	free_page(buffer,num_pages);
+	dbgprintf("Successfully got USB interface descriptor\n");
+	return interface;
+}
+
+usb_endpoint_desc uhci_get_endpoint_desc(usb_device *device, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index) {	
+	usb_config_desc config = uhci_get_config_desc(device,config_index);
+	usb_endpoint_desc endpoint;
+	memset(&endpoint,0,sizeof(usb_endpoint_desc));
+	
+	if (config.num_interfaces<interface_index)
+		return endpoint;
+	
+	usb_setup_pkt sp;
+	sp.type = 0x80;
+	sp.request = 6;
+	sp.value = 0x200 | config_index;
+	sp.index = 0;
+	sp.length = config.total_len;
+	uint16_t num_pages = (config.total_len/4096)+1;
+	void *buffer = alloc_page(num_pages);
+	void *buffer_end = buffer+(num_pages*4096);
+	memset(buffer,0,num_pages*4096);
+	if (!uhci_usb_get_desc(device,buffer,sp,config.total_len)) {
+		free_page(buffer,num_pages);
+		return endpoint;
+	}
+	void *bufferptr = buffer+sizeof(usb_config_desc);
+	for (uint8_t i = 0; i < interface_index; i++) {
+		bufferptr = uhci_get_next_desc(USB_DESC_INTERFACE,bufferptr,buffer_end);
+		if (!bufferptr) {
+			free_page(buffer,num_pages);
+			return endpoint;
+		}
+	}
+	bufferptr = uhci_get_next_desc(USB_DESC_INTERFACE,bufferptr,buffer_end);
+	if (!bufferptr) {
+		free_page(buffer,num_pages);
+		return endpoint;
+	}
+	for (uint8_t i = 0; i < endpoint_index; i++) {
+		bufferptr = uhci_get_next_desc(USB_DESC_ENDPOINT,bufferptr,buffer_end);
+		if (!bufferptr) {
+			free_page(buffer,num_pages);
+			return endpoint;
+		}
+	}
+	bufferptr = uhci_get_next_desc(USB_DESC_ENDPOINT,bufferptr,buffer_end);
+	if (!bufferptr) {
+		free_page(buffer,num_pages);
+		return endpoint;
+	}
+	
+	endpoint = *(usb_endpoint_desc *)bufferptr;
+	
+	dbgprintf("Endpoint: %#\n",(uint64_t)(uint32_t)(bufferptr));
+	
+	free_page(buffer,num_pages);
+	dbgprintf("Successfully got USB endpoint descriptor\n");
+	return endpoint;
 }

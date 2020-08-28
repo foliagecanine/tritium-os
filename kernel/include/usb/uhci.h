@@ -126,13 +126,20 @@ typedef struct {
 	uhci_usb_queue *queues_vaddr;
 	uhci_usb_queue *queues_paddr;
 	uint8_t num_ports;
+	usb_device devices[128];
 } uhci_controller;
 
-uhci_controller get_uhci_controller(uint8_t id);
-bool uhci_set_address(uhci_controller uc, uint8_t dev_address, uint8_t port);
-usb_dev_desc uhci_get_usb_dev_descriptor(uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size, uint16_t size);
-bool uhci_get_string_desc(char *out, uint8_t index, uint16_t targetlang, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size);
-usb_config_desc uhci_get_config_desc(uint8_t index, uhci_controller uc, uint8_t port, uint8_t dev_address, uint16_t pkt_size);
+uhci_controller *get_uhci_controller(uint8_t id);
+bool uhci_set_address(usb_device *device, uint8_t dev_address);
+bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed);
+bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
+bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);
+usb_dev_desc uhci_get_usb_dev_descriptor(usb_device *device, uint16_t size);
+bool uhci_get_usb_str_desc(usb_device *device, char *out, uint8_t index, uint16_t targetlang);
+usb_config_desc uhci_get_config_desc(usb_device *device, uint8_t index);
+usb_interface_desc uhci_get_interface_desc(usb_device *device, uint8_t config_index, uint8_t interface_index);
+usb_endpoint_desc uhci_get_endpoint_desc(usb_device *device, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
+uint8_t uhci_get_unused_device(uhci_controller *uc);
 uint8_t init_uhci_ctrlr(uint16_t iobase);
 
 #endif

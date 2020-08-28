@@ -46,15 +46,19 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "usb")) {
-		init_usb();
-		uhci_controller uc = get_uhci_controller(0);
-		if (inw(uc.iobase+UHCI_PORTSC1)&1) {
-			//printf("Device found on port 0.");
-			//uhci_set_address(uc,1,0);
-			//get_usb_dev_desc(usb_dev_addr(USB_CTRLR_UHCI,0,0,0));
-			//get_usb_dev_desc(usb_dev_addr(USB_CTRLR_UHCI,0,0,1));
-		} else {
-			printf("No device found on port 0. Make sure device is connected.");
+		uhci_controller *uc = get_uhci_controller(0);
+		for (uint8_t i = 1; i; i++) {
+			if (uc->devices[i].valid) {
+				uint16_t usbdev = usb_dev_addr(0,0,i);
+				usb_dev_desc devdesc = usb_get_dev_desc(usbdev);
+				if (devdesc.length) {
+					printf("---USB-DEVICE---\n");
+					char name[256];
+					memset(name,0,256);
+					usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409);
+					printf("%s\n",name);
+				}
+			}
 		}
 		cmdAck=true;
 	}
@@ -129,6 +133,11 @@ bool check_command(char* command) {
 	
 	if (strcmp(command, "shutdown")) {
 		power_shutdown();
+		cmdAck=true;
+	}
+	
+	if (strcmp(command, "reboot")) {
+		power_reboot();
 		cmdAck=true;
 	}
 	

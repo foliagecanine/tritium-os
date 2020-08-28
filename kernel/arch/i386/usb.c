@@ -2,6 +2,8 @@
 
 char name[5];
 
+uint8_t ctrlrcounts[4] = {0,0,0,0};
+
 void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==0xC&&pci.subclass==3) {
 		if (pci.progIF==0x00)
@@ -22,10 +24,17 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 		if (strcmp(name,"UHCI")) {
 			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3);
 			if (rval) {
-				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1).num_ports);
+				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports);
+				ctrlrcounts[0]++;
 			}
 		}
 	}
+}
+
+void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass, uint8_t protocol) {
+	usb_config_desc config = usb_get_config_desc(dev_addr,0);
+	if (class==USB_CLASS_HUB)
+		init_hub(dev_addr,config);
 }
 
 void init_usb() {
@@ -47,38 +56,122 @@ void init_usb() {
 			}
 		}
 	}
+	kprint("[USB ] Assigning drivers to devices...");
+	for (uint8_t ctype = 0; ctype < 1; ctype++) {
+		for (uint8_t cid = 0; cid < ctrlrcounts[ctype]; cid++) {
+			for (uint8_t dev_num = 1; dev_num < 128; dev_num++) {
+				uint16_t devaddr = usb_dev_addr(ctype,cid,dev_num);
+				usb_dev_desc devdesc = usb_get_dev_desc(devaddr);
+				if (!devdesc.length)
+					break;
+				if (devdesc.dev_class) {
+					usb_get_driver_for_class(devaddr,devdesc.dev_class,devdesc.dev_subclass,devdesc.dev_protocol);
+				} else {
+					usb_interface_desc interface = usb_get_interface_desc(devaddr,0,0);
+					if (!interface.length)
+						break;
+					usb_get_driver_for_class(devaddr,interface.iclass,interface.isubclass,interface.iprotocol);
+				}
+			}
+		}
+	}
 	kprint("[INIT] Initialized USB driver");
 }
 
 //	dev_addr:
 //
-//	0x0F000000 >> 24: Controller type
+//	0xF000 >> 12: Controller type
 // 		0 = UHCI
 //		1 = OHCI
 //		2 = EHCI
 //		3 = XHCI
 //
-//	0x00FF0000 >> 16: Controller ID
+//	0x0F00 >> 8: Controller ID
 //		#   = Controller ID
 //
-//	0x0000FF00 >> 8:  Port ID
-//		#   = Root Port ID
 //
-//	0x0000007F	   :  Device ID 
+//	0x007F	   :  Device ID 
 //		0-127 = Device ID
 
 
-uint32_t usb_dev_addr(uint8_t ctrlrtype, uint8_t ctrlrID, uint8_t portID, uint8_t devID) {
-	return ((ctrlrtype&0x0F)<<24) | (ctrlrID<<16) | (portID<<8) | (devID&0x7F);
+uint16_t usb_dev_addr(uint8_t ctrlrtype, uint8_t ctrlrID, uint8_t devID) {
+	return ((ctrlrtype&0x0F)<<12) | (ctrlrID<<8) | (devID&0x7F);
 }
 
-usb_dev_desc get_usb_dev_desc(uint32_t dev_addr) {
-	if (!(dev_addr&0x0F000000)) {
-		dprintf("Attempting to get USB Device Descriptor from UHCI %d.%d.%d\n",(uint32_t)((dev_addr&0x00FF0000)>>16),(uint32_t)((dev_addr&0x0000FF00)>>8),(uint32_t)(dev_addr&0x7F));
-		return uhci_get_usb_dev_descriptor(get_uhci_controller((dev_addr&0x00FF0000)>>16),dev_addr&0x7F,(dev_addr&0x0000FF00)>>8,8,8);
+usb_device device_null = {0};
+
+usb_device *usb_device_from_addr(uint16_t dev_addr) {
+	if ((dev_addr&0xF000)>>12==USB_CTRLR_UHCI) {
+		return &get_uhci_controller((dev_addr&0x0F00)>>8)->devices[dev_addr&0x007F];
+	} else {
+		return &device_null;
+	}
+}
+
+bool usb_get_str_desc(uint16_t dev_addr, void *out, uint8_t index, uint16_t targetlang) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_get_usb_str_desc(device,out,index,targetlang);
+	} else {
+		return false;
+	}
+}
+
+usb_dev_desc usb_get_dev_desc(uint16_t dev_addr) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_get_usb_dev_descriptor(device,sizeof(usb_dev_desc));
 	} else {
 		usb_dev_desc retnull;
 		memset(&retnull,0,sizeof(usb_dev_desc));
 		return retnull;
+	}
+}
+
+usb_config_desc usb_get_config_desc(uint16_t dev_addr, uint8_t index) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_get_config_desc(device,index);
+	} else {
+		usb_config_desc retnull;
+		memset(&retnull,0,sizeof(usb_config_desc));
+		return retnull;
+	}
+}
+
+usb_interface_desc usb_get_interface_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_get_interface_desc(device, config_index, interface_index);
+	} else {
+		usb_interface_desc retnull;
+		memset(&retnull,0,sizeof(usb_interface_desc));
+		return retnull;
+	}
+}
+
+bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_usb_get_desc(device, out, setup_pkt_template, size);
+	} else {
+		return false;
+	}
+}
+
+bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_generic_setup(device, setup_pkt_template);
+	} else {
+		return false;
+	}
+}
+
+bool usb_assign_address(uint16_t port_addr, uint8_t lowspeed) {
+	if ((port_addr&0xF000)>>12==USB_CTRLR_UHCI) {
+		return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, lowspeed);
+	} else {
+		return false;
 	}
 }
