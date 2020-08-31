@@ -123,6 +123,7 @@ usb_dev_desc usb_get_dev_desc(uint16_t dev_addr);
 bool usb_get_str_desc(uint16_t dev_addr, void *out, uint8_t index, uint16_t targetlang);
 usb_config_desc usb_get_config_desc(uint16_t dev_addr, uint8_t index);
 usb_interface_desc usb_get_interface_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index);
+usb_endpoint_desc usb_get_endpoint_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
 bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template);
 
 #endif

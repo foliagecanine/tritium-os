@@ -55,7 +55,11 @@ bool check_command(char* command) {
 					printf("---USB-DEVICE---\n");
 					char name[256];
 					memset(name,0,256);
-					usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409);
+					if (devdesc.product_index) {
+						if (!usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409))
+							strcpy(name,"Unknown USB Device");							
+					} else
+						strcpy(name,"Unknown USB Device");
 					printf("%s\n",name);
 				}
 			}

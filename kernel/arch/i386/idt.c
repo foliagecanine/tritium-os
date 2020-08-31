@@ -252,9 +252,9 @@ void irq7_handler(void) {
 	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
 	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
 	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	abort();
+	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[7] = true;
 }
  
@@ -272,9 +272,9 @@ void irq9_handler(void) {
 	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
 	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
 	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	abort();
+	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[9] = true;
 }
  
@@ -286,9 +286,9 @@ void irq10_handler(void) {
 	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
 	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
 	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	abort();
+	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[10] = true;
 }
  
@@ -300,9 +300,9 @@ void irq11_handler(void) {
 	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
 	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
 	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	abort();
+	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[11] = true;
 }
 

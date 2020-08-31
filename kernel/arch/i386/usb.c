@@ -33,8 +33,11 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 
 void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass, uint8_t protocol) {
 	usb_config_desc config = usb_get_config_desc(dev_addr,0);
+	usb_get_endpoint_desc(dev_addr,0,0,0);
 	if (class==USB_CLASS_HUB)
 		init_hub(dev_addr,config);
+	if (class==USB_CLASS_HID)
+		init_hid(dev_addr,config);
 }
 
 void init_usb() {
@@ -146,6 +149,17 @@ usb_interface_desc usb_get_interface_desc(uint16_t dev_addr, uint8_t config_inde
 	} else {
 		usb_interface_desc retnull;
 		memset(&retnull,0,sizeof(usb_interface_desc));
+		return retnull;
+	}
+}
+
+usb_endpoint_desc usb_get_endpoint_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_get_endpoint_desc(device, config_index, interface_index, endpoint_index);
+	} else {
+		usb_endpoint_desc retnull;
+		memset(&retnull,0,sizeof(usb_endpoint_desc));
 		return retnull;
 	}
 }
