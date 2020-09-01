@@ -17,6 +17,10 @@ const uint8_t usb_scancode_to_ps2[256] = {
 	0x45,0,0,0,0,0x1C,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0 // NUMLOCK,KPSLASH,KPASTERISK,KPMINUS,KPENTER,KP"1234567890",KPDECIMAL
 };
 uint8_t keyboard_buffer_cmp[8];
+uint64_t repeat_key_press_time = 0;
+uint8_t keyboard_repeat_key = 0;
+uint16_t usb_keyboard_repeat_initial_delay = 5000; // 500 ms, measured in 100us
+uint16_t usb_keyboard_repeat_repeat_delay = 250; // 25 ms
 
 bool key_exists(uint8_t key, uint8_t *keylist) {
 	for (uint8_t i = 0; i < 7; i++) {
@@ -24,6 +28,20 @@ bool key_exists(uint8_t key, uint8_t *keylist) {
 			return true;
 	}
 	return false;
+}
+
+void insert_repeatable(uint8_t scancode) {
+	insert_scancode(scancode);
+	keyboard_repeat_key = scancode;
+	repeat_key_press_time = get_ticks();
+}
+
+void usb_keyboard_repeat() {
+	uint64_t ticks = get_ticks();
+	if (!(ticks%usb_keyboard_repeat_repeat_delay)) {
+		if (keyboard_repeat_key&&(ticks-repeat_key_press_time)>usb_keyboard_repeat_initial_delay)
+			insert_scancode(keyboard_repeat_key);
+	}
 }
 
 uint8_t PS2_modifiers[8] = { PS2_CTRL, PS2_LSHIFT, PS2_ALT, 0, PS2_CTRL, PS2_RSHIFT, PS2_ALT, 0};
@@ -56,13 +74,15 @@ void hid_kbd_irq(uint16_t dev_addr) {
 		// Check for newly pressed keys
 		for (uint8_t i = 1; i < 8; i++) {
 			if (!key_exists(kbd_input[i],keyboard_buffer_cmp+1))
-				insert_scancode(usb_scancode_to_ps2[kbd_input[i]]);
+				insert_repeatable(usb_scancode_to_ps2[kbd_input[i]]);
 			if (!key_exists(keyboard_buffer_cmp[i],kbd_input+1))
 				insert_scancode(usb_scancode_to_ps2[keyboard_buffer_cmp[i]+PS2_KEY_RELEASED]);
 		}
 		
 		// Sync the buffer
 		memcpy(keyboard_buffer_cmp,kbd_input,8);
+		if (!memcmp(keyboard_buffer_cmp+1,(uint8_t[]){0,0,0,0,0,0,0},7))
+			keyboard_repeat_key = 0;
 	}
 }
 

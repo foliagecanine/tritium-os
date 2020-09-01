@@ -15,5 +15,6 @@
 #define USB_HID_KBD_RGUI	(1<<7)
 
 bool init_hid(uint16_t dev_addr, usb_config_desc config);
+void usb_keyboard_repeat();
 
 #endif

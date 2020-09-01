@@ -187,6 +187,7 @@ void irq0_handler(void) {
 		asm("nop"); //Debug breakpoint
 	outb(0x20, 0x20); //EOI
 	pit_tick();
+	usb_keyboard_repeat();
 	if (ts_enabled&&!(get_ticks()%10))
 		task_switch(temp_tss,ready_esp);
 	irq_finished[0] = true;
