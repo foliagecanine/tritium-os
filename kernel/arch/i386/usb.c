@@ -189,3 +189,36 @@ bool usb_assign_address(uint16_t port_addr, uint8_t lowspeed) {
 		return false;
 	}
 }
+
+void *usb_create_interval_in(uint16_t dev_addr, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_create_interval_in(device, out, interval, endpoint_addr, max_pkt_size, size);
+	} else {
+		return 0;
+	}
+}
+
+bool usb_refresh_interval(uint16_t dev_addr, void *data) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->controller&&!device->ctrlr_type) {
+		return uhci_refresh_interval(data);
+	} else {
+		return false;
+	}
+}
+
+void usb_interrupt() {
+	for (uint8_t ctrlrType = 0; ctrlrType < 4; ctrlrType++) {
+		for (uint8_t ctrlrID = 0; ctrlrID < USB_MAX_CTRLRS; ctrlrID++) {
+			for (uint8_t devID = 1; devID < 128; devID++) {
+				uint16_t dev_addr = usb_dev_addr(ctrlrType,ctrlrID,devID);
+				usb_device *device = usb_device_from_addr(dev_addr);
+				if (device->valid) {
+					if (device->driver_function)
+						device->driver_function(dev_addr);
+				}
+			}
+		}
+	}
+}

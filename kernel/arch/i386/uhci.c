@@ -12,7 +12,7 @@
 #define dbgprintf
 #endif
 
-uhci_controller uhci_controllers[8]; //Allow up to 8 controllers.
+uhci_controller uhci_controllers[USB_MAX_CTRLRS];
 uint8_t num_ctrlrs = 0;
 
 void uhci_global_reset(uint16_t iobase) {
@@ -139,6 +139,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 	this_ctrlr->queues_paddr = (uhci_usb_queue *)(this_ctrlr->framelist_paddr+4096);
 	q.headlinkptr = UHCI_FRAMEPTR_TERM;
 	q.elemlinkptr = UHCI_FRAMEPTR_TERM;
+	q.taillinkptr = 0;
 	
 	for (uint16_t i = 0; i < 8; i++) {
 		this_ctrlr->queues_vaddr[i] = q;
@@ -177,6 +178,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 			usbdev.port = current_port;
 			usbdev.lowspeed = (inw(this_ctrlr->iobase+UHCI_PORTSC1+(current_port*2))&UHCI_PORTSC_LS) ? 1 : 0;
 			usbdev.max_pkt_size = 8;
+			usbdev.driver_function = 0;
 			usb_dev_desc devdesc;
 			devdesc = uhci_get_usb_dev_descriptor(&usbdev,8);
 			if (devdesc.length) {
@@ -215,6 +217,28 @@ uint8_t uhci_get_unused_device(uhci_controller *uc) {
 	return 0;
 }
 
+void uhci_clear_interrupt(uint8_t id) {
+	outw(uhci_controllers[id].iobase+UHCI_USBSTS,UHCI_USBSTS_ALLSTS);
+}
+
+void uhci_add_queue(uhci_controller *uc, uhci_usb_queue *queue, void *p_queue, uint8_t interval) {
+	queue->headlinkptr = uc->queues_vaddr[interval].elemlinkptr;
+	queue->taillinkptr = (uint32_t)&uc->queues_vaddr[interval];
+	if (!(uc->queues_vaddr[interval].elemlinkptr&UHCI_FRAMEPTR_TERM)) {
+		((uhci_usb_queue *)(uc->queues_vaddr[interval].elemlinkptr))->taillinkptr = (uint32_t)queue;
+	}
+	uc->queues_vaddr[interval].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+}
+
+void uhci_remove_queue(uhci_usb_queue *queue) {
+	if (!(queue->headlinkptr&UHCI_FRAMEPTR_TERM))
+		((uhci_usb_queue *)(queue->headlinkptr))->taillinkptr = queue->taillinkptr;
+	if (!(((uhci_usb_queue *)(queue->taillinkptr))->taillinkptr))
+		((uhci_usb_queue *)(queue->taillinkptr))->elemlinkptr = queue->headlinkptr;
+	else
+		((uhci_usb_queue *)(queue->taillinkptr))->headlinkptr = queue->headlinkptr;
+}
+
 bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	// Allocate a page and define where all our structures will be
 	void *data_vaddr = alloc_page(1);
@@ -251,11 +275,10 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the framelist
-	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
-	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	uhci_add_queue(uc,queue,p_queue,0);
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
-	uint16_t timeout = 500;
+	uint16_t timeout = 2000;
 	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
 		timeout--;
 		sleep(1);
@@ -264,15 +287,16 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	// Check to make sure we didn't time out
 	if (!timeout) {
 		dbgprintf("USB timed out.\n");
-		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		uhci_remove_queue(queue);
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 		free_page(data_vaddr,1);
 		return false;
 	}
 	
-	// Clear the interrupt bit and remove our queue from the list
+	// Clear the interrupt bit and remove our queue from the list, and re-enable IRQs
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
-	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	uhci_remove_queue(queue);
+	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
 	// Check for any errors in the TDs
 	for (uint8_t j = 0; j < i; j++) {
@@ -332,11 +356,10 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the framelist
-	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
-	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	uhci_add_queue(uc,queue,p_queue,0);
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
-	uint16_t timeout = 500;
+	uint16_t timeout = 2000;
 	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
 		timeout--;
 		sleep(1);
@@ -345,7 +368,7 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	// Check to make sure we didn't time out
 	if (!timeout) {
 		dbgprintf("USB timed out.\n");
-		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		uhci_remove_queue(queue);		
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 		free_page(data_vaddr,1);
 		return false;
@@ -353,7 +376,8 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	
 	// Clear the interrupt bit and remove our queue from the list
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
-	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	uhci_remove_queue(queue);
+	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
 	// Check for any errors in the TDs
 	for (uint8_t j = 0; j < i; j++) {
@@ -400,10 +424,10 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	// Calculate the number of TDs needed
 	uint16_t num_tds = (size/device->max_pkt_size)+3;
 	uint16_t total_size = sizeof(uhci_usb_queue)+(num_tds*sizeof(uhci_usb_xfr_desc))+8+size;
+	uint16_t num_pages = (total_size/4096)+1;
 	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to Alloc.\n");
 	// Allocate a page and define where all our structures will be
-	void *data_vaddr = alloc_page((total_size/4096)+1);
+	void *data_vaddr = alloc_page(num_pages);
 	void *data_paddr = get_phys_addr(data_vaddr);
 	uhci_usb_queue *queue = (uhci_usb_queue *)data_vaddr;
 	uhci_usb_queue *p_queue = data_paddr;
@@ -424,9 +448,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	// Create a queue
 	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
 	queue->elemlinkptr = (uint32_t)p_td;
-	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to TDs.\n");
-	
+		
 	// Create the setup TD
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
@@ -456,116 +478,118 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the list
-	queue->headlinkptr = uc->queues_vaddr[0].elemlinkptr;
-	uc->queues_vaddr[0].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
-	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to timer.\n");
-	
+	uhci_add_queue(uc,queue,p_queue,0);
+		
 	// Wait until we recieve the IOC
-	uint16_t timeout = 500;
-	//if (setup_pkt_template.length==2) dbgprintf("Timer: %d\n",(uint32_t)timeout);
-	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+	uint16_t timeout = 2000;
+	while ((!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) || td[0].flags0 & UHCI_XFRDESC_STATUS_ACTIVE) && timeout) {
 		timeout--;
-		//if (setup_pkt_template.length==2) dbgprintf("Timer: %d\n",(uint32_t)timeout);
 		sleep(1);
 	}
 	
 	// Make sure we didn't time out
 	if (!timeout) {
 		dbgprintf("USB timed out.\n");
-		uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+		uhci_remove_queue(queue);
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
-		free_page(data_vaddr,1);
+		free_page(data_vaddr,num_pages);
 		return false;
 	}
-	// Clear the interupt bit and remove our queue from the list
+	// Clear the interupt bit, remove our queue from the list, then re-enable IRQs
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
-	uc->queues_vaddr[0].elemlinkptr = queue->headlinkptr;
+	uhci_remove_queue(queue);
+	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to errors.\n");
 	// Check to make sure there's no errors with any of the TDs
 	for (uint8_t j = 0; j < i; j++) {
 		if (td[j].flags0 & UHCI_XFRDESC_STATUS) {
 			dbgprintf("TD%d Error: %#\n",(uint32_t)j,(uint64_t)(td[j].flags0));
 			outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
-			free_page(data_vaddr,1);
+			free_page(data_vaddr,num_pages);
 			return false;
 		}
 	}
 	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to memcpy.\n");
 	// Copy our data over to the return value
 	memcpy(out,buffer,size);
 	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to Free.\n");
 	// Free the data page
-	free_page(data_vaddr,1);
+	free_page(data_vaddr,num_pages);
 	
 	dbgprintf("Successfully got USB descriptor.\n");
 	return true;
 }
 
-void *uhci_create_interval_in(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint8_t interval, uint16_t max_pkt_size, uint16_t size) {
-	// Calculate the number of TDs needed
-	uint16_t num_tds = (size/max_pkt_size)+3;
-	uint16_t total_size = sizeof(uhci_usb_queue)+(num_tds*sizeof(uhci_usb_xfr_desc))+8+size;
-	
-	//if (setup_pkt_template.length==2) dbgprintf("Prior to Alloc.\n");
+void *uhci_create_interval_in(usb_device *device, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {
 	// Allocate a page and define where all our structures will be
-	void *data_vaddr = alloc_page((total_size/4096)+1);
+	void *data_vaddr = alloc_page(1);
 	void *data_paddr = get_phys_addr(data_vaddr);
 	uhci_usb_queue *queue = (uhci_usb_queue *)data_vaddr;
 	uhci_usb_queue *p_queue = data_paddr;
-	uhci_usb_xfr_desc *td = data_vaddr+sizeof(uhci_usb_queue);
-	uhci_usb_xfr_desc *p_td = data_paddr+sizeof(uhci_usb_queue);
-	uint8_t *setup_pkt = data_vaddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*num_tds);
-	uint8_t *p_setup_pkt = data_paddr+sizeof(uhci_usb_queue)+(sizeof(uhci_usb_xfr_desc)*num_tds);
+	uint16_t *num_tds = data_vaddr+sizeof(uhci_usb_queue);
+	uhci_usb_xfr_desc *td = data_vaddr+sizeof(uhci_usb_queue)+16;
+	uhci_usb_xfr_desc *p_td = data_paddr+sizeof(uhci_usb_queue)+16;
 	uint8_t *buffer = out;
 	uint8_t *p_buffer = get_phys_addr(out);
 	uhci_controller *uc = device->controller;
 	
-	memcpy(setup_pkt,&setup_pkt_template,8);
-	
-	// Clear the output buffer
+	// Clear the output buffer and the allocation page
 	memset(buffer,0,size);
+	memset(data_vaddr,0,4096);
+	
+	// Calculate the number of TDs needed
+	*num_tds = (size/max_pkt_size);
+	if (size%max_pkt_size)
+		*num_tds++;
 	
 	// Create a queue
 	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
 	queue->elemlinkptr = (uint32_t)p_td;
+	queue->taillinkptr = 0;
 	
-	// Create the setup TD
-	uint8_t i = 0;
-	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
-	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_SETUP;
-	td[i].bufferptr = (uint32_t)p_setup_pkt;
+	// No setup TD since this is an interrupt transfer
 	
 	// Create the number of TDs required to transfer the data
+	uint8_t i;
 	uint16_t size_remaining = size;
-	for (i = 1; i < num_tds-1 && size_remaining; i++) {
+	for (i = 0; i < *num_tds && size_remaining; i++) {
 		td[i].linkptr = (uint32_t)&p_td[i+1];
-		td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
-		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= device->max_pkt_size ? size_remaining-1 : device->max_pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_IN;
-		td[i].bufferptr = (uint32_t)p_buffer+((i-1)*device->max_pkt_size);
+		td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_ACTIVE;
+		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= device->max_pkt_size ? size_remaining-1 : device->max_pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_XFRDESC_ENDPT_OFF(endpoint_addr) | UHCI_PID_IN;
+		td[i].bufferptr = (uint32_t)p_buffer+(i*device->max_pkt_size);
 		size_remaining -= (size_remaining <= device->max_pkt_size ? size_remaining : device->max_pkt_size);
 	}
-	
-	// Create a status TD
-	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
-	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_OUT;
-	td[i].bufferptr = 0;
-	i++;
+	td[i-1].linkptr = UHCI_XFRDESC_TERM;
+	td[i-1].flags0 |= UHCI_XFRDESC_IOC;
+	// No status TD
 	
 	// Add our queue to the list
-	queue->headlinkptr = uc->queues_vaddr[interval].elemlinkptr;
-	uc->queues_vaddr[interval].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	uhci_add_queue(uc,queue,p_queue,interval);
 	
-	return;
+	// Make sure interrupts are enabled
+	outw(((uhci_controller *)device->controller)->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
+	
+	return data_vaddr;
 }
 
-bool uhci_destroy_interval(usb_device *device, uint8_t interval, void *data) {
-	
+bool uhci_refresh_interval(void *data) {
+	uhci_usb_queue *queue = data;
+	uint16_t *num_tds = data+sizeof(uhci_usb_queue);
+	uhci_usb_xfr_desc *td = data+sizeof(uhci_usb_queue)+16;
+	bool retval = true;
+	for (uint16_t i = 0; i < *num_tds; i++) {
+		if (td[i].flags0 & UHCI_XFRDESC_STATUS_ACTIVE)
+			retval = false;
+		else
+			td[i].flags0 |= UHCI_XFRDESC_STATUS_ACTIVE;
+	}
+	queue->elemlinkptr = (uint32_t)get_phys_addr(td);
+	return retval;
+}
+
+void uhci_destroy_interval(void *data) {
+	uhci_remove_queue(data);
+	free_page(data,1);
 }
 
 usb_dev_desc uhci_get_usb_dev_descriptor(usb_device *device, uint16_t size) {	

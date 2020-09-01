@@ -1,17 +1,6 @@
 #include <kernel/kbd.h>
 #include <kernel/sysfunc.h>
 
-#define KEY_PRESSED 0
-#define KEY_RELEASED 128
-
-#define LSHIFT 42
-#define RSHIFT 54
-#define CTRL 29
-#define ALT 56
-#define CAPSLCK 58
-#define SCRLCK 70
-#define NUMLCK 69
-
 char kbdus[] = {
 	0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0,
 	'\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']',
@@ -69,8 +58,8 @@ unsigned int getkey_a() {
 unsigned int getkey() {
 	if (!special_read) {
 		special_read = true;
-		if (last_scancode>KEY_PRESSED)
-			return last_scancode-KEY_PRESSED;
+		if (last_scancode>PS2_KEY_PRESSED)
+			return last_scancode-PS2_KEY_PRESSED;
 		else
 			return last_scancode;
 	} else {
@@ -138,20 +127,19 @@ void toggle_capslck()
   update_leds(kbdstatus);
 }
 
-void kbd_handler() {
-	last_scancode = inb(0x60);
+void decode_scancode() {
 	if (last_scancode>128) {
-		if (last_scancode==LSHIFT+KEY_RELEASED||last_scancode==RSHIFT+KEY_RELEASED) {
+		if (last_scancode==PS2_LSHIFT+PS2_KEY_RELEASED||last_scancode==PS2_RSHIFT+PS2_KEY_RELEASED) {
 			shift = false;
-		} else if (last_scancode==CTRL+KEY_RELEASED) {
+		} else if (last_scancode==PS2_CTRL+PS2_KEY_RELEASED) {
 			ctrl = false;
-		} else if (last_scancode==ALT+KEY_RELEASED) {
+		} else if (last_scancode==PS2_ALT+PS2_KEY_RELEASED) {
 			alt = false;
-		} else if (last_scancode==CAPSLCK+KEY_RELEASED) {
+		} else if (last_scancode==PS2_CAPSLCK+PS2_KEY_RELEASED) {
 			toggle_capslck();
-		} else if (last_scancode==SCRLCK+KEY_RELEASED) {
+		} else if (last_scancode==PS2_SCRLCK+PS2_KEY_RELEASED) {
 			toggle_scrlck();
-		} else if (last_scancode==NUMLCK+KEY_RELEASED) {
+		} else if (last_scancode==PS2_NUMLCK+PS2_KEY_RELEASED) {
 			toggle_numlck();
 		}
 		special_read = false;
@@ -159,14 +147,24 @@ void kbd_handler() {
 		key_read = false;
 		special_read = false;
 		lastkey_char=0;
-		if (last_scancode==LSHIFT+KEY_PRESSED||last_scancode==RSHIFT+KEY_PRESSED) {
+		if (last_scancode==PS2_LSHIFT+PS2_KEY_PRESSED||last_scancode==PS2_RSHIFT+PS2_KEY_PRESSED) {
 			shift = true;
-		} else if (last_scancode==CTRL+KEY_PRESSED) {
+		} else if (last_scancode==PS2_CTRL+PS2_KEY_PRESSED) {
 			ctrl = true;
-		} else if (last_scancode==ALT+KEY_PRESSED) {
+		} else if (last_scancode==PS2_ALT+PS2_KEY_PRESSED) {
 			alt = true;
 		} else {
 			lastkey_char = (shift) ? kbdus_shift[last_scancode] : ((capslck) ? kbdus_caps[last_scancode] : kbdus[last_scancode]);
 		}
 	}
+}
+
+void kbd_handler() {
+	last_scancode = inb(0x60);
+	decode_scancode();
+}
+
+void insert_scancode(uint8_t scancode) {
+	last_scancode = scancode;
+	decode_scancode();
 }

@@ -223,37 +223,15 @@ void irq6_handler(void) {
 	irq_finished[6] = true;
 }
  
-typedef struct {
-	uint8_t valid;
-	void *controller;
-	uint8_t ctrlr_type;
-	uint8_t port;
-	uint8_t address;
-	uint8_t lowspeed;
-	uint16_t max_pkt_size;
-} usb_device;
- 
-typedef struct {
-	uint16_t iobase;
-	uint32_t framelist_paddr;
-	uint32_t framelist_vaddr;
-	void *queues_vaddr;
-	void *queues_paddr;
-	uint8_t num_ports;
-	usb_device devices[128];
-} uhci_controller;
- 
-extern uhci_controller *get_uhci_controller(uint8_t);
- 
 void irq7_handler(void) {
 	outb(0x20, 0x20); //EOI
-	printf("USB INTERRUPT?!\n");
-	printf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	//dprintf("USB INTERRUPT?!\n");
+	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
+	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
+	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
+	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
+	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[7] = true;
 }
@@ -267,13 +245,13 @@ void irq8_handler(void) {
 void irq9_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	printf("USB INTERRUPT?!\n");
-	printf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	//dprintf("USB INTERRUPT?!\n");
+	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
+	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
+	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
+	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
+	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[9] = true;
 }
@@ -281,13 +259,13 @@ void irq9_handler(void) {
 void irq10_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	printf("USB INTERRUPT?!\n");
-	printf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	//dprintf("USB INTERRUPT?!\n");
+	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
+	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
+	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
+	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
+	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
 	irq_finished[10] = true;
 }
@@ -295,14 +273,15 @@ void irq10_handler(void) {
 void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	printf("USB INTERRUPT?!\n");
-	printf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	printf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	printf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	printf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	printf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	printf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
+	//dprintf("USB INTERRUPT?!\n");
+	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
+	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
+	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
+	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
+	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
+	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
+	usb_interrupt();
 	irq_finished[11] = true;
 }
 

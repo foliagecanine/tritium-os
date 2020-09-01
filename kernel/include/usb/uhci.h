@@ -66,6 +66,7 @@
 #define UHCI_XFRDESC_STATUS 0x00FF0000	// Status Byte
 #define UHCI_XFRDESC_STATUS_OFF(x) ((x)<<16) // Offset macro for Status Byte
 #define UHCI_XFRDESC_STATUS_ROFF(x) ((x)>>16) // Reverse Offset macro for Status Byte
+#define UHCI_XFRDESC_STATUS_ACTIVE	UHCI_XFRDESC_STATUS_OFF(0x80)
 #define UHCI_XFRDESC_IOC	(1<<24)		// Interrupt on Completion
 #define UHCI_XFRDESC_ISO	(1<<25)		// Isochronus Select
 #define UHCI_XFRDESC_LS		(1<<26)		// Low Speed Device
@@ -77,6 +78,7 @@
 #define UHCI_XFRDESC_DEVADDR 0x00007F00	// Device Identifer
 #define UHCI_XFRDESC_DEVADDR_OFF(x) ((x)<<8) 	// Device Identifer
 #define UHCI_XFRDESC_ENDPT	0x00078000	// Endpoint
+#define UHCI_XFRDESC_ENDPT_OFF(x) ((x)<<15)	// Endpoint Offset macro
 #define UHCI_XFRDESC_DTOGGLE2 (1<<19)	// Data Toggle Bit (Dword 2)
 #define UHCI_XFRDESC_MAXLEN	0xFFE00000	// Max Length
 #define UHCI_XFRDESC_MAXLEN_OFF(x) ((x)<<21)	// Offset Macro for Max Length
@@ -115,8 +117,8 @@ typedef struct {
 typedef struct {
 	uint32_t headlinkptr;
 	uint32_t elemlinkptr;
+	uint32_t taillinkptr;
 	uint32_t unused0;
-	uint32_t unused1;
 } __attribute__((packed)) __attribute__((aligned(16))) uhci_usb_queue;
 
 typedef struct {
@@ -134,6 +136,9 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address);
 bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed);
 bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
 bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);
+void *uhci_create_interval_in(usb_device *device, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size);
+bool uhci_refresh_interval(void *data);
+void uhci_destroy_interval(void *data);
 usb_dev_desc uhci_get_usb_dev_descriptor(usb_device *device, uint16_t size);
 bool uhci_get_usb_str_desc(usb_device *device, char *out, uint8_t index, uint16_t targetlang);
 usb_config_desc uhci_get_config_desc(usb_device *device, uint8_t index);

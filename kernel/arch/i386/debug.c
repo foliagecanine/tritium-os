@@ -970,6 +970,7 @@ uint8_t mode_err;
 uint32_t i;
 volatile uint32_t gx;
 volatile uint32_t gy;
+volatile uint8_t btns;
 
 uint8_t set_resolution(uint32_t width, uint32_t height, uint8_t bits) {
 	framebuffer_width = width;
@@ -1180,6 +1181,19 @@ void graphicstest() {
 		draw_bitmap_alpha(gx,gy,cursor,c);
 		gx = mouse_getx();
 		gy = mouse_gety();
+		btns = mouse_getbuttons();
+		if (btns&1)
+			o.g = 0;
+		else
+			o.g = 255;
+		if (btns&2)
+			o.b = 0;
+		else
+			o.b = 255;
+		if (btns&4)
+			o.r = 100;
+		else
+			o.r = 255;
 		//dprintf("ok ");
 		draw_bitmap_alpha(gx,gy,cursor,o);
 		syncvideo();

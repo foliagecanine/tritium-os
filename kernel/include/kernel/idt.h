@@ -7,6 +7,7 @@
 #include <kernel/pit.h>
 #include <kernel/task.h>
 #include <stdbool.h>
+#include <usb/usb.h>
 
 void init_idt();
 void clear_irq_status(uint8_t irq);
