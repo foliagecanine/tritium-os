@@ -174,6 +174,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 			usbdev.valid = true;
 			usbdev.controller = this_ctrlr;
 			usbdev.ctrlr_type = USB_CTRLR_UHCI;
+			usbdev.ctrlrID = this_ctrlr_id;
 			usbdev.address = 0;
 			usbdev.port = current_port;
 			usbdev.lowspeed = (inw(this_ctrlr->iobase+UHCI_PORTSC1+(current_port*2))&UHCI_PORTSC_LS) ? 1 : 0;
@@ -225,9 +226,11 @@ void uhci_add_queue(uhci_controller *uc, uhci_usb_queue *queue, void *p_queue, u
 	queue->headlinkptr = uc->queues_vaddr[interval].elemlinkptr;
 	queue->taillinkptr = (uint32_t)&uc->queues_vaddr[interval];
 	if (!(uc->queues_vaddr[interval].elemlinkptr&UHCI_FRAMEPTR_TERM)) {
-		((uhci_usb_queue *)(uc->queues_vaddr[interval].elemlinkptr))->taillinkptr = (uint32_t)queue;
+		((uhci_usb_queue *)(uc->queues_vaddr[interval].vaddr))->taillinkptr = (uint32_t)queue;
+		queue->vaddr = uc->queues_vaddr[interval].vaddr;
 	}
 	uc->queues_vaddr[interval].elemlinkptr = (uint32_t)p_queue | UHCI_FRAMEPTR_QUEUE;
+	uc->queues_vaddr[interval].vaddr = (uint32_t)queue;
 }
 
 void uhci_remove_queue(uhci_usb_queue *queue) {
@@ -279,7 +282,7 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
 	uint16_t timeout = 2000;
-	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+	while ((!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) || td[0].flags0 & UHCI_XFRDESC_STATUS_ACTIVE) && timeout) {
 		timeout--;
 		sleep(1);
 	}
@@ -360,7 +363,7 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
 	uint16_t timeout = 2000;
-	while (!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) && timeout) {
+	while ((!(inw(uc->iobase+UHCI_USBSTS) & UHCI_USBSTS_USBINT) || td[0].flags0 & UHCI_XFRDESC_STATUS_ACTIVE) && timeout) {
 		timeout--;
 		sleep(1);
 	}
@@ -402,9 +405,11 @@ bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed) {
 	uhci_controller *uc = get_uhci_controller(ctrlrID);
 	uint8_t dev_addr = uhci_get_unused_device(uc);
 	usb_device usbdev;
+	memset(&usbdev,0,sizeof(usb_device));
 	usbdev.valid = true;
 	usbdev.controller = uc;
 	usbdev.ctrlr_type = USB_CTRLR_UHCI;
+	usbdev.ctrlrID = ctrlrID;
 	usbdev.address = 0;
 	usbdev.port = port;
 	usbdev.lowspeed = lowspeed;
@@ -416,6 +421,7 @@ bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed) {
 	if (!devdesc.length)
 		return false;
 	usbdev.max_pkt_size = devdesc.max_pkt_size;
+	usbdev.driver_function = 0;
 	uc->devices[dev_addr] = usbdev;
 	return true;
 }
@@ -540,7 +546,7 @@ void *uhci_create_interval_in(usb_device *device, void *out, uint8_t interval, u
 	// Calculate the number of TDs needed
 	*num_tds = (size/max_pkt_size);
 	if (size%max_pkt_size)
-		*num_tds++;
+		(*num_tds)++;
 	
 	// Create a queue
 	queue->headlinkptr = UHCI_FRAMEPTR_TERM;
@@ -604,9 +610,10 @@ usb_dev_desc uhci_get_usb_dev_descriptor(usb_device *device, uint16_t size) {
 	setup_pkt_template.index = 0;
 	setup_pkt_template.length = size;
 	
-	uhci_usb_get_desc(device,&retval,setup_pkt_template,size);
-	
-	dbgprintf("Successfully got USB device descriptor.\n");
+	if (uhci_usb_get_desc(device,&retval,setup_pkt_template,size))
+		dbgprintf("Successfully got USB device descriptor.\n");
+	else
+		dbgprintf("Failed to get USB Device descriptor\n");
 	
 	return retval;
 }

@@ -118,7 +118,7 @@ typedef struct {
 	uint32_t headlinkptr;
 	uint32_t elemlinkptr;
 	uint32_t taillinkptr;
-	uint32_t unused0;
+	uint32_t vaddr;
 } __attribute__((packed)) __attribute__((aligned(16))) uhci_usb_queue;
 
 typedef struct {

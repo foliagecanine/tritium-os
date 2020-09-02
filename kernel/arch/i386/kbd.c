@@ -166,5 +166,6 @@ void kbd_handler() {
 
 void insert_scancode(uint8_t scancode) {
 	last_scancode = scancode;
+	dprintf("Scancode: %#\n",(uint64_t)scancode);
 	decode_scancode();
 }

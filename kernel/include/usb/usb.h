@@ -25,6 +25,7 @@ typedef struct {
 	uint8_t valid;
 	void *controller;
 	uint8_t ctrlr_type;
+	uint8_t ctrlrID;
 	uint8_t port;
 	uint8_t address;
 	uint8_t lowspeed;

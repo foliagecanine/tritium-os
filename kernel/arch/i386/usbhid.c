@@ -21,9 +21,10 @@ uint64_t repeat_key_press_time = 0;
 uint8_t keyboard_repeat_key = 0;
 uint16_t usb_keyboard_repeat_initial_delay = 5000; // 500 ms, measured in 100us
 uint16_t usb_keyboard_repeat_repeat_delay = 250; // 25 ms
+usb_device *dev_kbd = 0;
 
 bool key_exists(uint8_t key, uint8_t *keylist) {
-	for (uint8_t i = 0; i < 7; i++) {
+	for (uint8_t i = 0; i < 6; i++) {
 		if (key==keylist[i])
 			return true;
 	}
@@ -31,16 +32,31 @@ bool key_exists(uint8_t key, uint8_t *keylist) {
 }
 
 void insert_repeatable(uint8_t scancode) {
-	insert_scancode(scancode);
+	dprintf("Make : %#\n",(uint64_t)scancode);
+	insert_scancode(usb_scancode_to_ps2[scancode]);
 	keyboard_repeat_key = scancode;
 	repeat_key_press_time = get_ticks();
 }
 
+void remove_repeatable(uint8_t scancode) {
+	dprintf("Break: %#\n",(uint64_t)scancode);
+	if (keyboard_repeat_key==scancode)
+		keyboard_repeat_key = 0;
+	insert_scancode(usb_scancode_to_ps2[scancode]+PS2_KEY_RELEASED);
+}
+
 void usb_keyboard_repeat() {
+	usb_device *tmp_kbd = dev_kbd;
+	while (tmp_kbd) {
+		uint16_t dev_addr = usb_dev_addr(tmp_kbd->ctrlr_type,tmp_kbd->ctrlrID,tmp_kbd->address);
+		hid_kbd_irq(dev_addr);
+		tmp_kbd = tmp_kbd->driver2;
+	}
+	
 	uint64_t ticks = get_ticks();
 	if (!(ticks%usb_keyboard_repeat_repeat_delay)) {
 		if (keyboard_repeat_key&&(ticks-repeat_key_press_time)>usb_keyboard_repeat_initial_delay)
-			insert_scancode(keyboard_repeat_key);
+			insert_scancode(usb_scancode_to_ps2[keyboard_repeat_key]);
 	}
 }
 
@@ -72,17 +88,15 @@ void hid_kbd_irq(uint16_t dev_addr) {
 		check_modifiers(kbd_input[0],keyboard_buffer_cmp[0],1);
 		
 		// Check for newly pressed keys
-		for (uint8_t i = 1; i < 8; i++) {
-			if (!key_exists(kbd_input[i],keyboard_buffer_cmp+1))
-				insert_repeatable(usb_scancode_to_ps2[kbd_input[i]]);
-			if (!key_exists(keyboard_buffer_cmp[i],kbd_input+1))
-				insert_scancode(usb_scancode_to_ps2[keyboard_buffer_cmp[i]+PS2_KEY_RELEASED]);
+		for (uint8_t i = 2; i < 8; i++) {
+			if (!key_exists(kbd_input[i],keyboard_buffer_cmp+2))
+				insert_repeatable(kbd_input[i]);
+			if (!key_exists(keyboard_buffer_cmp[i],kbd_input+2))
+				remove_repeatable(keyboard_buffer_cmp[i]);
 		}
 		
 		// Sync the buffer
 		memcpy(keyboard_buffer_cmp,kbd_input,8);
-		if (!memcmp(keyboard_buffer_cmp+1,(uint8_t[]){0,0,0,0,0,0,0},7))
-			keyboard_repeat_key = 0;
 	}
 }
 
@@ -121,7 +135,10 @@ bool init_hid_kbd(uint16_t dev_addr, usb_config_desc config, usb_interface_desc 
 	device->driver_function = &hid_kbd_irq;
 	device->driver1 = keyboard_buffer;
 	device->driver0 = usb_create_interval_in(dev_addr,device->driver1,calc_interval(endpoint.interval),endpoint_addr,endpoint.max_pkt_size,8);
+	device->driver2 = dev_kbd;
+	dev_kbd = device;
 	
+	printf("Installed HID Keyboard\n");
 	return true;
 }
 
@@ -170,17 +187,24 @@ bool init_hid_mouse(uint16_t dev_addr, usb_config_desc config, usb_interface_des
 	device->driver_function = &hid_mouse_irq;
 	device->driver1 = mouse_buffer;
 	device->driver0 = usb_create_interval_in(dev_addr,device->driver1,calc_interval(endpoint.interval),endpoint_addr,endpoint.max_pkt_size,4);
+	
+	printf("Installed HID Mouse\n");
 	return true;
 }
 
 bool init_hid(uint16_t dev_addr, usb_config_desc config) {
 	printf("Configuring HID device...\n");
 	usb_setup_pkt sp;
+	sp.type = 0;
+	sp.request = 0x09;
+	sp.value = config.config_value;
+	sp.index = 0;
+	sp.length = 0;
+	if (!usb_generic_setup(dev_addr,sp))
+		return false;
 	sp.type = 0x21;
 	sp.request = 0x0A;
 	sp.value = 0;
-	sp.index = 0;
-	sp.length = 0;
 	if (!usb_generic_setup(dev_addr,sp))
 		return false;
 	usb_interface_desc interface = usb_get_interface_desc(dev_addr,0,0);
@@ -192,5 +216,6 @@ bool init_hid(uint16_t dev_addr, usb_config_desc config) {
 		return init_hid_kbd(dev_addr,config,interface);
 	else if (interface.iprotocol==2)
 		return init_hid_mouse(dev_addr,config,interface);
+	printf("Unknown protocol %d.\n",(uint32_t)interface.iprotocol);
 	return false;
 }

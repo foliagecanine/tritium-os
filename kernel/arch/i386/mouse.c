@@ -29,12 +29,20 @@ uint8_t mouse_getbuttons() {
 
 void mouse_set_override(uint32_t _x, uint32_t _y) {
 	x = _x;
+	if (x>max_width-1)
+		x = max_width-1;
+	if (_x>((uint32_t)-1)/2)
+		x = 0;
 	y = _y;
+	if (y>max_height-1)
+		y = max_height-1;
+	if (_y>((uint32_t)-1)/2)
+		y = 0;
 }
 
 void mouse_buttons_override(uint8_t _buttons) {
 	buttons = _buttons;
-	printf("Mouse X: %d, Mouse Y: %d, Buttons: %#\n",x,y,(uint64_t)buttons);
+	dprintf("Mouse X: %d, Mouse Y: %d, Buttons: %#\n",x,y,(uint64_t)buttons);
 }
 
 //Mouse functions

@@ -234,6 +234,7 @@ void irq7_handler(void) {
 	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
 	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
+	usb_interrupt();
 	irq_finished[7] = true;
 }
  
@@ -254,6 +255,7 @@ void irq9_handler(void) {
 	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
 	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
+	usb_interrupt();
 	irq_finished[9] = true;
 }
  
@@ -268,6 +270,7 @@ void irq10_handler(void) {
 	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
 	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
 	outw(get_uhci_controller(0)->iobase+2,3);
+	usb_interrupt();
 	irq_finished[10] = true;
 }
  
