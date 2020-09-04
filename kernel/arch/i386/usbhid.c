@@ -45,6 +45,28 @@ void remove_repeatable(uint8_t scancode) {
 	insert_scancode(usb_scancode_to_ps2[scancode]+PS2_KEY_RELEASED);
 }
 
+void hid_kbd_irq(uint16_t dev_addr) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (usb_refresh_interval(dev_addr,device->driver0)) {
+		uint8_t *kbd_input = device->driver1;
+		
+		// Check modifiers
+		check_modifiers(kbd_input[0],keyboard_buffer_cmp[0],0);
+		check_modifiers(kbd_input[0],keyboard_buffer_cmp[0],1);
+		
+		// Check for newly pressed keys
+		for (uint8_t i = 2; i < 8; i++) {
+			if (!key_exists(kbd_input[i],keyboard_buffer_cmp+2))
+				insert_repeatable(kbd_input[i]);
+			if (!key_exists(keyboard_buffer_cmp[i],kbd_input+2))
+				remove_repeatable(keyboard_buffer_cmp[i]);
+		}
+		
+		// Sync the buffer
+		memcpy(keyboard_buffer_cmp,kbd_input,8);
+	}
+}
+
 void usb_keyboard_repeat() {
 	usb_device *tmp_kbd = dev_kbd;
 	while (tmp_kbd) {
@@ -75,28 +97,6 @@ void check_modifiers(uint8_t key, uint8_t bufferkey, uint8_t direction) {
 				insert_scancode(PS2_modifiers[i]+PS2_KEY_RELEASED);
 			}
 		}
-	}
-}
-
-void hid_kbd_irq(uint16_t dev_addr) {
-	usb_device *device = usb_device_from_addr(dev_addr);
-	if (usb_refresh_interval(dev_addr,device->driver0)) {
-		uint8_t *kbd_input = device->driver1;
-		
-		// Check modifiers
-		check_modifiers(kbd_input[0],keyboard_buffer_cmp[0],0);
-		check_modifiers(kbd_input[0],keyboard_buffer_cmp[0],1);
-		
-		// Check for newly pressed keys
-		for (uint8_t i = 2; i < 8; i++) {
-			if (!key_exists(kbd_input[i],keyboard_buffer_cmp+2))
-				insert_repeatable(kbd_input[i]);
-			if (!key_exists(keyboard_buffer_cmp[i],kbd_input+2))
-				remove_repeatable(keyboard_buffer_cmp[i]);
-		}
-		
-		// Sync the buffer
-		memcpy(keyboard_buffer_cmp,kbd_input,8);
 	}
 }
 

@@ -13,7 +13,7 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 		else if (pci.progIF==0x20)
 			strcpy(name,"EHCI");
 		else if (pci.progIF==0x30)
-			strcpy(name,"XHCI");
+			strcpy(name,"xHCI");
 		else
 			strcpy(name,"ERR!");
 		if (k==0)
@@ -26,6 +26,12 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 			if (rval) {
 				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports);
 				ctrlrcounts[0]++;
+			}
+		} else if (strcmp(name,"xHCI")) {
+			uint8_t rval = init_xhci_ctrlr(pci.BAR0&~15);
+			if (rval) {
+				printf("Initialized xHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports);
+				ctrlrcounts[3]++;
 			}
 		}
 	}
@@ -220,5 +226,15 @@ void usb_interrupt() {
 				}
 			}
 		}
+	}
+}
+
+void dump_memory(uint8_t *mem, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		if (i&&!(i%16))
+			dprintf("\n");
+		if (mem[i]<0x10)
+			dprintf("0");
+		dprintf("%# ",(uint64_t)mem[i]);
 	}
 }
