@@ -14,23 +14,23 @@
 #define XHCI_HCCAP_RTSOFF		0x18
 #define XHCI_HCCAP_HCCPARAM2	0x1C
 
-#define XHCI_HCOPS_USBCMD		0x00
-#define XHCI_HCOPS_USBCMD_RS		0
-#define XHCI_HCOPS_USBCMD_HCRST		1
-#define XHCI_HCOPS_USBCMD_INTE		2
-#define XHCI_HCOPS_USBCMD_HSEE		3
-#define XHCI_HCOPS_USBCMD_LHCRST	7
-#define XHCI_HCOPS_USBCMD_CSS		8
-#define XHCI_HCOPS_USBCMD_CRS		9
-#define XHCI_HCOPS_USBCMD_EWE		10
+#define XHCI_HCOPS_USBCMD			0x00
+#define XHCI_HCOPS_USBCMD_RS		1
+#define XHCI_HCOPS_USBCMD_HCRST		(1<<1)
+#define XHCI_HCOPS_USBCMD_INTE		(1<<2)
+#define XHCI_HCOPS_USBCMD_HSEE		(1<<3)
+#define XHCI_HCOPS_USBCMD_LHCRST	(1<<7)
+#define XHCI_HCOPS_USBCMD_CSS		(1<<8)
+#define XHCI_HCOPS_USBCMD_CRS		(1<<9)
+#define XHCI_HCOPS_USBCMD_EWE		(1<<10)
 
-#define XHCI_HCOPS_USBSTS		0x04
-#define XHCI_HCOPS_USBSTS_HCHALT	0
-#define XHCI_HCOPS_USBSTS_HSE		2
-#define XHCI_HCOPS_USBSTS_EINT		3
-#define XHCI_HCOPS_USBSTS_PCD		4
-#define XHCI_HCOPS_USBSTS_CNR		11
-#define XHCI_HCOPS_USBSTS_HCE		12
+#define XHCI_HCOPS_USBSTS			0x04
+#define XHCI_HCOPS_USBSTS_HCHALT	1
+#define XHCI_HCOPS_USBSTS_HSE		(1<<2)
+#define XHCI_HCOPS_USBSTS_EINT		(1<<3)
+#define XHCI_HCOPS_USBSTS_PCD		(1<<4)
+#define XHCI_HCOPS_USBSTS_CNR		(1<<11)
+#define XHCI_HCOPS_USBSTS_HCE		(1<<12)
 
 #define XHCI_HCOPS_PAGESIZE		0x08
 #define XHCI_HCOPS_DNCTRL		0x14
@@ -43,9 +43,17 @@
 #define XHCI_LEGACY_MASK		((1<<24)|(1<<16))
 
 typedef struct {
+	bool legacy; // Legacy, or 2.0 port
+	uint8_t port_pair; // 0xFF if null
+} xhci_port;
+
+typedef struct {
 	void *baseaddr;
 	void *hcops;
 	uint8_t num_ports;
+	uint8_t num_ports_2;
+	uint8_t num_ports_3;
+	xhci_port ports;
 	usb_device devices[128];
 } xhci_controller;
 

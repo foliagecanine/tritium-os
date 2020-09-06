@@ -36,10 +36,19 @@ inline void _wr32(void *mem, uint32_t b) {
 }
 
 bool xhci_global_reset(xhci_controller *xc) {
+	// Clear the RunStop bit and wait until the controller stops
+	_wr32(xc->hcops+XHCI_HCOPS_USBCMD,_rd32(xc->hcops+XHCI_HCOPS_USBCMD)&~XHCI_HCOPS_USBCMD_RS);
+	uint16_t timeout = 20;
+	while (!(_rd32(xc->hcops+XHCI_HCOPS_USBSTS)&XHCI_HCOPS_USBSTS_HCHALT)) {
+		sleep(1);
+		if (!--timeout)
+			return false;
+	}
+	
 	// Set the HCReset bit and wait until it clears itself
+	timeout = 100;
 	_wr32(xc->hcops+XHCI_HCOPS_USBCMD,XHCI_HCOPS_USBCMD_HCRST);
-	uint16_t timeout = 500;
-	while (_rd32(xc->hcops+XHCI_HCOPS_USBCMD)&XHCI_HCOPS_USBCMD_HCRST) {
+	while (_rd32(xc->hcops+XHCI_HCOPS_USBCMD)&XHCI_HCOPS_USBCMD_HCRST || _rd32(xc->hcops+XHCI_HCOPS_USBSTS)&XHCI_HCOPS_USBSTS_CNR) {
 		sleep(1);
 		if (!--timeout)
 			return false;
@@ -61,7 +70,6 @@ bool xhci_global_reset(xhci_controller *xc) {
 	if (paramval&0xFF) {
 		timeout = 10;
 		while ((_rd32(xc->baseaddr+paramoff)&XHCI_LEGACY_MASK)!=XHCI_LEGACY_OWNED) {
-			printf("a");
 			sleep(1);
 			if (!--timeout)
 				return false;
@@ -74,6 +82,13 @@ bool xhci_global_reset(xhci_controller *xc) {
 	return true;
 }
 
+void xhci_pair_ports(xhci_controller *xc) {
+	uint8_t portID;
+	uint8_t count = 0;
+	uint8_t flags;
+	 
+}
+
 bool xhci_port_reset() {
 	
 }
@@ -84,7 +99,7 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
 		identity_map((void *)baseaddr+(i*4096));
 	}
 	
-	xhci_controller *this_ctrlr = get_xhci_controller(xhci_num_ctrlrs);
+	xhci_controller *this_ctrlr = get_xhci_controller(xhci_num_ctrlrs++);
 	this_ctrlr->baseaddr = (void *)baseaddr;
 	this_ctrlr->hcops = (void *)baseaddr+_rd8(this_ctrlr->baseaddr+XHCI_HCCAP_CAPLEN);
 	dbgprintf("[xHCI] Ops Address: %#\n",(uint64_t)(uint32_t)this_ctrlr->hcops);
@@ -98,10 +113,12 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
 	if (!xhci_global_reset(this_ctrlr))
 		return false;
 	
+	xhci_pair_ports(this_ctrlr);
+	
 	this_ctrlr->num_ports = _rd32(this_ctrlr->baseaddr+XHCI_HCCAP_HCSPARAM1)>>24;
 	dbgprintf("[xHCI] Detected %d ports\n",this_ctrlr->num_ports);
 	
-	return 1;
+	return xhci_num_ctrlrs;
 }
 
 xhci_controller *get_xhci_controller(uint8_t id) {
