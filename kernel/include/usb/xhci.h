@@ -43,9 +43,14 @@
 #define XHCI_LEGACY_MASK		((1<<24)|(1<<16))
 
 typedef struct {
-	bool legacy; // Legacy, or 2.0 port
+	uint8_t legacy; // Legacy flags
+	uint8_t phys_portID; // Physical port ID, 0xFF if null
 	uint8_t port_pair; // 0xFF if null
 } xhci_port;
+
+#define XHCI_PORT_LEGACY_USB2	1
+#define XHCI_PORT_LEGACY_HSO	(1<<1)
+#define XHCI_PORT_LEGACY_PAIRED	(1<<2)
 
 typedef struct {
 	void *baseaddr;

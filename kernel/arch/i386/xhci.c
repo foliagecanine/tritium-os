@@ -57,7 +57,6 @@ bool xhci_global_reset(xhci_controller *xc) {
 	sleep(50);
 	
 	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1+2)*4;
-	dbgprintf("Paramoff %d\n",paramoff);
 	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
 	while ((paramval&0xFF)&&(paramval&0xFF)!=1) {
 		if ((paramval>>8)&0xFF) {
@@ -84,24 +83,28 @@ bool xhci_global_reset(xhci_controller *xc) {
 }
 
 void xhci_pair_ports(xhci_controller *xc) {
-	for (uint8_t i = 0; i < 16; i++)
+	for (uint8_t i = 0; i < 16; i++) {
 		xc->ports[i].port_pair = 0xFF;
+		xc->ports[i].phys_portID = 0xFF;
+	}
 	
 	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1+2)*4;
 	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
 	 
 	while (paramoff) {
-		dbgprintf("Parameter ID %d\n",paramval&0xFF);
 		if ((paramval&0xFF)==2) {
 			if (_rd8(xc->baseaddr+paramoff+3)==2) {
 				uint8_t count = _rd8(xc->baseaddr+paramoff+9);
 				for (uint8_t i = 0; i < count; i++) {
-					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i].port_pair = +xc->num_ports_2++;
+					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i-1].phys_portID = xc->num_ports_2++;
+					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i-1].legacy |= XHCI_PORT_LEGACY_USB2;
+					if (_rd16(xc->baseaddr+paramoff+10)&2)
+						xc->ports[_rd8(xc->baseaddr+paramoff+8)+i-1].legacy |= XHCI_PORT_LEGACY_HSO;
 				}
 			} else if (_rd8(xc->baseaddr+paramoff+3)==3) {
 				uint8_t count = _rd8(xc->baseaddr+paramoff+9);
 				for (uint8_t i = 0; i < count; i++) {
-					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i].port_pair = xc->num_ports_3++;
+					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i-1].phys_portID = xc->num_ports_3++;
 				}
 			}
 		}
@@ -112,7 +115,26 @@ void xhci_pair_ports(xhci_controller *xc) {
 			paramoff = 0;
 	}
 	
-	dbgprintf("Found %d USB 2 ports and %d USB 3 ports.\n",xc->num_ports_2,xc->num_ports_3);
+	dbgprintf("[xHCI] Found %d USB 2 ports and %d USB 3 ports.\n",xc->num_ports_2,xc->num_ports_3);
+	
+	for (uint8_t i = 0; i < 16; i++) {
+		if (xc->ports[i].phys_portID!=0xFF) {
+			for (uint8_t j = 0; j < 16; j++) {
+				if (xc->ports[j].phys_portID!=0xFF) {
+					if (i!=j) {
+						if (xc->ports[i].phys_portID==xc->ports[j].phys_portID) {
+							xc->ports[i].port_pair = j;
+							xc->ports[i].legacy |= XHCI_PORT_LEGACY_PAIRED;
+							xc->ports[j].port_pair = i;
+							xc->ports[j].legacy |= XHCI_PORT_LEGACY_PAIRED;
+						}
+					}
+				}
+			}
+			uint8_t legacy = xc->ports[i].legacy;
+			dbgprintf("[xHCI] Port %d: %s%s%s, Phys %d, PortPair %d\n", (uint32_t)i,legacy&1?"USB 2 ":"USB 3 ",legacy&2?"HSO ":"",legacy&4?"Paired":"",(uint32_t)xc->ports[i].phys_portID,(uint32_t)xc->ports[i].port_pair);
+		}
+	}
 }
 
 bool xhci_port_reset() {
@@ -139,10 +161,10 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
 	if (!xhci_global_reset(this_ctrlr))
 		return false;
 	
-	xhci_pair_ports(this_ctrlr);
-	
 	this_ctrlr->num_ports = _rd32(this_ctrlr->baseaddr+XHCI_HCCAP_HCSPARAM1)>>24;
 	dbgprintf("[xHCI] Detected %d ports\n",this_ctrlr->num_ports);
+	
+	xhci_pair_ports(this_ctrlr);
 	
 	return xhci_num_ctrlrs;
 }
