@@ -56,7 +56,8 @@ bool xhci_global_reset(xhci_controller *xc) {
 	dbgprintf("[xHCI] Reset xHCI Controller Globally\n");
 	sleep(50);
 	
-	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1)*4;
+	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1+2)*4;
+	dbgprintf("Paramoff %d\n",paramoff);
 	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
 	while ((paramval&0xFF)&&(paramval&0xFF)!=1) {
 		if ((paramval>>8)&0xFF) {
@@ -83,15 +84,26 @@ bool xhci_global_reset(xhci_controller *xc) {
 }
 
 void xhci_pair_ports(xhci_controller *xc) {
-	uint32_t paramoff = (_rd32(xc->baseaddr+XHCI_HCCAP_HCCPARAM1)>>16)*4;
+	for (uint8_t i = 0; i < 16; i++)
+		xc->ports[i].port_pair = 0xFF;
+	
+	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1+2)*4;
 	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
-	uint8_t portID;
-	uint8_t count = 0;
-	uint8_t flags;
 	 
 	while (paramoff) {
+		dbgprintf("Parameter ID %d\n",paramval&0xFF);
 		if ((paramval&0xFF)==2) {
-			
+			if (_rd8(xc->baseaddr+paramoff+3)==2) {
+				uint8_t count = _rd8(xc->baseaddr+paramoff+9);
+				for (uint8_t i = 0; i < count; i++) {
+					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i].port_pair = +xc->num_ports_2++;
+				}
+			} else if (_rd8(xc->baseaddr+paramoff+3)==3) {
+				uint8_t count = _rd8(xc->baseaddr+paramoff+9);
+				for (uint8_t i = 0; i < count; i++) {
+					xc->ports[_rd8(xc->baseaddr+paramoff+8)+i].port_pair = xc->num_ports_3++;
+				}
+			}
 		}
 		paramoff += ((paramval>>8)&0xFF)*4;
 		if (paramval&0xFF00)
@@ -99,6 +111,8 @@ void xhci_pair_ports(xhci_controller *xc) {
 		else
 			paramoff = 0;
 	}
+	
+	dbgprintf("Found %d USB 2 ports and %d USB 3 ports.\n",xc->num_ports_2,xc->num_ports_3);
 }
 
 bool xhci_port_reset() {

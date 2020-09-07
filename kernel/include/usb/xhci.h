@@ -53,7 +53,7 @@ typedef struct {
 	uint8_t num_ports;
 	uint8_t num_ports_2;
 	uint8_t num_ports_3;
-	xhci_port ports;
+	xhci_port ports[16];
 	usb_device devices[128];
 } xhci_controller;
 
