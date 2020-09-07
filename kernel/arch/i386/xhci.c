@@ -137,8 +137,43 @@ void xhci_pair_ports(xhci_controller *xc) {
 	}
 }
 
-bool xhci_port_reset() {
+bool xhci_port_reset(xhci_controller *xc, uint8_t port) {
+	void *portbase = xc->baseaddr+XHCI_HCOPS_PORTREGS+(port*16);
+	uint32_t writeflags = 0;
 	
+	// Give the port power
+	if (!(_rd32(portbase+XHCI_PORTREGS_PORTSC)&XHCI_PORTREGS_PORTSC_PORTPWR)) {
+		_wr32(portbase+XHCI_PORTREGS_PORTSC,XHCI_PORTREGS_PORTSC_PORTPWR);
+		sleep(20);
+		if (!(_rd32(portbase+XHCI_PORTREGS_PORTSC)&XHCI_PORTREGS_PORTSC_PORTPWR))
+			return false;
+		writeflags |= XHCI_PORTREGS_PORTSC_PORTPWR;
+	}
+	
+	// Clear the status bits (but keep the power bit on)
+	_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_STATUS);
+	
+	// Do regular reset with USB 2 or a warm reset with USB 3
+	if (xc->ports[port].legacy&XHCI_PORT_LEGACY_USB2) {
+		_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_PORTRST);
+	} else {
+		_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_WARMRST);
+	}
+	
+	uint16_t timeout = 500;
+	while (!(_rd32(portbase+XHCI_PORTREGS_PORTSC)&XHCI_PORTREGS_PORTSC_PRSTCHG)) {
+		sleep(1);
+		if (!timeout--)
+			return false;
+	}
+	
+	sleep(3);
+	
+	if (_rd32(portbase+XHCI_PORTREGS_PORTSC)&XHCI_PORTREGS_PORTSC_PE) {
+		_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_STATUS);
+		return true;
+	} else
+		return false;
 }
 
 uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
