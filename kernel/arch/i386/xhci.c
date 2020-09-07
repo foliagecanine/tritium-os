@@ -56,8 +56,7 @@ bool xhci_global_reset(xhci_controller *xc) {
 	dbgprintf("[xHCI] Reset xHCI Controller Globally\n");
 	sleep(50);
 	
-	uint32_t paramoff = (_rd32(xc->baseaddr+XHCI_HCCAP_HCCPARAM1)>>16)*4;
-	_wr32(xc->baseaddr+paramoff,_rd32(xc->baseaddr+paramoff) | XHCI_LEGACY_OWNED);
+	uint32_t paramoff = _rd16(xc->baseaddr+XHCI_HCCAP_HCCPARAM1)*4;
 	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
 	while ((paramval&0xFF)&&(paramval&0xFF)!=1) {
 		if ((paramval>>8)&0xFF) {
@@ -68,6 +67,7 @@ bool xhci_global_reset(xhci_controller *xc) {
 		}
 	}
 	if (paramval&0xFF) {
+		_wr32(xc->baseaddr+paramoff,_rd32(xc->baseaddr+paramoff) | XHCI_LEGACY_OWNED);
 		timeout = 10;
 		while ((_rd32(xc->baseaddr+paramoff)&XHCI_LEGACY_MASK)!=XHCI_LEGACY_OWNED) {
 			sleep(1);
@@ -83,10 +83,22 @@ bool xhci_global_reset(xhci_controller *xc) {
 }
 
 void xhci_pair_ports(xhci_controller *xc) {
+	uint32_t paramoff = (_rd32(xc->baseaddr+XHCI_HCCAP_HCCPARAM1)>>16)*4;
+	uint32_t paramval = _rd32(xc->baseaddr+paramoff);
 	uint8_t portID;
 	uint8_t count = 0;
 	uint8_t flags;
 	 
+	while (paramoff) {
+		if ((paramval&0xFF)==2) {
+			
+		}
+		paramoff += ((paramval>>8)&0xFF)*4;
+		if (paramval&0xFF00)
+			paramval = _rd32(xc->baseaddr+paramoff);
+		else
+			paramoff = 0;
+	}
 }
 
 bool xhci_port_reset() {

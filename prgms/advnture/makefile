@@ -1,6 +1,6 @@
-GCC=gcc
+GCC=i686-elf-gcc
 LIBDIR=../libc
-CFLAGS=-m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
+CFLAGS=-m32 -Os -s -fno-pie -ffreestanding -nostartfiles -nostartfiles
 
 include $(LIBDIR)/make.config
 

@@ -65,7 +65,7 @@ Also remember to exit your program with syscall 2. Otherwise your program will e
 
 Compile with the following flags (GCC):  
 ```bash
-gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -nostdlib -nostartfiles -fcf-protection=none -nodefaultlibs -fno-builtin
+gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -ffreestanding -nostartfiles
 ```
 
 Note: The -m32 flag is only required when using a 64 bit compiler

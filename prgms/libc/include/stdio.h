@@ -1,7 +1,7 @@
 #ifndef _STDIO_H
 #define _STDIO_H 1
 
-#include <sys/cdefs.h>
+//#include <sys/cdefs.h>
 #include <stdint.h>
 #include <sys.h>
 

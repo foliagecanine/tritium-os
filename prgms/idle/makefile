@@ -1,4 +1,4 @@
-GCC=gcc
+GCC=i686-elf-gcc
 
 all: IDLE.SYS
 
