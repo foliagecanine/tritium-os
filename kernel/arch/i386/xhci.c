@@ -32,7 +32,14 @@ inline volatile uint8_t _rd8(volatile void *mem) {
 
 // Force a 32 bit write
 inline void _wr32(void *mem, uint32_t b) {
-	__asm__ __volatile__("movl %%eax, %0":"=m"(mem):"a"(b):"memory");
+	__asm__ __volatile__("movl %%eax, %0":"=m"(*mem):"a"(b):"memory");
+}
+
+// Emulate a 64 bit write
+inline void _wr64(void *mem, uint64_t b, xhci_controller *xc) {
+	_wr32(mem,(uint32_t)b);
+	if (xc->params&1)
+		_wr32(mem+4,(uint32_t)(b>>32));
 }
 
 bool xhci_global_reset(xhci_controller *xc) {
@@ -185,6 +192,7 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
 	xhci_controller *this_ctrlr = get_xhci_controller(xhci_num_ctrlrs++);
 	this_ctrlr->baseaddr = (void *)baseaddr;
 	this_ctrlr->hcops = (void *)baseaddr+_rd8(this_ctrlr->baseaddr+XHCI_HCCAP_CAPLEN);
+	this_ctrlr->params = _rd32(this_ctrlr->baseaddr+XHCI_HCCAP_HCCPARAM1);
 	dbgprintf("[xHCI] Ops Address: %#\n",(uint64_t)(uint32_t)this_ctrlr->hcops);
 	
 	uint16_t hcver = _rd16(this_ctrlr->baseaddr+XHCI_HCCAP_HCIVER);
@@ -200,6 +208,22 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr) {
 	dbgprintf("[xHCI] Detected %d ports\n",this_ctrlr->num_ports);
 	
 	xhci_pair_ports(this_ctrlr);
+	
+	this_ctrlr->dcbaap = alloc_page(1);
+	memset(this_ctrlr->dcbaap,0,4096);
+	_wr64(this_ctrlr->hcops+XHCI_HCOPS_DCBAAP,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->dcbaap),this_ctrlr);
+	
+	this_ctrlr->cmdring = alloc_page(1); // Guaranteed not to cross 64k boundary
+	memset(this_ctrlr->cmdring,0,4096);
+	this_ctrlr->cmdring[127].param = &this_ctrlr->cmdring[0];
+	this_ctrlr->cmdring[127].status = 0;
+	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
+	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|1,this_ctrlr);
+	this_ctrlr->cycle = 1;
+	
+	_wr32(this_ctrlr->hcops+XHCI_HCOPS_CONFIG,_rd32(this_ctrlr->baseaddr+XHCI_HCCAP_HCSPARAM1)&0xFF);
+	
+	_wr32(this_ctrlr->hcops+XHCI_HCOPS_DNCTRL,2);
 	
 	return xhci_num_ctrlrs;
 }

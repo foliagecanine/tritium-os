@@ -68,11 +68,39 @@ typedef struct {
 #define XHCI_PORT_LEGACY_PAIRED	(1<<2)
 
 typedef struct {
+	uint64_t param;
+	uint32_t status;
+	uint32_t command;
+} xhci_trb;
+
+#define XHCI_TRB_CYCLE		1
+#define XHCI_TRB_EVALTRB	(1<<1)
+#define XHCI_TRB_SPE		(1<<2)
+#define XHCI_TRB_NOSNOOP	(1<<3)
+#define XHCI_TRB_CHAIN		(1<<4)
+#define XHCI_TRB_IOC		(1<<5)
+#define XHCI_TRB_IMMEDIATE	(1<<6)
+#define XHCI_TRB_TRBTYPE(x) ((x)<<10)
+
+#define XHCI_TRBTYPE_NORMAL	1
+#define XHCI_TRBTYPE_SETUP	2
+#define XHCI_TRBTYPE_DATA	3
+#define XHCI_TRBTYPE_STATUS	4
+#define XHCI_TRBTYPE_ISO	5
+#define XHCI_TRBTYPE_LINK	6
+#define XHCI_TRBTYPE_EVENT	7
+#define XHCI_TRBTYPE_NOOP	8
+
+typedef struct {
 	void *baseaddr;
 	void *hcops;
+	uint32_t params;
+	xhci_trb *cmdring;
+	void *dcbaap;
 	uint8_t num_ports;
 	uint8_t num_ports_2;
 	uint8_t num_ports_3;
+	uint8_t cycle;
 	xhci_port ports[16];
 	usb_device devices[128];
 } xhci_controller;
