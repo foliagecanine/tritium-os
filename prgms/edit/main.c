@@ -262,7 +262,7 @@ void gui() {
 			if (text_cursor_x>0) {
 				key_left_arrow();
 				memcpy(&lines[skip_lines+text_cursor_y][text_cursor_x],&lines[skip_lines+text_cursor_y][text_cursor_x+1],1023-text_cursor_x);
-				redraw(false);
+				redraw(hscroll==text_cursor_x-1);
 			} else {
 				uint32_t old_tcx = text_cursor_x;
 				uint32_t old_y = text_cursor_y+skip_lines;
