@@ -60,7 +60,7 @@ void unhandled_interrupt() {
 	for (;;);
 }
 
-void *irq_functions[16][16];
+void (*irq_functions[16][16])() = {0};
 
 void init_idt() {
 	uint32_t irq0_addr;
@@ -174,145 +174,129 @@ void clear_irq_status(uint8_t irq) {
 	irq_finished[irq] = false;
 }
 
-void set_irq_finish_state(uint8_t irq, _Bool state) {
-	irq_finished[irq] = state;
+void execute_irq(uint8_t irq) {
+	for (uint8_t i = 0; i < 16; i++) {
+		if (irq_functions[irq][i]) {
+			irq_functions[irq][i]();
+		}
+	}
+	irq_finished[irq] = true;
 }
+
+void add_irq_function(uint8_t irq, void (*function)()) {
+	for (uint8_t i = 0; i < 16; i++) {
+		if (!irq_functions[irq][i]) {
+			if (irq_functions[irq][i]==function)
+				break;
+			irq_functions[irq][i] = function;
+			break;
+		}
+	}
+}
+
+/*void set_irq_finish_state(uint8_t irq, _Bool state) {
+	irq_finished[irq] = state;
+}*/
 
 _Bool ts_enabled = false;
 tss_entry_t temp_tss;
 uint32_t ready_esp;
 
 void irq0_handler(void) {
+	outb(0x20, 0x20); //EOI
 	if (ts_enabled)
 		asm("nop"); //Debug breakpoint
-	outb(0x20, 0x20); //EOI
 	pit_tick();
 	usb_keyboard_repeat();
 	if (ts_enabled&&!(get_ticks()%10))
 		task_switch(temp_tss,ready_esp);
-	irq_finished[0] = true;
+	execute_irq(0);
 }
  
 void irq1_handler(void) {
-	kbd_handler();
 	outb(0x20, 0x20); //EOI
-	irq_finished[1] = true;
+	kbd_handler();
+	execute_irq(1);
 }
  
 void irq2_handler(void) {
 	outb(0x20, 0x20); //EOI
-	irq_finished[2] = true;
+	execute_irq(2);
 }
  
 void irq3_handler(void) {
 	outb(0x20, 0x20); //EOI
-	irq_finished[3] = true;
+	execute_irq(3);
 }
  
 void irq4_handler(void) {
 	outb(0x20, 0x20); //EOI
-	irq_finished[4] = true;
+	execute_irq(4);
 }
  
 void irq5_handler(void) {
 	outb(0x20, 0x20); //EOI
-	irq_finished[5] = true;
+	execute_irq(5);
 }
  
 void irq6_handler(void) {
 	outb(0x20, 0x20); //EOI
-	irq_finished[6] = true;
+	execute_irq(6);
 }
  
 void irq7_handler(void) {
 	outb(0x20, 0x20); //EOI
-	//dprintf("USB INTERRUPT?!\n");
-	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
-	outw(get_uhci_controller(0)->iobase+2,3);
-	usb_interrupt();
-	irq_finished[7] = true;
+	execute_irq(7);
 }
  
 void irq8_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI          
-	irq_finished[8] = true;
+	execute_irq(8);
 }
  
 void irq9_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	//dprintf("USB INTERRUPT?!\n");
-	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
-	outw(get_uhci_controller(0)->iobase+2,3);
-	usb_interrupt();
-	irq_finished[9] = true;
+	execute_irq(9);
 }
  
 void irq10_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	//dprintf("USB INTERRUPT?!\n");
-	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
-	outw(get_uhci_controller(0)->iobase+2,3);
-	usb_interrupt();
-	irq_finished[10] = true;
+	execute_irq(10);
 }
  
 void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	//dprintf("USB INTERRUPT?!\n");
-	//dprintf("USBCMD : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+0));
-	//dprintf("USBSTS : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+2));
-	//dprintf("USBINTR: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+4));
-	//dprintf("FRNUM  : %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+6));
-	//dprintf("PORTSC1: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+10));
-	//dprintf("PORTSC2: %#\n",(uint64_t)inw(get_uhci_controller(0)->iobase+12));
-	outw(get_uhci_controller(0)->iobase+2,3);
-	usb_interrupt();
-	irq_finished[11] = true;
+	execute_irq(11);
 }
 
 void irq12_handler(void) {
-	mouse_handler();
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	irq_finished[12] = true;
+	mouse_handler();
+	execute_irq(12);
 }
  
 void irq13_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
 	kerror("[Exception.Interrupt] FPU Error Interrupt!");
-	irq_finished[13] = true;
+	execute_irq(13);
 }
  
 void irq14_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	irq_finished[14] = true;
+	execute_irq(14);
 }
  
 void irq15_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
-	irq_finished[15] = true;
+	execute_irq(15);
 }
 
 void enable_tasking() {

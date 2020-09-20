@@ -145,6 +145,6 @@ usb_config_desc uhci_get_config_desc(usb_device *device, uint8_t index);
 usb_interface_desc uhci_get_interface_desc(usb_device *device, uint8_t config_index, uint8_t interface_index);
 usb_endpoint_desc uhci_get_endpoint_desc(usb_device *device, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
 uint8_t uhci_get_unused_device(uhci_controller *uc);
-uint8_t init_uhci_ctrlr(uint16_t iobase);
+uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq);
 
 #endif

@@ -29,8 +29,13 @@
 #define XHCI_HCOPS_USBSTS_HSE		(1<<2)
 #define XHCI_HCOPS_USBSTS_EINT		(1<<3)
 #define XHCI_HCOPS_USBSTS_PCD		(1<<4)
+#define XHCI_HCOPS_USBSTS_SRE		(1<<10)
 #define XHCI_HCOPS_USBSTS_CNR		(1<<11)
 #define XHCI_HCOPS_USBSTS_HCE		(1<<12)
+
+#define XHCI_DBOFF_DBOFF		0xFFFFFFF8
+
+#define XHCI_RTSOFF_RTSOFF		0xFFFFFFE0
 
 #define XHCI_HCOPS_PAGESIZE		0x08
 #define XHCI_HCOPS_DNCTRL		0x14
@@ -81,6 +86,7 @@ typedef struct {
 #define XHCI_TRB_IOC		(1<<5)
 #define XHCI_TRB_IMMEDIATE	(1<<6)
 #define XHCI_TRB_TRBTYPE(x) ((x)<<10)
+#define XHCI_TRB_GTRBTYPE(x) (((x)>>10)&0x1F)
 
 #define XHCI_TRBTYPE_NORMAL	1
 #define XHCI_TRBTYPE_SETUP	2
@@ -90,22 +96,48 @@ typedef struct {
 #define XHCI_TRBTYPE_LINK	6
 #define XHCI_TRBTYPE_EVENT	7
 #define XHCI_TRBTYPE_NOOP	8
+#define XHCI_TRBTYPE_ENSLOT	9
+#define XHCI_TRBTYPE_ADDR	11
+
+#define XHCI_RUNTIME_IR0	0x20
+
+#define XHCI_INTREG_IMR		0
+#define XHCI_INTREG_IMR_IP	0
+#define XHCI_INTREG_IMR_EN	(1<<1)
+
+#define XHCI_INTREG_IMOD	0x04
+#define XHCI_INTREG_IMOD_IMI 0x0000FFFF
+#define XHCI_INTREG_IMOD_IMC 0xFFFF0000
+
+#define XHCI_INTREG_ERSTS	0x08
+#define XHCI_INTREG_ERSTBA	0x10
+
+#define XHCI_INTREG_ERDQPTR	0x18
+#define XHCI_INTREG_ERDQPTR_EHBSY	(1<<3)
 
 typedef struct {
 	void *baseaddr;
 	void *hcops;
+	void *runtime;
+	void *dboff;
+	void *dcbaap;
 	uint32_t params;
 	xhci_trb *cmdring;
-	void *dcbaap;
+	xhci_trb *ccmdtrb;
+	xhci_trb *evtring;
+	void *evtring_table;
+	void *evtring_alloc;
 	uint8_t num_ports;
 	uint8_t num_ports_2;
 	uint8_t num_ports_3;
 	uint8_t cycle;
+	uint8_t ctrlrID;
 	xhci_port ports[16];
 	usb_device devices[128];
 } xhci_controller;
 
 xhci_controller *get_xhci_controller(uint8_t id);
+xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
 bool xhci_set_address(usb_device *device, uint8_t dev_address);
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port);
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
@@ -119,6 +151,6 @@ usb_config_desc xhci_get_config_desc(usb_device *device, uint8_t index);
 usb_interface_desc xhci_get_interface_desc(usb_device *device, uint8_t config_index, uint8_t interface_index);
 usb_endpoint_desc xhci_get_endpoint_desc(usb_device *device, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
 uint8_t xhci_get_unused_device(xhci_controller *xc);
-uint8_t init_xhci_ctrlr(uint32_t baseaddr);
+uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq);
 
 #endif

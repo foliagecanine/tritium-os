@@ -12,7 +12,7 @@
 #define dbgprintf
 #endif
 
-uhci_controller uhci_controllers[USB_MAX_CTRLRS];
+uhci_controller uhci_controllers[USB_MAX_CTRLRS] = {0};
 uint8_t uhci_num_ctrlrs = 0;
 
 void uhci_global_reset(uint16_t iobase) {
@@ -100,9 +100,24 @@ void dump_queue(uhci_usb_queue q) {
 	dbgprintf("[UHCI] Q: %# %#\n",(uint64_t)q.headlinkptr,(uint64_t)q.elemlinkptr);
 }
 
+void uhci_interrupt() {
+	for (uint8_t i = 0; i < USB_MAX_CTRLRS; i++) {
+		if (uhci_controllers[i].iobase) {
+			if (inw(uhci_controllers[i].iobase+UHCI_USBSTS)&(UHCI_USBSTS_USBINT|UHCI_USBSTS_UEINT)) {
+				outw(uhci_controllers[i].iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT|UHCI_USBSTS_UEINT);
+				for (uint8_t j = 0; j < 127; j++) {
+					if (uhci_controllers[i].devices[j].valid) {
+						uhci_controllers[i].devices[j].driver_function(usb_dev_addr(USB_CTRLR_UHCI,i,j));
+					}
+				}
+			}
+		}
+	}
+}
+
 uint8_t data_table[] = {0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,7};
 
-uint8_t init_uhci_ctrlr(uint16_t iobase) {
+uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 	dbgprintf("[UHCI] IOBase: %#\n",(uint64_t)iobase);
 	uhci_global_reset(iobase);
 	
@@ -152,7 +167,6 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 		*(uint32_t *)(this_ctrlr->framelist_vaddr+i) = (this_ctrlr->framelist_paddr+4096+(data_table[(i/4)%128]*sizeof(uhci_usb_queue))) | UHCI_FRAMEPTR_QUEUE;
 	}
 	
-	
 	//Tell the USB controller to use this memory.
 	outl(iobase+UHCI_FRBASEADD, this_ctrlr->framelist_paddr & UHCI_FRBASEADD_BADD);
 	outw(iobase+UHCI_FRNUM, 0); //Begin executing at frame 0
@@ -160,6 +174,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 	outw(iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE); //Turn off all interrupts except IOC
 	outw(iobase+UHCI_USBSTS,UHCI_USBSTS_ALLSTS); //Clear all status bits
 	outw(iobase+UHCI_USBCMD,UHCI_USBCMD_MAXP | UHCI_USBCMD_CF | UHCI_USBCMD_RS); //Set packet size to 64 bytes, enable the configuration, then set the Run bit.
+	add_irq_function(irq,&uhci_interrupt);
 	//The USB device should now be running through all the framelist addresses. It shouldn't execute anything since we enabled the TERMINATE bit in the queues, which disables execution.
 	dbgprintf("[UHCI] Enabled USB stack for controller\n");
 	
@@ -177,7 +192,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase) {
 			usbdev.ctrlrID = this_ctrlr_id;
 			usbdev.address = 0;
 			usbdev.port = current_port;
-			usbdev.lowspeed = (inw(this_ctrlr->iobase+UHCI_PORTSC1+(current_port*2))&UHCI_PORTSC_LS) ? 1 : 0;
+			usbdev.speed = (inw(this_ctrlr->iobase+UHCI_PORTSC1+(current_port*2))&UHCI_PORTSC_LS) ? 1 : 0;
 			usbdev.max_pkt_size = 8;
 			usbdev.driver_function = 0;
 			usb_dev_desc devdesc;
@@ -261,14 +276,14 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	// Create a TD that points the the setup packet.
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_SETUP;
 	td[i].bufferptr = (uint32_t)p_setup_pkt;
 	i++;
 	
 	// Create a status TD
 	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_IN;
 	td[i].bufferptr = 0;
 	i++;
@@ -342,14 +357,14 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	// Create a TD that points the the setup packet.
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_PID_SETUP;
 	td[i].bufferptr = (uint32_t)p_setup_pkt;
 	i++;
 	
 	// Create a status TD
 	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_PID_IN;
 	td[i].bufferptr = 0;
 	i++;
@@ -412,7 +427,7 @@ bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed) {
 	usbdev.ctrlrID = ctrlrID;
 	usbdev.address = 0;
 	usbdev.port = port;
-	usbdev.lowspeed = lowspeed;
+	usbdev.speed = lowspeed;
 	usbdev.max_pkt_size = 8;
 	if (!(uhci_set_address(&usbdev,dev_addr)))
 		return false;
@@ -458,7 +473,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	// Create the setup TD
 	uint8_t i = 0;
 	td[i].linkptr = (uint32_t)&p_td[i+1];
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(7) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_SETUP;
 	td[i].bufferptr = (uint32_t)p_setup_pkt;
 	
@@ -466,7 +481,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	uint16_t size_remaining = size;
 	for (i = 1; i < num_tds-1 && size_remaining; i++) {
 		td[i].linkptr = (uint32_t)&p_td[i+1];
-		td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
+		td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_OFF(0x80);
 		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= device->max_pkt_size ? size_remaining-1 : device->max_pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_IN;
 		td[i].bufferptr = (uint32_t)p_buffer+((i-1)*device->max_pkt_size);
 		size_remaining -= (size_remaining <= device->max_pkt_size ? size_remaining : device->max_pkt_size);
@@ -474,7 +489,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	
 	// Create a status TD
 	td[i].linkptr = UHCI_XFRDESC_TERM;
-	td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
+	td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_IOC | UHCI_XFRDESC_STATUS_OFF(0x80);
 	td[i].flags1 = UHCI_XFRDESC_MAXLEN | UHCI_XFRDESC_DTOGGLE2 | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_PID_OUT;
 	td[i].bufferptr = 0;
 	i++;
@@ -560,7 +575,7 @@ void *uhci_create_interval_in(usb_device *device, void *out, uint8_t interval, u
 	uint16_t size_remaining = size;
 	for (i = 0; i < *num_tds && size_remaining; i++) {
 		td[i].linkptr = (uint32_t)&p_td[i+1];
-		td[i].flags0 = (device->lowspeed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_ACTIVE;
+		td[i].flags0 = (device->speed*UHCI_XFRDESC_LS) | UHCI_XFRDESC_CERR | UHCI_XFRDESC_STATUS_ACTIVE;
 		td[i].flags1 = UHCI_XFRDESC_MAXLEN_OFF(size_remaining <= device->max_pkt_size ? size_remaining-1 : device->max_pkt_size-1) | ((i&1)*UHCI_XFRDESC_DTOGGLE2) | UHCI_XFRDESC_DEVADDR_OFF(device->address) | UHCI_XFRDESC_ENDPT_OFF(endpoint_addr) | UHCI_PID_IN;
 		td[i].bufferptr = (uint32_t)p_buffer+(i*device->max_pkt_size);
 		size_remaining -= (size_remaining <= device->max_pkt_size ? size_remaining : device->max_pkt_size);

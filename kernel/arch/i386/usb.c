@@ -22,13 +22,13 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 			printf("Detected USB %s Controller on port %#:%#.%d\n", name, (uint64_t)i,(uint64_t)j,(uint32_t)k);
 		
 		if (strcmp(name,"UHCI")) {
-			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3);
+			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3,pci.irq);
 			if (rval) {
 				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports);
 				ctrlrcounts[0]++;
 			}
 		} else if (strcmp(name,"xHCI")) {
-			uint8_t rval = init_xhci_ctrlr(pci.BAR0&~15);
+			uint8_t rval = init_xhci_ctrlr(pci.BAR0&~15,pci.irq);
 			if (rval) {
 				printf("Initialized xHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports);
 				ctrlrcounts[3]++;
@@ -211,21 +211,6 @@ bool usb_refresh_interval(uint16_t dev_addr, void *data) {
 		return uhci_refresh_interval(data);
 	} else {
 		return false;
-	}
-}
-
-void usb_interrupt() {
-	for (uint8_t ctrlrType = 0; ctrlrType < 4; ctrlrType++) {
-		for (uint8_t ctrlrID = 0; ctrlrID < USB_MAX_CTRLRS; ctrlrID++) {
-			for (uint8_t devID = 1; devID < 128; devID++) {
-				uint16_t dev_addr = usb_dev_addr(ctrlrType,ctrlrID,devID);
-				usb_device *device = usb_device_from_addr(dev_addr);
-				if (device->valid) {
-					if (device->driver_function)
-						device->driver_function(dev_addr);
-				}
-			}
-		}
 	}
 }
 

@@ -28,7 +28,7 @@ typedef struct {
 	uint8_t ctrlrID;
 	uint8_t port;
 	uint8_t address;
-	uint8_t lowspeed;
+	uint8_t speed;
 	uint16_t max_pkt_size;
 	void (*driver_function)(uint16_t);
 	void *driver0;
