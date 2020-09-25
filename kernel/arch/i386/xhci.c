@@ -196,10 +196,11 @@ void xhci_interrupt() {
 		if (!xc->hcops)
 			continue;
 		_wr32(xc->hcops+XHCI_HCOPS_USBSTS,_rd32(xc->hcops+XHCI_HCOPS_USBSTS));
-		if (_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&XHCI_INTREG_IMR_IP==XHCI_INTREG_IMR_IP) {
-			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)|3);
+		if (_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)==(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)) {
+			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR));
 			while (xc->cevttrb->command&XHCI_TRB_CYCLE==xc->evtcycle) {
 				xc->cevttrb += sizeof(xhci_trb);
+				dbgprintf("Processed TRB\n");
 			}
 			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb-sizeof(xhci_trb)))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
 		}
