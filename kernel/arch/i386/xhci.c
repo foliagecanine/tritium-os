@@ -191,6 +191,19 @@ bool xhci_port_reset(xhci_controller *xc, uint8_t port) {
 
 void xhci_interrupt() {
 	dbgprintf("[xHCI] USB INTERRUPT\n");
+	for (uint8_t i = 0; i < USB_MAX_CTRLRS; i++) {
+		xhci_controller *xc = get_xhci_controller(i);
+		if (!xc->hcops)
+			continue;
+		_wr32(xc->hcops+XHCI_HCOPS_USBSTS,_rd32(xc->hcops+XHCI_HCOPS_USBSTS));
+		if (_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&XHCI_INTREG_IMR_IP==XHCI_INTREG_IMR_IP) {
+			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)|3);
+			while (xc->cevttrb->command&XHCI_TRB_CYCLE==xc->evtcycle) {
+				xc->cevttrb += sizeof(xhci_trb);
+			}
+			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb-sizeof(xhci_trb)))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
+		}
+	}
 }
 
 bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
@@ -249,9 +262,9 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
 	this_ctrlr->cmdring[127].param = &this_ctrlr->cmdring[0];
 	this_ctrlr->cmdring[127].status = 0;
 	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
-	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|1,this_ctrlr);
+	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|XHCI_HCOPS_CRCR_RCS,this_ctrlr);
 	this_ctrlr->ccmdtrb = this_ctrlr->cmdring;
-	this_ctrlr->cycle = 1;
+	this_ctrlr->cmdcycle = XHCI_HCOPS_CRCR_RCS;
 	
 	// Set up other variables
 	_wr32(this_ctrlr->hcops+XHCI_HCOPS_CONFIG,_rd32(this_ctrlr->baseaddr+XHCI_HCCAP_HCSPARAM1)&0xFF);
@@ -264,17 +277,19 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
 	this_ctrlr->evtring_alloc = alloc_page(80);
 	memset(this_ctrlr->evtring_alloc,0,4096*80);
 	this_ctrlr->evtring = (void *)((uint32_t)(this_ctrlr->evtring_alloc+(16*4096))&0xFFFF0000);
+	this_ctrlr->cevttrb = this_ctrlr->evtring;
+	this_ctrlr->evtcycle = 1;
 	
 	// Set table address
-	*(uint64_t *)this_ctrlr->evtring_table = (uint64_t)(uint32_t)this_ctrlr->evtring;
+	*(uint64_t *)this_ctrlr->evtring_table = (uint64_t)(uint32_t)get_phys_addr(this_ctrlr->evtring);
 	*(uint32_t *)(this_ctrlr->evtring_table+8) = 4096;
 	
 	// Assign the event ring to the primary interrupter (IR_0)
 	_wr32(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR, XHCI_INTREG_IMR_IP | XHCI_INTREG_IMR_EN);
 	_wr32(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMOD, 0);
 	_wr32(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERSTS, 1);
-	_wr64(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR, ((uint64_t)(uint32_t)this_ctrlr->evtring) | XHCI_INTREG_ERDQPTR_EHBSY, this_ctrlr);
-	_wr64(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERSTBA, (uint64_t)(uint32_t)this_ctrlr->evtring_table, this_ctrlr);
+	_wr64(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR, ((uint64_t)(uint32_t)get_phys_addr(this_ctrlr->evtring)) | XHCI_INTREG_ERDQPTR_EHBSY, this_ctrlr);
+	_wr64(this_ctrlr->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERSTBA, (uint64_t)(uint32_t)get_phys_addr(this_ctrlr->evtring_table), this_ctrlr);
 	
 	_wr32(this_ctrlr->hcops+XHCI_HCOPS_USBSTS, XHCI_HCOPS_USBSTS_HSE | XHCI_HCOPS_USBSTS_EINT | XHCI_HCOPS_USBSTS_PCD | XHCI_HCOPS_USBSTS_SRE);
 	
@@ -294,7 +309,7 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
 			dbgprintf("[xHCI] Reset port %d (USB3) FAILED\n",current_port);
 			if (this_ctrlr->ports[current_port].port_pair!=0xFF) {
 				if (xhci_port_reset(this_ctrlr,this_ctrlr->ports[current_port].port_pair)) {
-					dbgprintf("[xHCI] Reset port %d (USB2) SUCCESS\n",current_port);
+					dbgprintf("[xHCI] Reset port %d (USB2) SUCCESS\n",this_ctrlr->ports[current_port].port_pair);
 					xhci_init_port_dev(this_ctrlr,current_port);
 				} else
 					dbgprintf("[xHCI] Reset port %d (USB2) FAILED\n",this_ctrlr->ports[current_port].port_pair);
@@ -318,16 +333,22 @@ uint8_t xhci_get_unused_device(xhci_controller *xc) {
 }
 
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
+	xhci_trb *this_trb = xc->ccmdtrb;
 	*xc->ccmdtrb = trb;
 	xc->ccmdtrb += sizeof(xhci_trb);
 	
 	if (XHCI_TRB_GTRBTYPE(xc->ccmdtrb->command)==XHCI_TRBTYPE_LINK) {
-		xc->ccmdtrb->command = (xc->ccmdtrb->command & ~1) | xc->cycle;
-		xc->cycle ^= 1;
+		xc->ccmdtrb->command = (xc->ccmdtrb->command & ~1) | xc->cmdcycle;
+		xc->cmdcycle ^= 1;
 		xc->ccmdtrb = xc->cmdring;
 	}
 	
 	_wr32(xc->dboff, 0);
+	
+	uint16_t timeout = 2000;
+	while (timeout--) {
+		//if (this_trb->
+	}
 }
 
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {

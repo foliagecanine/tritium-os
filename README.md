@@ -102,7 +102,10 @@ Here's the checklist:
 - [x] Arguments
 - [x] Environment variables
 - [x] FAT12/FAT16 file creation and writing
-- [ ] UHCI USB support (possibly)
+- [x] UHCI USB support  
+- [x] Generic USB Driver (mostly)
+- [x] Basic USB HID Driver
+- [ ] xHCI USB support
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 Programs:

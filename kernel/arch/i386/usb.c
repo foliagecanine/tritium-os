@@ -24,13 +24,13 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 		if (strcmp(name,"UHCI")) {
 			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3,pci.irq);
 			if (rval) {
-				printf("Initialized UHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports);
+				printf("Initialized UHCI controller ID %d with %d ports IRQ %d.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports,pci.irq);
 				ctrlrcounts[0]++;
 			}
 		} else if (strcmp(name,"xHCI")) {
 			uint8_t rval = init_xhci_ctrlr(pci.BAR0&~15,pci.irq);
 			if (rval) {
-				printf("Initialized xHCI controller ID %d with %d ports.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports);
+				printf("Initialized xHCI controller ID %d with %d ports IRQ %d.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports,pci.irq);
 				ctrlrcounts[3]++;
 			}
 		}

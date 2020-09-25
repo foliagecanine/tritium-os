@@ -39,7 +39,10 @@
 
 #define XHCI_HCOPS_PAGESIZE		0x08
 #define XHCI_HCOPS_DNCTRL		0x14
+
 #define XHCI_HCOPS_CRCR			0x18
+#define XHCI_HCOPS_CRCR_RCS		1
+
 #define XHCI_HCOPS_DCBAAP		0x30
 #define XHCI_HCOPS_CONFIG		0x38
 #define XHCI_HCOPS_PORTREGS		0x400
@@ -102,7 +105,7 @@ typedef struct {
 #define XHCI_RUNTIME_IR0	0x20
 
 #define XHCI_INTREG_IMR		0
-#define XHCI_INTREG_IMR_IP	0
+#define XHCI_INTREG_IMR_IP	1
 #define XHCI_INTREG_IMR_EN	(1<<1)
 
 #define XHCI_INTREG_IMOD	0x04
@@ -124,13 +127,15 @@ typedef struct {
 	uint32_t params;
 	xhci_trb *cmdring;
 	xhci_trb *ccmdtrb;
+	uint8_t cmdcycle;
 	xhci_trb *evtring;
+	xhci_trb *cevttrb;
+	uint8_t evtcycle;
 	void *evtring_table;
 	void *evtring_alloc;
 	uint8_t num_ports;
 	uint8_t num_ports_2;
 	uint8_t num_ports_3;
-	uint8_t cycle;
 	uint8_t ctrlrID;
 	xhci_port ports[16];
 	usb_device devices[128];
