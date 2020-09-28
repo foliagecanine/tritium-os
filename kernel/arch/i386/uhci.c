@@ -14,6 +14,7 @@
 
 uhci_controller uhci_controllers[USB_MAX_CTRLRS] = {0};
 uint8_t uhci_num_ctrlrs = 0;
+CREATE_MUTEX(uhci_lock);
 
 void uhci_global_reset(uint16_t iobase) {
 	for (uint8_t i = 0; i < 5; i++) {
@@ -102,11 +103,11 @@ void dump_queue(uhci_usb_queue q) {
 
 void uhci_interrupt() {
 	for (uint8_t i = 0; i < USB_MAX_CTRLRS; i++) {
-		if (uhci_controllers[i].iobase) {
+		if (uhci_controllers[i].iobase&&!uhci_controllers[i].lock) {
 			if (inw(uhci_controllers[i].iobase+UHCI_USBSTS)&(UHCI_USBSTS_USBINT|UHCI_USBSTS_UEINT)) {
 				outw(uhci_controllers[i].iobase+UHCI_USBSTS,UHCI_USBSTS_USBINT|UHCI_USBSTS_UEINT);
 				for (uint8_t j = 0; j < 127; j++) {
-					if (uhci_controllers[i].devices[j].valid) {
+					if (uhci_controllers[i].devices[j].valid && uhci_controllers[i].devices[j].driver_function) {
 						uhci_controllers[i].devices[j].driver_function(usb_dev_addr(USB_CTRLR_UHCI,i,j));
 					}
 				}
@@ -293,6 +294,7 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the framelist
+	uc->lock = MUTEX_STATE_LOCKED;
 	uhci_add_queue(uc,queue,p_queue,0);
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
@@ -306,6 +308,7 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	if (!timeout) {
 		dbgprintf("[UHCI] USB timed out.\n");
 		uhci_remove_queue(queue);
+		uc->lock = MUTEX_STATE_UNLOCKED;
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 		free_page(data_vaddr,1);
 		return false;
@@ -314,6 +317,7 @@ bool uhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	// Clear the interrupt bit and remove our queue from the list, and re-enable IRQs
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
 	uhci_remove_queue(queue);
+	uc->lock = MUTEX_STATE_UNLOCKED;
 	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
 	// Check for any errors in the TDs
@@ -374,6 +378,7 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the framelist
+	uc->lock = MUTEX_STATE_LOCKED;
 	uhci_add_queue(uc,queue,p_queue,0);
 	
 	// Wait until the TDs are executed (USBINT bit comes on)
@@ -387,6 +392,7 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	if (!timeout) {
 		dbgprintf("[UHCI] USB timed out.\n");
 		uhci_remove_queue(queue);		
+		uc->lock = MUTEX_STATE_UNLOCKED;
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 		free_page(data_vaddr,1);
 		return false;
@@ -395,6 +401,7 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	// Clear the interrupt bit and remove our queue from the list
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
 	uhci_remove_queue(queue);
+	uc->lock = MUTEX_STATE_UNLOCKED;
 	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
 	// Check for any errors in the TDs
@@ -499,6 +506,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	outw(uc->iobase+UHCI_USBINTR,0);
 	
 	// Add our queue to the list
+	uc->lock = MUTEX_STATE_LOCKED;
 	uhci_add_queue(uc,queue,p_queue,0);
 		
 	// Wait until we recieve the IOC
@@ -512,6 +520,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	if (!timeout) {
 		dbgprintf("[UHCI] USB timed out.\n");
 		uhci_remove_queue(queue);
+		uc->lock = MUTEX_STATE_UNLOCKED;
 		outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 		free_page(data_vaddr,num_pages);
 		return false;
@@ -519,11 +528,12 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	// Clear the interupt bit, remove our queue from the list, then re-enable IRQs
 	outw(uc->iobase+UHCI_USBSTS, UHCI_USBSTS_USBINT);
 	uhci_remove_queue(queue);
+	uc->lock = MUTEX_STATE_UNLOCKED;
 	outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 	
 	// Check to make sure there's no errors with any of the TDs
 	for (uint8_t j = 0; j < i; j++) {
-		if (td[j].flags0 & UHCI_XFRDESC_STATUS) {
+		if (td[j].flags0 & UHCI_XFRDESC_STATUS & ~UHCI_XFRDESC_STATUS_ACTIVE) {
 			dbgprintf("[UHCI] TD%d Error: %#\n",(uint32_t)j,(uint64_t)(td[j].flags0));
 			outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 			free_page(data_vaddr,num_pages);
@@ -659,7 +669,7 @@ bool uhci_get_usb_str_desc(usb_device *device, char *out, uint8_t index, uint16_
 	
 	sp.index = strdesc->langid[i];
 	sp.value = 0x300 | index;
-	printf("Getting index %d, (0x%#)\n",(uint32_t)index,(uint64_t)sp.value);
+	//printf("Getting index %d, (0x%#)\n",(uint32_t)index,(uint64_t)sp.value);
 	sp.length = 2;
 	memset(buffer,0,256);
 	if (!uhci_usb_get_desc(device,&header,sp,2))

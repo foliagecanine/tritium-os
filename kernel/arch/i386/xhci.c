@@ -15,6 +15,10 @@
 xhci_controller xhci_controllers[USB_MAX_CTRLRS];
 uint8_t xhci_num_ctrlrs = 0;
 
+inline volatile uint64_t _rd64(volatile void *mem) {
+	return *(volatile uint64_t *)mem;
+}
+
 // Force a 32 bit read
 inline volatile uint32_t _rd32(volatile void *mem) {
 	return *(volatile uint32_t *)mem;
@@ -205,9 +209,10 @@ void xhci_interrupt() {
 				dbgprintf("Param: %#\n",xc->cevttrb->param);
 				dbgprintf("Status: %#\n",(uint64_t)xc->cevttrb->status);
 				dbgprintf("Command: %#\n",(uint64_t)xc->cevttrb->command);
-				xc->cevttrb += sizeof(xhci_trb);
+				xc->cevttrb++;
 			}
-			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb-sizeof(xhci_trb)))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
+			dbgprintf("New ERDQPTR: %#\n",(uint64_t)(uint32_t)xc->cevttrb);
+			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
 		}
 	}
 }
@@ -340,8 +345,13 @@ uint8_t xhci_get_unused_device(xhci_controller *xc) {
 
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 	xhci_trb *this_trb = xc->ccmdtrb;
+	trb.command |= xc->cmdcycle;
 	*xc->ccmdtrb = trb;
-	xc->ccmdtrb += sizeof(xhci_trb);
+	dbgprintf("Send TRB\n");
+	dbgprintf("Param: %#\n",xc->ccmdtrb->param);
+	dbgprintf("Status: %#\n",(uint64_t)xc->ccmdtrb->status);
+	dbgprintf("Command: %#\n",(uint64_t)xc->ccmdtrb->command);
+	xc->ccmdtrb++;
 	
 	if (XHCI_TRB_GTRBTYPE(xc->ccmdtrb->command)==XHCI_TRBTYPE_LINK) {
 		xc->ccmdtrb->command = (xc->ccmdtrb->command & ~1) | xc->cmdcycle;
@@ -349,12 +359,18 @@ xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 		xc->ccmdtrb = xc->cmdring;
 	}
 	
+	dbgprintf("New CCMDTRB: %#\n",(uint64_t)(uint32_t)xc->ccmdtrb);
+	
 	_wr32(xc->dboff, 0);
 	
 	uint16_t timeout = 2000;
 	while (timeout--) {
-		//if (this_trb->
+		sleep(1);
 	}
+	
+	// dbgprintf("USBSTS: %#\n",(uint64_t)_rd32(xc->hcops+XHCI_HCOPS_USBSTS));
+	// dbgprintf("IR0_1: %#\n",(uint64_t)_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR));
+	// dbgprintf("IR0_2: %#\n",_rd64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR));
 }
 
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {

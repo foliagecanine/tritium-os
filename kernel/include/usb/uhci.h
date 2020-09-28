@@ -2,6 +2,7 @@
 #define _USB_UHCI_H
 
 #include <kernel/stdio.h>
+#include <kernel/mutex.h>
 #include <usb/usb.h>
 
 #define UHCI_USBCMD			0			// USB Command Register
@@ -128,6 +129,7 @@ typedef struct {
 	uhci_usb_queue *queues_vaddr;
 	uhci_usb_queue *queues_paddr;
 	uint8_t num_ports;
+	mutex lock;
 	usb_device devices[128];
 } uhci_controller;
 
