@@ -195,12 +195,17 @@ void xhci_interrupt() {
 		xhci_controller *xc = get_xhci_controller(i);
 		if (!xc->hcops)
 			continue;
+		if (!_rd32(xc->hcops+XHCI_HCOPS_USBSTS))
+			continue;
 		_wr32(xc->hcops+XHCI_HCOPS_USBSTS,_rd32(xc->hcops+XHCI_HCOPS_USBSTS));
 		if (_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)==(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)) {
 			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR));
 			while (xc->cevttrb->command&XHCI_TRB_CYCLE==xc->evtcycle) {
-				xc->cevttrb += sizeof(xhci_trb);
 				dbgprintf("Processed TRB\n");
+				dbgprintf("Param: %#\n",xc->cevttrb->param);
+				dbgprintf("Status: %#\n",(uint64_t)xc->cevttrb->status);
+				dbgprintf("Command: %#\n",(uint64_t)xc->cevttrb->command);
+				xc->cevttrb += sizeof(xhci_trb);
 			}
 			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb-sizeof(xhci_trb)))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
 		}
@@ -260,7 +265,7 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
 	// Allocate space for a command ring
 	this_ctrlr->cmdring = alloc_page(1); // Guaranteed not to cross 64k boundary
 	memset(this_ctrlr->cmdring,0,4096);
-	this_ctrlr->cmdring[127].param = &this_ctrlr->cmdring[0];
+	this_ctrlr->cmdring[127].param = (uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring);
 	this_ctrlr->cmdring[127].status = 0;
 	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
 	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|XHCI_HCOPS_CRCR_RCS,this_ctrlr);
