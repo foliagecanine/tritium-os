@@ -81,15 +81,17 @@ typedef struct {
 	uint32_t command;
 } xhci_trb;
 
-#define XHCI_TRB_CYCLE		1
-#define XHCI_TRB_EVALTRB	(1<<1)
-#define XHCI_TRB_SPE		(1<<2)
-#define XHCI_TRB_NOSNOOP	(1<<3)
-#define XHCI_TRB_CHAIN		(1<<4)
-#define XHCI_TRB_IOC		(1<<5)
-#define XHCI_TRB_IMMEDIATE	(1<<6)
-#define XHCI_TRB_TRBTYPE(x) ((x)<<10)
-#define XHCI_TRB_GTRBTYPE(x) (((x)>>10)&0x1F)
+#define XHCI_TRB_COMMAND_CYCLE		1
+#define XHCI_TRB_COMMAND_EVALTRB	(1<<1)
+#define XHCI_TRB_COMMAND_SPE		(1<<2)
+#define XHCI_TRB_COMMAND_NOSNOOP	(1<<3)
+#define XHCI_TRB_COMMAND_CHAIN		(1<<4)
+#define XHCI_TRB_COMMAND_IOC		(1<<5)
+#define XHCI_TRB_COMMAND_IMMEDIATE	(1<<6)
+#define XHCI_TRB_COMMAND_BLOCK		(1<<9)
+#define XHCI_TRB_COMMAND_TRBTYPE(x) ((x)<<10)
+#define XHCI_TRB_COMMAND_GTRBTYPE(x) (((x)>>10)&0x1F)
+#define XHCI_TRB_COMMAND_SLOT(x)	((x)<<24)
 
 #define XHCI_TRBTYPE_NORMAL	1
 #define XHCI_TRBTYPE_SETUP	2
@@ -101,6 +103,10 @@ typedef struct {
 #define XHCI_TRBTYPE_NOOP	8
 #define XHCI_TRBTYPE_ENSLOT	9
 #define XHCI_TRBTYPE_ADDR	11
+
+#define XHCI_EVTTRB_STATUS_GETCODE(x) 	((x)>>24)
+#define XHCI_EVTTRB_COMMAND_GETSLOT(x) 	((x)>>24)
+#define XHCI_TRBCODE_SUCCESS 1
 
 #define XHCI_RUNTIME_IR0	0x20
 
@@ -125,6 +131,7 @@ typedef struct {
 	void *dboff;
 	void *dcbaap;
 	uint32_t params;
+	uint8_t ctx_size;
 	xhci_trb *cmdring;
 	xhci_trb *ccmdtrb;
 	uint8_t cmdcycle;
@@ -141,9 +148,66 @@ typedef struct {
 	usb_device devices[128];
 } xhci_controller;
 
+typedef struct {
+	uint32_t entries;
+	uint16_t max_exit_latency;
+	uint8_t rh_port_num;
+	uint8_t num_ports;
+	uint16_t tt;
+	uint16_t int_target;
+	uint8_t devaddr;
+	uint16_t reserved;
+	uint8_t state;
+	uint32_t reserved0;
+	uint32_t reserved1;
+	uint32_t reserved2;
+	uint32_t reserved3;
+} __attribute__((packed)) xhci_slot;
+
+#define XHCI_SLOT_ENTRY_ROUTESTRING(x)	(x)
+#define XHCI_SLOT_ENTRY_SPEED(x)		((x)<<20)
+#define XHCI_SLOT_ENTRY_MULTITT				(1<<25)
+#define XHCI_SLOT_ENTRY_HUB				(1<<26)
+#define XHCI_SLOT_ENTRY_COUNT(x)		((x)<<27)
+
+#define XHCI_SLOT_STATE_D_E				0
+#define XHCI_SLOT_STATE_DEFAULT			1
+#define XHCI_SLOT_STATE_ADDRESSED		2
+#define XHCI_SLOT_STATE_CONFIGURED		3
+
+typedef struct {
+	uint16_t state;
+	uint8_t interval;
+	uint8_t esinterval_h;
+	uint8_t flags;
+	uint8_t maxburst;
+	uint16_t max_pkt_size;
+	uint64_t dqptr;
+	uint16_t avg_trblen;
+	uint16_t exinterval_l;
+	uint32_t reserved0;
+	uint32_t reserved1;
+	uint32_t reserved2;
+} __attribute__((packed)) xhci_endpt;
+
+#define XHCI_ENDPT_STATE_STATE(x)		(x)	
+#define XHCI_ENDPT_STATE_MULTI(x)		((x)<<8)
+#define XHCI_ENDPT_STATE_PSTREAMS(x)	((x)<<10)
+#define XHCI_ENDPT_STATE_LSA			(1<<15)
+
+#define XHCI_ENDPT_FLAGS_ERRCNT(x)		((x)<<1)
+#define XHCI_ENDPT_FLAGS_ENDPT_TYPE(x)	((x)<<3)
+#define XHCI_ENDPT_FLAGS_HID			(1<<7)
+
+#define XHCI_ENDPOINT_STATE_DISABLE		0
+#define XHCI_ENDPOINT_STATE_RUN			1
+#define XHCI_ENDPOINT_STATE_HALT		2
+#define XHCI_ENDPOINT_STATE_STOP		3
+#define XHCI_ENDPOINT_STATE_ERROR		4
+
 xhci_controller *get_xhci_controller(uint8_t id);
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
-bool xhci_set_address(usb_device *device, uint8_t dev_address);
+bool xhci_set_address(usb_device *device);
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port);
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);

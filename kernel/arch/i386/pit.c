@@ -6,8 +6,6 @@
 uint32_t frequency = 0;
 uint64_t ticks = 0;
 
-uint8_t usbints[255];
-
 void pit_tick() {
 	ticks++;
 }
