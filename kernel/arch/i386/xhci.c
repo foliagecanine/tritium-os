@@ -1,6 +1,7 @@
 #include <usb/xhci.h>
 
 #define DEBUG
+//#define DEBUG_TERMINAL
 
 #ifdef DEBUG
 #ifdef DEBUG_TERMINAL
@@ -210,13 +211,17 @@ void xhci_interrupt() {
 					xhci_trb *exec_trb = (xc->cevttrb->param&0xFFF)+((void *)xc->cmdring);
 					exec_trb->param = (uint64_t)(uint32_t)(void *)xc->cevttrb;
 				}
-				dbgprintf("Processed TRB\n");
-				dbgprintf("Param: %#\n",xc->cevttrb->param);
-				dbgprintf("Status: %#\n",(uint64_t)xc->cevttrb->status);
-				dbgprintf("Command: %#\n",(uint64_t)xc->cevttrb->command);
+				dbgprintf("[xHCI] DATA: Processed TRB\n");
+				dbgprintf("[xHCI] DATA: Param: %#\n",xc->cevttrb->param);
+				dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)xc->cevttrb->status);
+				dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)xc->cevttrb->command);
 				xc->cevttrb++;
+				if ((void *)(xc->cevttrb)>xc->evtring+65536) {
+					xc->cevttrb = xc->evtring;
+					xc->evtcycle ^= 1;
+				}
 			}
-			dbgprintf("New ERDQPTR: %#\n",(uint64_t)(uint32_t)xc->cevttrb);
+			dbgprintf("[xHCI] DATA: New ERDQPTR: %#\n",(uint64_t)(uint32_t)xc->cevttrb);
 			_wr64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR,((uint64_t)(uint32_t)get_phys_addr(xc->cevttrb))|XHCI_INTREG_ERDQPTR_EHBSY,xc);
 		}
 	}
@@ -256,6 +261,8 @@ void *xhci_init_slot(usb_device *usbdev, xhci_controller *xc) {
 	xhci_endpt *this_ep = usbdev->data0+xc->ctx_size;
 	*this_ep = ep;
 	
+	xc->dcbaap[usbdev->address] = get_phys_addr(usbdev->data0);
+	
 	return usbdev->data0;
 }
 
@@ -283,7 +290,12 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	usbdev->max_pkt_size = default_speeds[usbdev->speed];
 	
 	xhci_init_slot(usbdev,xc);
-	xhci_set_address(usbdev);
+	usbdev->data1 = alloc_page(1);
+	memset(usbdev->data1,0,4096);
+	memcpy(usbdev->data1+xc->ctx_size,usbdev->data0,2048);
+	((uint32_t *)usbdev->data1)[1] = 3;
+	//xhci_set_address(usbdev,0);
+	xhci_set_address(usbdev,0);
 }
 
 uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
@@ -406,10 +418,10 @@ xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 	xhci_trb *this_trb = xc->ccmdtrb;
 	trb.command |= xc->cmdcycle;
 	*this_trb = trb;
-	dbgprintf("Send TRB\n");
-	dbgprintf("Param: %#\n",this_trb->param);
-	dbgprintf("Status: %#\n",(uint64_t)this_trb->status);
-	dbgprintf("Command: %#\n",(uint64_t)this_trb->command);
+	dbgprintf("[xHCI] DATA: Send TRB\n");
+	dbgprintf("[xHCI] DATA: Param: %#\n",this_trb->param);
+	dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)this_trb->status);
+	dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)this_trb->command);
 	xc->ccmdtrb++;
 	
 	if (XHCI_TRB_COMMAND_GTRBTYPE(xc->ccmdtrb->command)==XHCI_TRBTYPE_LINK) {
@@ -418,7 +430,7 @@ xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 		xc->ccmdtrb = xc->cmdring;
 	}
 	
-	dbgprintf("New CCMDTRB: %#\n",(uint64_t)(uint32_t)xc->ccmdtrb);
+	dbgprintf("[xHCI] DATA: New CCMDTRB: %#\n",(uint64_t)(uint32_t)xc->ccmdtrb);
 	
 	_wr32(xc->dboff, 0);
 	
@@ -449,19 +461,40 @@ bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 }
 
 // Set the address of a usb device.
-bool xhci_set_address(usb_device *device) {
+bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	xhci_controller *xc = device->controller;
-	device->data1 = alloc_page(1);
-	memset(device->data1,0,4096);
-	memcpy(device->data1+xc->ctx_size,device->data0,2048);
-	((uint32_t *)device->data1)[1] = 3;
+	xhci_slot *slot_copy = (xhci_slot *)(device->data1+xc->ctx_size);
+	xhci_endpt *endpt_copy = (xhci_endpt *)(device->data1+(xc->ctx_size*2));
+	xhci_slot *active_slot = (xhci_slot *)device->data0;
+	xhci_endpt *active_endpt = (xhci_endpt *)(device->data0+xc->ctx_size);
 	
 	xhci_trb trb;
 	trb.param = get_phys_addr(device->data1);
 	trb.status = 0;
-	trb.command = XHCI_TRB_COMMAND_SLOT(device->address) | XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_ADDR) | XHCI_TRB_COMMAND_BLOCK;
+	trb.command = XHCI_TRB_COMMAND_SLOT(device->address) | XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_ADDR) | command_params;
 	trb = xhci_send_cmdtrb(xc,trb);
-	dbgprintf("Device Address %d\n",((xhci_slot *)(device->data0))->devaddr);
+	
+	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS)
+		return false;
+	
+	//dbgprintf("\n------------------------------------------------------------\n");
+	dbgprintf("[xHCI] Got Device Address %d\n",active_slot->devaddr);
+	slot_copy->state = active_slot->state;
+	slot_copy->devaddr = active_slot->devaddr;
+	endpt_copy->state = active_endpt->state;
+	endpt_copy->max_pkt_size = active_endpt->max_pkt_size;
+	
+	//dbgprintf("------------------------------------------------------------\n");
+	//dbgprintf("This data is pointed to by DCBAAP+Slot#%d\n",device->address);
+	//dump_memory32(device->data0,256/4);
+	//dbgprintf("\n------------------------------------------------------------\n");
+	//dbgprintf("This data is pointed to by the Set Address TRB.\n");
+	//dump_memory32(device->data1,xc->ctx_size/4);
+	//dbgprintf("\n\n");
+	//dump_memory32(device->data1+xc->ctx_size,256/4);
+	//dbgprintf("\n");
+	
+	return true;
 }
 
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port) {
@@ -476,7 +509,7 @@ bool xhci_assign_address(uint8_t ctrlrID, uint8_t port) {
 	usbdev.address = 0;
 	usbdev.port = port;
 	usbdev.max_pkt_size = 8;
-	if (!(xhci_set_address(&usbdev)))//,dev_addr)))
+	if (!(xhci_set_address(&usbdev,XHCI_TRB_COMMAND_BLOCK)))//,dev_addr)))
 		return false;
 	usbdev.address = dev_addr;
 	usb_dev_desc devdesc = xhci_get_usb_dev_descriptor(&usbdev,sizeof(usb_dev_desc));

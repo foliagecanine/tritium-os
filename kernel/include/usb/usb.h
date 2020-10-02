@@ -141,5 +141,6 @@ void *usb_create_interval_in(uint16_t dev_addr, void *out, uint8_t interval, uin
 bool usb_refresh_interval(uint16_t dev_addr, void *data);
 void usb_interrupt();
 void dump_memory(uint8_t *mem, size_t size);
+void dump_memory32(uint32_t *mem, size_t size);
 
 #endif

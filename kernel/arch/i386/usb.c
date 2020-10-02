@@ -223,3 +223,16 @@ void dump_memory(uint8_t *mem, size_t size) {
 		dprintf("%# ",(uint64_t)mem[i]);
 	}
 }
+
+void dump_memory32(uint32_t *mem, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		if (i&&!(i%8))
+			dprintf("\n");
+		for (uint8_t j = 0; j < 7; j++) {
+			if ((mem[i]<<(j*4))&0xF0000000)
+				break;
+			dprintf("0");
+		}
+		dprintf("%# ",(uint64_t)mem[i]);
+	}
+}

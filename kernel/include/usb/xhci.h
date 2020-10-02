@@ -129,7 +129,7 @@ typedef struct {
 	void *hcops;
 	void *runtime;
 	void *dboff;
-	void *dcbaap;
+	uint64_t *dcbaap;
 	uint32_t params;
 	uint8_t ctx_size;
 	xhci_trb *cmdring;
@@ -207,7 +207,7 @@ typedef struct {
 
 xhci_controller *get_xhci_controller(uint8_t id);
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
-bool xhci_set_address(usb_device *device);
+bool xhci_set_address(usb_device *device, uint32_t command_params);
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port);
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);
