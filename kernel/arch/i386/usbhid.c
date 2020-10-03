@@ -45,6 +45,24 @@ void remove_repeatable(uint8_t scancode) {
 	insert_scancode(usb_scancode_to_ps2[scancode]+PS2_KEY_RELEASED);
 }
 
+uint8_t PS2_modifiers[8] = { PS2_CTRL, PS2_LSHIFT, PS2_ALT, 0, PS2_CTRL, PS2_RSHIFT, PS2_ALT, 0};
+
+void check_modifiers(uint8_t key, uint8_t bufferkey, uint8_t direction) {
+	for (uint8_t i = 0; i < 8; i++) {
+		uint8_t keymod = key & (1<<i);
+		uint8_t bkeymod = bufferkey & (1<<i);
+		if (!direction) {
+			if (keymod && !bkeymod) {
+				insert_scancode(PS2_modifiers[i]);
+			}
+		} else {
+			if (!keymod && bkeymod) {
+				insert_scancode(PS2_modifiers[i]+PS2_KEY_RELEASED);
+			}
+		}
+	}
+}
+
 void hid_kbd_irq(uint16_t dev_addr) {
 	usb_device *device = usb_device_from_addr(dev_addr);
 	if (usb_refresh_interval(dev_addr,device->driver0)) {
@@ -82,28 +100,13 @@ void usb_keyboard_repeat() {
 	}
 }
 
-uint8_t PS2_modifiers[8] = { PS2_CTRL, PS2_LSHIFT, PS2_ALT, 0, PS2_CTRL, PS2_RSHIFT, PS2_ALT, 0};
-
-void check_modifiers(uint8_t key, uint8_t bufferkey, uint8_t direction) {
-	for (uint8_t i = 0; i < 8; i++) {
-		uint8_t keymod = key & (1<<i);
-		uint8_t bkeymod = bufferkey & (1<<i);
-		if (!direction) {
-			if (keymod && !bkeymod) {
-				insert_scancode(PS2_modifiers[i]);
-			}
-		} else {
-			if (!keymod && bkeymod) {
-				insert_scancode(PS2_modifiers[i]+PS2_KEY_RELEASED);
-			}
-		}
-	}
-}
 
 uint8_t keyboard_buffer[8];
 
 bool init_hid_kbd(uint16_t dev_addr, usb_config_desc config, usb_interface_desc interface) {
 	printf("Configuring HID Keyboard\n");
+	
+	(void)config; // Remove the "unused variable" warning. The function definitions should match this format whether they use the variables or not.
 	
 	// Find endpoint address for the interrupt-in endpoint
 	usb_endpoint_desc endpoint;
@@ -156,6 +159,8 @@ uint8_t mouse_buffer[4];
 
 bool init_hid_mouse(uint16_t dev_addr, usb_config_desc config, usb_interface_desc interface) {
 	printf("Configuring HID Mouse\n");
+	
+	(void)config; // Remove the "unused variable" warning. The function definitions should match this format whether they use the variables or not.
 	
 	// Find endpoint address for the interrupt-in endpoint
 	usb_endpoint_desc endpoint;

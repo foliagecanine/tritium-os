@@ -17,23 +17,28 @@ xhci_controller xhci_controllers[USB_MAX_CTRLRS];
 uint8_t xhci_num_ctrlrs = 0;
 
 // Force a 64 bit read
-inline volatile uint64_t _rd64(volatile void *mem) {
+inline uint64_t _rd64(volatile void *mem) {
 	return *(volatile uint64_t *)mem;
 }
 
 // Force a 32 bit read
-inline volatile uint32_t _rd32(volatile void *mem) {
+inline uint32_t _rd32(volatile void *mem) {
 	return *(volatile uint32_t *)mem;
 }
 
 // Force a 16 bit read
-inline volatile uint16_t _rd16(volatile void *mem) {
+inline uint16_t _rd16(volatile void *mem) {
 	return (uint16_t)((*(volatile uint32_t *)(void *)((uint32_t)mem&~3))>>(((uint32_t)mem&3)*8));
 }
 
 // Force an 8 bit read
-inline volatile uint8_t _rd8(volatile void *mem) {
+inline uint8_t _rd8(volatile void *mem) {
 	return (uint8_t)((*(volatile uint32_t *)(void *)((uint32_t)mem&~3))>>(((uint32_t)mem&3)*8));
+}
+
+// Force a 32 bit write
+inline void _wr32(void *mem, uint32_t b) {
+	__asm__ __volatile__("movl %%eax, %0":"=m"(*mem):"a"(b):"memory");
 }
 
 // Emulate a 64 bit write
@@ -43,9 +48,9 @@ inline void _wr64(void *mem, uint64_t b, xhci_controller *xc) {
 		_wr32(mem+4,(uint32_t)(b>>32));
 }
 
-// Force a 32 bit write
-inline void _wr32(void *mem, uint32_t b) {
-	__asm__ __volatile__("movl %%eax, %0":"=m"(*mem):"a"(b):"memory");
+void ring_doorbell(xhci_controller* xc, uint8_t slot, uint32_t val) {
+	dbgprintf("[xHCI] Ringing doorbell %d with value %d\n",(uint32_t)slot,val);
+	_wr32(xc->dboff+(slot*sizeof(uint32_t)),val);
 }
 
 bool xhci_global_reset(xhci_controller *xc) {
@@ -168,14 +173,17 @@ bool xhci_port_reset(xhci_controller *xc, uint8_t port) {
 	// Clear the status bits (but keep the power bit on)
 	_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_STATUS);
 	
+	uint16_t timeout;
+	
 	// Do regular reset with USB 2 or a warm reset with USB 3
 	if (xc->ports[port].legacy&XHCI_PORT_LEGACY_USB2) {
 		_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_PORTRST);
+		timeout = 3;
 	} else {
 		_wr32(portbase+XHCI_PORTREGS_PORTSC,writeflags | XHCI_PORTREGS_PORTSC_WARMRST);
+		timeout = 500;
 	}
 	
-	uint16_t timeout = 500;
 	while (!(_rd32(portbase+XHCI_PORTREGS_PORTSC)&XHCI_PORTREGS_PORTSC_PRSTCHG)) {
 		sleep(1);
 		if (!timeout--) {
@@ -204,9 +212,9 @@ void xhci_interrupt() {
 		if (!_rd32(xc->hcops+XHCI_HCOPS_USBSTS))
 			continue;
 		_wr32(xc->hcops+XHCI_HCOPS_USBSTS,_rd32(xc->hcops+XHCI_HCOPS_USBSTS));
-		if (_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)==(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)) {
+		if ((_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP))==(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)) {
 			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR));
-			while (xc->cevttrb->command&XHCI_TRB_COMMAND_CYCLE==xc->evtcycle) {
+			while ((xc->cevttrb->command&XHCI_TRB_CYCLE)==xc->evtcycle) {
 				if (xc->cevttrb->command != 0x8801) {
 					xhci_trb *exec_trb = (xc->cevttrb->param&0xFFF)+((void *)xc->cmdring);
 					exec_trb->param = (uint64_t)(uint32_t)(void *)xc->cevttrb;
@@ -216,7 +224,7 @@ void xhci_interrupt() {
 				dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)xc->cevttrb->status);
 				dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)xc->cevttrb->command);
 				xc->cevttrb++;
-				if ((void *)(xc->cevttrb)>xc->evtring+65536) {
+				if ((void *)(xc->cevttrb)>(void *)xc->evtring+65536) {
 					xc->cevttrb = xc->evtring;
 					xc->evtcycle ^= 1;
 				}
@@ -227,11 +235,12 @@ void xhci_interrupt() {
 	}
 }
 
-void *xhci_init_slot(usb_device *usbdev, xhci_controller *xc) {
-	usbdev->data0 = alloc_page(1);
-	memset(usbdev->data0,0,4096);
-	xhci_slot *this_slot = usbdev->data0;
-	*(uint64_t *)(xc->dcbaap+(usbdev->address*8)) = (uint64_t)(uint32_t)(void *)this_slot;
+void *xhci_init_device(usb_device *usbdev, xhci_controller *xc) {
+	xhci_devdata *data = usbdev->data;
+	data->slot_ctx = alloc_page(1);
+	memset(data->slot_ctx,0,4096);
+	xhci_slot *this_slot = data->slot_ctx;
+	*(uint64_t *)(xc->dcbaap+(usbdev->slot*8)) = (uint64_t)(uint32_t)(void *)this_slot;
 	
 	xhci_slot slot;
 	slot.entries = XHCI_SLOT_ENTRY_COUNT(1) | XHCI_SLOT_ENTRY_SPEED(usbdev->speed);
@@ -250,52 +259,65 @@ void *xhci_init_slot(usb_device *usbdev, xhci_controller *xc) {
 	ep.state = XHCI_ENDPT_STATE_STATE(XHCI_ENDPOINT_STATE_DISABLE);
 	ep.flags = XHCI_ENDPT_FLAGS_ENDPT_TYPE(4) | XHCI_ENDPT_FLAGS_ERRCNT(3);
 	ep.avg_trblen = 8;
-	ep.interval = 0;
 	
-	ep.dqptr = alloc_page(1);
-	memset((void *)ep.dqptr,0,4096);
-	((xhci_trb *)ep.dqptr)[127].param = (uint64_t)(uint32_t)get_phys_addr(ep.dqptr);
-	((xhci_trb *)ep.dqptr)[127].status = 0;
-	((xhci_trb *)ep.dqptr)[127].command = XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_COMMAND_CYCLE;
+	data->endpt_ring[0] = alloc_page(1);
+	data->cendpttrb[0] = data->endpt_ring[0];
+	ep.dqptr = (uint64_t)(uint32_t)get_phys_addr(data->endpt_ring[0]) | XHCI_TRB_CYCLE;
+	memset(data->endpt_ring[0],0,4096);
+	data->endpt_ring[0][127].param = ep.dqptr;
+	data->endpt_ring[0][127].status = 0;
+	data->endpt_ring[0][127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
+	data->endpt_cycle[0] = XHCI_TRB_CYCLE;
 	
-	xhci_endpt *this_ep = usbdev->data0+xc->ctx_size;
+	xhci_endpt *this_ep = ((void *)data->slot_ctx)+xc->ctx_size;
 	*this_ep = ep;
 	
-	xc->dcbaap[usbdev->address] = get_phys_addr(usbdev->data0);
+	xc->dcbaap[usbdev->slot] = get_phys_addr(data->slot_ctx);
 	
-	return usbdev->data0;
+	return data->slot_ctx;
 }
 
 const uint16_t default_speeds[] = {64,8,64,512};
 
 bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	void *portbase = xc->hcops+XHCI_HCOPS_PORTREGS+(port*16);
-	uint8_t devaddr = xhci_get_unused_device(xc);
 	xhci_trb trb;
 	trb.param = 0;
 	trb.status = 0;
-	trb.command = XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_ENSLOT);
+	trb.command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_ENSLOT);
 	
 	trb = xhci_send_cmdtrb(xc,trb);
 	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS)
 		return false;
 	
-	usb_device *usbdev = &xc->devices[XHCI_EVTTRB_COMMAND_GETSLOT(trb.command)];
+	usb_device *usbdev = &xc->devices[0];
 	memset(usbdev,0,sizeof(usb_device));
+	usbdev->slot = XHCI_EVTTRB_COMMAND_GETSLOT(trb.command);
 	usbdev->speed = XHCI_PORTREGS_PORTSC_PORTSPD(_rd32(portbase+XHCI_PORTREGS_PORTSC));
 	usbdev->controller = xc;
 	usbdev->ctrlrID = xc->ctrlrID;
 	usbdev->ctrlr_type = USB_CTRLR_XHCI;
-	usbdev->address = XHCI_EVTTRB_COMMAND_GETSLOT(trb.command);
 	usbdev->max_pkt_size = default_speeds[usbdev->speed];
+	usbdev->data = alloc_page(1);
+	xhci_devdata *data = usbdev->data;
 	
-	xhci_init_slot(usbdev,xc);
-	usbdev->data1 = alloc_page(1);
-	memset(usbdev->data1,0,4096);
-	memcpy(usbdev->data1+xc->ctx_size,usbdev->data0,2048);
-	((uint32_t *)usbdev->data1)[1] = 3;
+	xhci_init_device(usbdev,xc);
+	data->slot_template = alloc_page(1);
+	memset(data->slot_template,0,4096);
+	memcpy((void *)(data->slot_template)+xc->ctx_size,data->slot_ctx,2048);
+	((uint32_t *)data->slot_template)[1] = 3;
 	//xhci_set_address(usbdev,0);
-	xhci_set_address(usbdev,0);
+	if (!xhci_set_address(usbdev,0))
+		return false;
+	
+	usbdev->address = data->slot_ctx->devaddr;
+	memcpy(&xc->devices[usbdev->address],usbdev,sizeof(usb_device));
+	usbdev = &xc->devices[usbdev->address];
+	usbdev->valid = true;
+	
+	usb_dev_desc devdesc = xhci_get_usb_dev_descriptor(usbdev,8);
+	
+	return true;
 }
 
 uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
@@ -343,7 +365,7 @@ uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
 	memset(this_ctrlr->cmdring,0,4096);
 	this_ctrlr->cmdring[127].param = (uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring);
 	this_ctrlr->cmdring[127].status = 0;
-	this_ctrlr->cmdring[127].command = XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_COMMAND_CYCLE;
+	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
 	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|XHCI_HCOPS_CRCR_RCS,this_ctrlr);
 	this_ctrlr->ccmdtrb = this_ctrlr->cmdring;
 	this_ctrlr->cmdcycle = XHCI_HCOPS_CRCR_RCS;
@@ -414,25 +436,41 @@ uint8_t xhci_get_unused_device(xhci_controller *xc) {
 	return 0;
 }
 
+void xhci_advance_trb(xhci_trb *ring_start, xhci_trb **current_pointer, uint8_t *current_cycle) {
+	(*current_pointer)++;
+	
+	if (XHCI_TRB_GTRBTYPE((*current_pointer)->command)==XHCI_TRBTYPE_LINK) {
+		(*current_pointer)->command = ((*current_pointer)->command & ~1) | *current_cycle;
+		*current_cycle ^= 1;
+		*current_pointer = ring_start;
+	}
+}
+
+uint32_t xhci_await_int(uint32_t *status) {
+	uint16_t timeout = 2000;
+	while (timeout--) {
+		if (*status)
+			break;
+		sleep(1);
+	}
+	
+	return status;
+}
+
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 	xhci_trb *this_trb = xc->ccmdtrb;
 	trb.command |= xc->cmdcycle;
 	*this_trb = trb;
-	dbgprintf("[xHCI] DATA: Send TRB\n");
+	dbgprintf("[xHCI] DATA: Send COMMAND TRB\n");
 	dbgprintf("[xHCI] DATA: Param: %#\n",this_trb->param);
 	dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)this_trb->status);
 	dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)this_trb->command);
-	xc->ccmdtrb++;
 	
-	if (XHCI_TRB_COMMAND_GTRBTYPE(xc->ccmdtrb->command)==XHCI_TRBTYPE_LINK) {
-		xc->ccmdtrb->command = (xc->ccmdtrb->command & ~1) | xc->cmdcycle;
-		xc->cmdcycle ^= 1;
-		xc->ccmdtrb = xc->cmdring;
-	}
+	xhci_advance_trb(xc->cmdring, &xc->ccmdtrb, &xc->cmdcycle);
 	
 	dbgprintf("[xHCI] DATA: New CCMDTRB: %#\n",(uint64_t)(uint32_t)xc->ccmdtrb);
 	
-	_wr32(xc->dboff, 0);
+	ring_doorbell(xc,0,0);
 	
 	uint16_t timeout = 2000;
 	while (timeout--) {
@@ -456,6 +494,76 @@ xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 	// dbgprintf("IR0_2: %#\n",_rd64(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_ERDQPTR));
 }
 
+void xhci_setup_trb(usb_device *device, usb_setup_pkt setup_pkt, uint8_t direction) {
+	xhci_devdata *data = device->data;
+	
+	xhci_trb trb;
+	trb.param = *(uint64_t *)&setup_pkt; // Convert setup packet into uint64_t
+	trb.status = 8;
+	trb.command = XHCI_TRB_SETUP_DIRECTION(direction) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_SETUP) | XHCI_TRB_IMMEDIATE | data->endpt_cycle[0];
+	
+	*data->cendpttrb[0] = trb;
+	
+	dbgprintf("[xHCI] DATA: Send SETUP TRB\n");
+	dbgprintf("[xHCI] DATA: Param: %#\n",trb.param);
+	dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)trb.status);
+	dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)trb.command);
+	
+	xhci_advance_trb(data->endpt_ring[0],&data->cendpttrb[0],&data->endpt_cycle[0]);
+	
+	dbgprintf("[xHCI] DATA: New CENDPTTRB: %#\n",(uint64_t)(uint32_t)data->cendpttrb[0]);
+}
+
+void xhci_data_trbs(usb_device *device, void *buffer, uint32_t *status, uint16_t size, uint8_t direction) {
+	void *current_buffer = buffer;
+	xhci_devdata *data = device->data;
+	uint16_t size_remaining = size;
+	uint8_t trbs_remaining = ((size + (device->max_pkt_size-1)) / device->max_pkt_size)-1;
+	uint8_t trb_type = XHCI_TRBTYPE_DATA;
+	
+	while (size_remaining) {
+		xhci_trb trb;
+		trb.param = (uint64_t)(uint32_t)get_phys_addr(current_buffer);
+		trb.status = XHCI_TRB_DATA_REMAINING(trbs_remaining) | ((size_remaining < device->max_pkt_size) ? size_remaining : device->max_pkt_size);
+		trb.command = XHCI_TRB_DATA_DIRECTION(direction) | XHCI_TRB_TRBTYPE(trb_type) | XHCI_TRB_CHAIN | (trbs_remaining?0:XHCI_TRB_EVALTRB) | data->endpt_cycle[0];
+		*data->cendpttrb[0] = trb;
+		
+		dbgprintf("[xHCI] DATA: TRBs remain: %d\n",trbs_remaining);
+		dbgprintf("[xHCI] DATA: Send DATA TRB\n");
+		dbgprintf("[xHCI] DATA: Param: %#\n",trb.param);
+		dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)trb.status);
+		dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)trb.command);
+		
+		xhci_advance_trb(data->endpt_ring[0],&data->cendpttrb[0],&data->endpt_cycle[0]);
+		
+		dbgprintf("[xHCI] DATA: New CENDPTTRB: %#\n",(uint64_t)(uint32_t)data->cendpttrb[0]);
+		
+		current_buffer += device->max_pkt_size;
+		size_remaining -= ((size_remaining < device->max_pkt_size) ? size_remaining : device->max_pkt_size);
+		trbs_remaining--;
+		
+		trb_type = XHCI_TRBTYPE_NORMAL;
+		direction = 0;
+	}
+	
+	*status = 0;
+	
+	xhci_trb trb;
+	trb.param = (uint64_t)(uint32_t)get_phys_addr(status);
+	trb.status = 0;
+	trb.command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_EVENT) | XHCI_TRB_IOC | data->endpt_cycle[0];
+	*data->cendpttrb[0] = trb;
+	
+	dbgprintf("[xHCI] DATA: Send EVENT TRB\n");
+	dbgprintf("[xHCI] DATA: Param: %#\n",trb.param);
+	dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)trb.status);
+	dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)trb.command);
+	
+	xhci_advance_trb(data->endpt_ring[0],&data->cendpttrb[0],&data->endpt_cycle[0]);
+	
+	dbgprintf("[xHCI] DATA: New CENDPTTRB: %#\n",(uint64_t)(uint32_t)data->cendpttrb[0]);
+}
+
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	
 }
@@ -463,15 +571,16 @@ bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 // Set the address of a usb device.
 bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	xhci_controller *xc = device->controller;
-	xhci_slot *slot_copy = (xhci_slot *)(device->data1+xc->ctx_size);
-	xhci_endpt *endpt_copy = (xhci_endpt *)(device->data1+(xc->ctx_size*2));
-	xhci_slot *active_slot = (xhci_slot *)device->data0;
-	xhci_endpt *active_endpt = (xhci_endpt *)(device->data0+xc->ctx_size);
+	xhci_devdata *data = device->data;
+	xhci_slot *slot_copy = (xhci_slot *)(data->slot_template+xc->ctx_size);
+	xhci_endpt *endpt_copy = (xhci_endpt *)(data->slot_template+(xc->ctx_size*2));
+	xhci_slot *active_slot = data->slot_ctx;
+	xhci_endpt *active_endpt = (xhci_endpt *)((void *)(data->slot_ctx)+xc->ctx_size);
 	
 	xhci_trb trb;
-	trb.param = get_phys_addr(device->data1);
+	trb.param = get_phys_addr(data->slot_template);
 	trb.status = 0;
-	trb.command = XHCI_TRB_COMMAND_SLOT(device->address) | XHCI_TRB_COMMAND_TRBTYPE(XHCI_TRBTYPE_ADDR) | command_params;
+	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_ADDR) | command_params;
 	trb = xhci_send_cmdtrb(xc,trb);
 	
 	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS)
@@ -484,21 +593,21 @@ bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	endpt_copy->state = active_endpt->state;
 	endpt_copy->max_pkt_size = active_endpt->max_pkt_size;
 	
-	//dbgprintf("------------------------------------------------------------\n");
-	//dbgprintf("This data is pointed to by DCBAAP+Slot#%d\n",device->address);
-	//dump_memory32(device->data0,256/4);
-	//dbgprintf("\n------------------------------------------------------------\n");
-	//dbgprintf("This data is pointed to by the Set Address TRB.\n");
-	//dump_memory32(device->data1,xc->ctx_size/4);
-	//dbgprintf("\n\n");
-	//dump_memory32(device->data1+xc->ctx_size,256/4);
-	//dbgprintf("\n");
+	/*dbgprintf("------------------------------------------------------------\n");
+	dbgprintf("This data is pointed to by DCBAAP+Slot#%d\n",device->slot);
+	dump_memory32(data->slot_ctx,256/4);
+	dbgprintf("\n------------------------------------------------------------\n");
+	dbgprintf("This data is pointed to by the Set Address TRB.\n");
+	dump_memory32(data->slot_template,xc->ctx_size/4);
+	dbgprintf("\n\n");
+	dump_memory32(data->slot_template+xc->ctx_size,256/4);
+	dbgprintf("\n");*/
 	
 	return true;
 }
 
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port) {
-	xhci_controller *xc = get_xhci_controller(ctrlrID);
+	/*xhci_controller *xc = get_xhci_controller(ctrlrID);
 	uint8_t dev_addr = xhci_get_unused_device(xc);
 	usb_device usbdev;
 	memset(&usbdev,0,sizeof(usb_device));
@@ -517,12 +626,27 @@ bool xhci_assign_address(uint8_t ctrlrID, uint8_t port) {
 		return false;
 	usbdev.max_pkt_size = devdesc.max_pkt_size;
 	usbdev.driver_function = 0;
-	xc->devices[dev_addr] = usbdev;
+	xc->devices[dev_addr] = usbdev;*/
 	return true;
 }
 
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
+	xhci_controller *xc = device->controller;
+	void *data = alloc_page(((size+sizeof(uint32_t))/4096)+1);
+	uint32_t *status = data;
+	void *buffer = data+sizeof(uint32_t);
 	
+	xhci_setup_trb(device, setup_pkt_template,XHCI_DIRECTION_IN);
+	xhci_data_trbs(device, buffer, status, size, XHCI_DATA_DIR_IN);
+	ring_doorbell(xc,device->slot,1);
+	
+	status = xhci_await_int(status);
+	
+	if (XHCI_EVTTRB_STATUS_GETCODE(*status)==XHCI_TRBCODE_SUCCESS)
+		return true;
+	
+	dbgprintf("[xHCI] Error: Timed out or bad code\n");
+	return false;
 }
 
 void *xhci_create_interval_in(usb_device *device, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {

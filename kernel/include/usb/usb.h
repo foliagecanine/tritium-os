@@ -28,10 +28,10 @@ typedef struct {
 	uint8_t ctrlrID;
 	uint8_t port;
 	uint8_t address;
+	uint8_t slot; // Used with xHCI
 	uint8_t speed;
 	uint16_t max_pkt_size;
-	void *data0;
-	void *data1;
+	void *data;
 	void (*driver_function)(uint16_t);
 	void *driver0;
 	void *driver1;

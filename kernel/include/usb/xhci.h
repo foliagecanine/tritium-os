@@ -81,17 +81,23 @@ typedef struct {
 	uint32_t command;
 } xhci_trb;
 
-#define XHCI_TRB_COMMAND_CYCLE		1
-#define XHCI_TRB_COMMAND_EVALTRB	(1<<1)
+#define XHCI_TRB_CYCLE		1
+#define XHCI_TRB_EVALTRB	(1<<1)
+#define XHCI_TRB_CHAIN		(1<<4)
+#define XHCI_TRB_IOC		(1<<5)
+#define XHCI_TRB_IMMEDIATE	(1<<6)
+#define XHCI_TRB_TRBTYPE(x) ((x)<<10)
+#define XHCI_TRB_GTRBTYPE(x) (((x)>>10)&0x1F)
+
 #define XHCI_TRB_COMMAND_SPE		(1<<2)
 #define XHCI_TRB_COMMAND_NOSNOOP	(1<<3)
-#define XHCI_TRB_COMMAND_CHAIN		(1<<4)
-#define XHCI_TRB_COMMAND_IOC		(1<<5)
-#define XHCI_TRB_COMMAND_IMMEDIATE	(1<<6)
 #define XHCI_TRB_COMMAND_BLOCK		(1<<9)
-#define XHCI_TRB_COMMAND_TRBTYPE(x) ((x)<<10)
-#define XHCI_TRB_COMMAND_GTRBTYPE(x) (((x)>>10)&0x1F)
 #define XHCI_TRB_COMMAND_SLOT(x)	((x)<<24)
+
+#define XHCI_TRB_SETUP_DIRECTION(x)	((x)<<16)
+
+#define XHCI_TRB_DATA_DIRECTION(x)	((x)<<16)
+#define XHCI_TRB_DATA_REMAINING(x)	((x)<<17)
 
 #define XHCI_TRBTYPE_NORMAL	1
 #define XHCI_TRBTYPE_SETUP	2
@@ -103,6 +109,13 @@ typedef struct {
 #define XHCI_TRBTYPE_NOOP	8
 #define XHCI_TRBTYPE_ENSLOT	9
 #define XHCI_TRBTYPE_ADDR	11
+
+#define XHCI_DIRECTION_NONE	0
+#define XHCI_DIRECTION_OUT	2
+#define XHCI_DIRECTION_IN	3
+
+#define XHCI_DATA_DIR_OUT	0
+#define XHCI_DATA_DIR_IN	1
 
 #define XHCI_EVTTRB_STATUS_GETCODE(x) 	((x)>>24)
 #define XHCI_EVTTRB_COMMAND_GETSLOT(x) 	((x)>>24)
@@ -204,6 +217,15 @@ typedef struct {
 #define XHCI_ENDPOINT_STATE_HALT		2
 #define XHCI_ENDPOINT_STATE_STOP		3
 #define XHCI_ENDPOINT_STATE_ERROR		4
+
+typedef struct {
+	void *slot_template;
+	xhci_slot *slot_ctx;
+	
+	xhci_trb *endpt_ring[31];
+	xhci_trb *cendpttrb[31];
+	uint8_t endpt_cycle[31];
+} __attribute__((packed)) xhci_devdata;
 
 xhci_controller *get_xhci_controller(uint8_t id);
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
