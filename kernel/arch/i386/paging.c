@@ -238,6 +238,42 @@ void map_page_secretly(void *vaddr, void *paddr) {
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
+void unmap_secret_page(void *vaddr, size_t pages) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	for (size_t i = 0; i < pages; i++) {
+		kernel_tables[vaddr_page+i].address = 0;
+		kernel_tables[vaddr_page+i].readwrite = 0;
+		kernel_tables[vaddr_page+i].present = 0;
+	}
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void *map_paddr(void *paddr, size_t pages) {
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	for(volatile uint32_t i = 4096; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			 size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				for (uint32_t step=0; step<pages;step++) {
+					map_page_secretly((void *)((i+step)*4096),(void *)((paddr_page+step)*4096));
+				}
+				return (void *)(i*4096)+((uint32_t)paddr&0xFFF);
+			}
+		}
+	}
+}
+
 void* alloc_page(size_t pages) {
 	//First find consecutive virtual pages
 	for(volatile uint32_t i = 4096; i < 1048576; i++) {
