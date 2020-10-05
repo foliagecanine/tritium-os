@@ -46,21 +46,25 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "usb")) {
-		uhci_controller *uc = get_uhci_controller(0);
-		for (uint8_t i = 1; i; i++) {
-			if (uc->devices[i].valid) {
-				uint16_t usbdev = usb_dev_addr(0,0,i);
-				usb_dev_desc devdesc = usb_get_dev_desc(usbdev);
-				if (devdesc.length) {
-					printf("---USB-DEVICE---\n");
-					char name[256];
-					memset(name,0,256);
-					if (devdesc.product_index) {
-						if (!usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409))
-							strcpy(name,"Unknown USB Device");							
-					} else
-						strcpy(name,"Unknown USB Device");
-					printf("%s\n",name);
+		for (uint8_t i = USB_CTRLR_UHCI; i < USB_CTRLR_XHCI+1; i++) {
+			for (uint8_t j = 0; j < USB_MAX_CTRLRS; j++) {
+				for (uint8_t k = 0; k < 128; k++) {
+					uint16_t usbdev = usb_dev_addr(i,j,k);
+					if (usb_device_from_addr(usbdev)->valid) {
+						dprintf("Valid device found at %d.%d.%d\n",(uint32_t)i,(uint32_t)j,(uint32_t)k);
+						usb_dev_desc devdesc = usb_get_dev_desc(usbdev);
+						if (devdesc.length) {
+							printf("---USB-DEVICE---\n");
+							char name[256];
+							memset(name,0,256);
+							if (devdesc.product_index) {
+								if (!usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409))
+									strcpy(name,"Unknown USB Device");							
+							} else
+								strcpy(name,"Unknown USB Device");
+							printf("%s\n",name);
+						}
+					}
 				}
 			}
 		}

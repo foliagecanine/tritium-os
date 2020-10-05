@@ -38,7 +38,7 @@ inline uint8_t _rd8(volatile void *mem) {
 
 // Force a 32 bit write
 inline void _wr32(void *mem, uint32_t b) {
-	__asm__ __volatile__("movl %%eax, %0":"=m"(*mem):"a"(b):"memory");
+	__asm__ __volatile__("movl %%eax, %0":"=m"(*(uint32_t *)mem):"a"(b):"memory");
 }
 
 // Emulate a 64 bit write
@@ -215,8 +215,14 @@ void xhci_interrupt() {
 		if ((_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR)&(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP))==(XHCI_INTREG_IMR_EN|XHCI_INTREG_IMR_IP)) {
 			_wr32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR,_rd32(xc->runtime+XHCI_RUNTIME_IR0+XHCI_INTREG_IMR));
 			while ((xc->cevttrb->command&XHCI_TRB_CYCLE)==xc->evtcycle) {
-				if (xc->cevttrb->command != 0x8801) {
-					xhci_trb *exec_trb = map_paddr(xc->cevttrb->param,1);//(xc->cevttrb->param&0xFFF)+((void *)xc->cmdring);
+				if (xc->cevttrb->command&XHCI_TRB_EVENT) {
+					dbgprintf("[xHCI] DATA: Detected Event TRB\n");
+					uint32_t *status = map_paddr((void *)(uint32_t)xc->cevttrb->param,1);
+					dbgprintf("Writing %# to %#\n",(uint64_t)xc->cevttrb->status,xc->cevttrb->param);
+					*status = xc->cevttrb->status;
+					unmap_secret_page(status,1);
+				} else if (xc->cevttrb->command != 0x8801) {
+					xhci_trb *exec_trb = map_paddr((void *)(uint32_t)xc->cevttrb->param,1);//(xc->cevttrb->param&0xFFF)+((void *)xc->cmdring);
 					exec_trb->param = (uint64_t)(uint32_t)(void *)xc->cevttrb;
 					unmap_secret_page(exec_trb,1);
 				}
@@ -273,7 +279,7 @@ void *xhci_init_device(usb_device *usbdev, xhci_controller *xc) {
 	xhci_endpt *this_ep = ((void *)data->slot_ctx)+xc->ctx_size;
 	*this_ep = ep;
 	
-	xc->dcbaap[usbdev->slot] = get_phys_addr(data->slot_ctx);
+	xc->dcbaap[usbdev->slot] = (uint64_t)(uint32_t)get_phys_addr(data->slot_ctx);
 	
 	return data->slot_ctx;
 }
@@ -294,6 +300,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	usb_device *usbdev = &xc->devices[0];
 	memset(usbdev,0,sizeof(usb_device));
 	usbdev->slot = XHCI_EVTTRB_COMMAND_GETSLOT(trb.command);
+	usbdev->port = port;
 	usbdev->speed = XHCI_PORTREGS_PORTSC_PORTSPD(_rd32(portbase+XHCI_PORTREGS_PORTSC));
 	usbdev->controller = xc;
 	usbdev->ctrlrID = xc->ctrlrID;
@@ -354,8 +361,8 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	return true;
 }
 
-uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq) {
-	dbgprintf("[xHCI] Base Address: %#\n",(uint64_t)baseaddr);
+uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq) {
+	dbgprintf("[xHCI] Base Address: %#\n",(uint64_t)(uint32_t)baseaddr);
 	for (uint8_t i = 0; i < 16; i++) {
 		identity_map((void *)baseaddr+(i*4096));
 	}
@@ -488,7 +495,7 @@ uint32_t xhci_await_int(uint32_t *status) {
 		sleep(1);
 	}
 	
-	return status;
+	return *status;
 }
 
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
@@ -712,8 +719,9 @@ bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	xhci_status_trb(device, status, XHCI_DATA_DIR_IN);
 	ring_doorbell(xc,device->slot,1);
 	
-	status = xhci_await_int(status);
+	*status = xhci_await_int(status);
 	
+	dbgprintf("[xHCI] Looking at PhysAddr %#\n",(uint64_t)(uint32_t)get_phys_addr(status));
 	dbgprintf("[xHCI] Recieved status code %#\n",(uint64_t)*status);
 	
 	if (XHCI_EVTTRB_STATUS_GETCODE(*status)==XHCI_TRBCODE_SUCCESS) {

@@ -89,6 +89,8 @@ typedef struct {
 #define XHCI_TRB_TRBTYPE(x) ((x)<<10)
 #define XHCI_TRB_GTRBTYPE(x) (((x)>>10)&0x1F)
 
+#define XHCI_TRB_EVENT		(1<<2)
+
 #define XHCI_TRB_COMMAND_SPE		(1<<2)
 #define XHCI_TRB_COMMAND_NOSNOOP	(1<<3)
 #define XHCI_TRB_COMMAND_BLOCK		(1<<9)
@@ -109,6 +111,8 @@ typedef struct {
 #define XHCI_TRBTYPE_NOOP	8
 #define XHCI_TRBTYPE_ENSLOT	9
 #define XHCI_TRBTYPE_ADDR	11
+
+#define XHCI_TRBTYPE_EVT_COMPLETE	32
 
 #define XHCI_DIRECTION_NONE	0
 #define XHCI_DIRECTION_OUT	2
@@ -242,6 +246,6 @@ usb_config_desc xhci_get_config_desc(usb_device *device, uint8_t index);
 usb_interface_desc xhci_get_interface_desc(usb_device *device, uint8_t config_index, uint8_t interface_index);
 usb_endpoint_desc xhci_get_endpoint_desc(usb_device *device, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
 uint8_t xhci_get_unused_device(xhci_controller *xc);
-uint8_t init_xhci_ctrlr(uint32_t baseaddr, uint8_t irq);
+uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq);
 
 #endif

@@ -28,7 +28,7 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 				ctrlrcounts[0]++;
 			}
 		} else if (strcmp(name,"xHCI")) {
-			uint8_t rval = init_xhci_ctrlr(pci.BAR0&~15,pci.irq);
+			uint8_t rval = init_xhci_ctrlr((void *)(pci.BAR0&~15),pci.irq);
 			if (rval) {
 				printf("Initialized xHCI controller ID %d with %d ports IRQ %d.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports,pci.irq);
 				ctrlrcounts[3]++;
@@ -38,6 +38,8 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 }
 
 void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass, uint8_t protocol) {
+	(void)subclass; // These two will be used later when we get more drivers
+	(void)protocol;
 	usb_config_desc config = usb_get_config_desc(dev_addr,0);
 	usb_get_endpoint_desc(dev_addr,0,0,0);
 	if (class==USB_CLASS_HUB)
@@ -66,10 +68,12 @@ void init_usb() {
 		}
 	}
 	kprint("[USB ] Assigning drivers to devices...");
-	for (uint8_t ctype = 0; ctype < 1; ctype++) {
+	for (uint8_t ctype = 0; ctype < USB_CTRLR_XHCI+1; ctype++) {
 		for (uint8_t cid = 0; cid < ctrlrcounts[ctype]; cid++) {
 			for (uint8_t dev_num = 1; dev_num < 128; dev_num++) {
 				uint16_t devaddr = usb_dev_addr(ctype,cid,dev_num);
+				if (!usb_device_from_addr(devaddr)->valid)
+					continue;
 				usb_dev_desc devdesc = usb_get_dev_desc(devaddr);
 				if (!devdesc.length)
 					break;
@@ -110,8 +114,13 @@ uint16_t usb_dev_addr(uint8_t ctrlrtype, uint8_t ctrlrID, uint8_t devID) {
 usb_device device_null = {0};
 
 usb_device *usb_device_from_addr(uint16_t dev_addr) {
-	if ((dev_addr&0xF000)>>12==USB_CTRLR_UHCI) {
-		return &get_uhci_controller((dev_addr&0x0F00)>>8)->devices[dev_addr&0x007F];
+	uint8_t ctrlrtype = (dev_addr&0xF000)>>12;
+	uint8_t ctrlrID = (dev_addr&0x0F00)>>8;
+	uint8_t devID = dev_addr&0x007F;
+	if (ctrlrtype==USB_CTRLR_UHCI) {
+		return &get_uhci_controller(ctrlrID)->devices[devID];
+	} else if (ctrlrtype==USB_CTRLR_XHCI) {
+		return &get_xhci_controller(ctrlrID)->devices[devID];
 	} else {
 		return &device_null;
 	}
@@ -119,78 +128,124 @@ usb_device *usb_device_from_addr(uint16_t dev_addr) {
 
 bool usb_get_str_desc(uint16_t dev_addr, void *out, uint8_t index, uint16_t targetlang) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_get_usb_str_desc(device,out,index,targetlang);
-	} else {
-		return false;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_get_usb_str_desc(device,out,index,targetlang);
+			case USB_CTRLR_XHCI:
+				return xhci_get_usb_str_desc(device,out,index,targetlang);
+			default:
+				break;
+		}
 	}
+	return false;
 }
 
 usb_dev_desc usb_get_dev_desc(uint16_t dev_addr) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_get_usb_dev_descriptor(device,sizeof(usb_dev_desc));
-	} else {
-		usb_dev_desc retnull;
-		memset(&retnull,0,sizeof(usb_dev_desc));
-		return retnull;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_get_usb_dev_descriptor(device,sizeof(usb_dev_desc));
+			case USB_CTRLR_XHCI:
+				return xhci_get_usb_dev_descriptor(device,sizeof(usb_dev_desc));
+			default:
+				break;
+		}
 	}
+	usb_dev_desc retnull;
+	memset(&retnull,0,sizeof(usb_dev_desc));
+	return retnull;
 }
 
 usb_config_desc usb_get_config_desc(uint16_t dev_addr, uint8_t index) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_get_config_desc(device,index);
-	} else {
-		usb_config_desc retnull;
-		memset(&retnull,0,sizeof(usb_config_desc));
-		return retnull;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_get_config_desc(device,index);
+			case USB_CTRLR_XHCI:
+				return xhci_get_config_desc(device,index);
+			default:
+				break;
+		}
 	}
+	usb_config_desc retnull;
+	memset(&retnull,0,sizeof(usb_config_desc));
+	return retnull;
 }
 
 usb_interface_desc usb_get_interface_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_get_interface_desc(device, config_index, interface_index);
-	} else {
-		usb_interface_desc retnull;
-		memset(&retnull,0,sizeof(usb_interface_desc));
-		return retnull;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_get_interface_desc(device,config_index,interface_index);
+			case USB_CTRLR_XHCI:
+				return xhci_get_interface_desc(device,config_index,interface_index);
+			default:
+				break;
+		}
 	}
+	usb_interface_desc retnull;
+	memset(&retnull,0,sizeof(usb_interface_desc));
+	return retnull;
 }
 
 usb_endpoint_desc usb_get_endpoint_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_get_endpoint_desc(device, config_index, interface_index, endpoint_index);
-	} else {
-		usb_endpoint_desc retnull;
-		memset(&retnull,0,sizeof(usb_endpoint_desc));
-		return retnull;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_get_endpoint_desc(device,config_index,interface_index,endpoint_index);
+			case USB_CTRLR_XHCI:
+				return xhci_get_endpoint_desc(device,config_index,interface_index,endpoint_index);
+			default:
+				break;
+		}
 	}
+	usb_endpoint_desc retnull;
+	memset(&retnull,0,sizeof(usb_endpoint_desc));
+	return retnull;
 }
 
 bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_usb_get_desc(device, out, setup_pkt_template, size);
-	} else {
-		return false;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				uhci_usb_get_desc(device, out, setup_pkt_template, size);
+				return true;
+			case USB_CTRLR_XHCI:
+				xhci_usb_get_desc(device, out, setup_pkt_template, size);
+				return true;
+			default:
+				break;
+		}
 	}
+	return false;
 }
 
 bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_generic_setup(device, setup_pkt_template);
-	} else {
-		return false;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				uhci_generic_setup(device, setup_pkt_template);
+				return true;
+			case USB_CTRLR_XHCI:
+				xhci_generic_setup(device, setup_pkt_template);
+				return true;
+			default:
+				break;
+		}
 	}
+	return false;
 }
 
-bool usb_assign_address(uint16_t port_addr, uint8_t lowspeed) {
+bool usb_assign_address(uint16_t port_addr, uint8_t speed) {
 	if ((port_addr&0xF000)>>12==USB_CTRLR_UHCI) {
-		return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, lowspeed);
+		return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
 	} else {
 		return false;
 	}
