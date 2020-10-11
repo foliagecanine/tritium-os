@@ -273,7 +273,7 @@ void *xhci_init_device(usb_device *usbdev, xhci_controller *xc) {
 	memset(data->endpt_ring[0],0,4096);
 	data->endpt_ring[0][127].param = ep.dqptr;
 	data->endpt_ring[0][127].status = 0;
-	data->endpt_ring[0][127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
+	data->endpt_ring[0][127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK);
 	data->endpt_cycle[0] = XHCI_TRB_CYCLE;
 	
 	xhci_endpt *this_ep = ((void *)data->slot_ctx)+xc->ctx_size;
@@ -406,7 +406,7 @@ uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq) {
 	memset(this_ctrlr->cmdring,0,4096);
 	this_ctrlr->cmdring[127].param = (uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring);
 	this_ctrlr->cmdring[127].status = 0;
-	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | XHCI_TRB_CYCLE;
+	this_ctrlr->cmdring[127].command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK);
 	_wr64(this_ctrlr->hcops+XHCI_HCOPS_CRCR,(uint64_t)(uint32_t)get_phys_addr(this_ctrlr->cmdring)|XHCI_HCOPS_CRCR_RCS,this_ctrlr);
 	this_ctrlr->ccmdtrb = this_ctrlr->cmdring;
 	this_ctrlr->cmdcycle = XHCI_HCOPS_CRCR_RCS;
@@ -481,8 +481,15 @@ void xhci_advance_trb(xhci_trb *ring_start, xhci_trb **current_pointer, uint8_t 
 	(*current_pointer)++;
 	
 	if (XHCI_TRB_GTRBTYPE((*current_pointer)->command)==XHCI_TRBTYPE_LINK) {
-		(*current_pointer)->command = ((*current_pointer)->command & ~1) | *current_cycle;
+		(*current_pointer)->param = get_phys_addr(ring_start);
+		(*current_pointer)->status = 0;
+		(*current_pointer)->command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | *current_cycle;
+		dbgprintf("[xHCI] DATA: Send LINK TRB\n");
+		dbgprintf("[xHCI] DATA: Param: %#\n",(uint64_t)(*current_pointer)->param);
+		dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)(*current_pointer)->status);
+		dbgprintf("[xHCI] DATA: Command: %#\n",(uint64_t)(*current_pointer)->command);
 		*current_cycle ^= 1;
+		dbgprintf("[xHCI] DATA: NEW CYCLE: %d\n",(uint32_t)*current_cycle);
 		*current_pointer = ring_start;
 	}
 }
