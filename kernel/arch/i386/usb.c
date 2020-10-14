@@ -2,7 +2,7 @@
 
 char name[5];
 
-uint8_t ctrlrcounts[4] = {0,0,0,0};
+uint8_t ctrlrcounts[4] = {1,0,0,1};
 
 void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==0xC&&pci.subclass==3) {
@@ -41,7 +41,7 @@ void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass
 	(void)subclass; // These two will be used later when we get more drivers
 	(void)protocol;
 	usb_config_desc config = usb_get_config_desc(dev_addr,0);
-	usb_get_endpoint_desc(dev_addr,0,0,0);
+	//usb_get_endpoint_desc(dev_addr,0,0,0);
 	if (class==USB_CLASS_HUB)
 		init_hub(dev_addr,config);
 	if (class==USB_CLASS_HID)
@@ -76,13 +76,13 @@ void init_usb() {
 					continue;
 				usb_dev_desc devdesc = usb_get_dev_desc(devaddr);
 				if (!devdesc.length)
-					break;
+					continue;
 				if (devdesc.dev_class) {
 					usb_get_driver_for_class(devaddr,devdesc.dev_class,devdesc.dev_subclass,devdesc.dev_protocol);
 				} else {
 					usb_interface_desc interface = usb_get_interface_desc(devaddr,0,0);
 					if (!interface.length)
-						break;
+						continue;
 					usb_get_driver_for_class(devaddr,interface.iclass,interface.isubclass,interface.iprotocol);
 				}
 			}
@@ -244,11 +244,13 @@ bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template) {
 }
 
 bool usb_assign_address(uint16_t port_addr, uint8_t speed) {
-	if ((port_addr&0xF000)>>12==USB_CTRLR_UHCI) {
-		return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
-	} else {
-		return false;
+	switch((port_addr&0xF000)>>12) {
+		case USB_CTRLR_UHCI:
+			return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
+		case USB_CTRLR_XHCI:
+			return xhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
 	}
+	return false;
 }
 
 void *usb_create_interval_in(uint16_t dev_addr, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {

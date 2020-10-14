@@ -9,6 +9,7 @@
 #else
 #define dbgprintf dprintf
 #endif
+#define ERROR(x) dbgprintf(x)&0
 #else
 #define dbgprintf
 #endif
@@ -286,7 +287,7 @@ void *xhci_init_device(usb_device *usbdev, xhci_controller *xc) {
 
 const uint16_t default_speeds[] = {64,8,64,512};
 
-bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
+bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint8_t speed) {
 	void *portbase = xc->hcops+XHCI_HCOPS_PORTREGS+(port*16);
 	xhci_trb trb;
 	trb.param = 0;
@@ -301,7 +302,10 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	memset(usbdev,0,sizeof(usb_device));
 	usbdev->slot = XHCI_EVTTRB_COMMAND_GETSLOT(trb.command);
 	usbdev->port = port;
-	usbdev->speed = XHCI_PORTREGS_PORTSC_PORTSPD(_rd32(portbase+XHCI_PORTREGS_PORTSC));
+	if (speed==5)
+		usbdev->speed = XHCI_PORTREGS_PORTSC_PORTSPD(_rd32(portbase+XHCI_PORTREGS_PORTSC));
+	else
+		usbdev->speed = speed;
 	usbdev->controller = xc;
 	usbdev->ctrlrID = xc->ctrlrID;
 	usbdev->ctrlr_type = USB_CTRLR_XHCI;
@@ -317,7 +321,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	((uint32_t *)data->slot_template)[1] = 3;
 	//xhci_set_address(usbdev,0);
 	if (!xhci_set_address(usbdev,0))
-		return false;
+		return ERROR("Set address failed.\n");
 	
 	usbdev->address = data->slot_ctx->devaddr;
 	memcpy(&xc->devices[usbdev->address],usbdev,sizeof(usb_device));
@@ -327,7 +331,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port) {
 	usb_dev_desc devdesc = xhci_get_usb_dev_descriptor(usbdev,8);
 	
 	if (!devdesc.length)
-		return false;
+		return ERROR("Device Descriptor failed.\n");
 	
 	dbgprintf("[xHCI] Got Descriptor\n");
 	dbgprintf("[xHCI] Length: %d\n",(uint32_t)devdesc.length);
@@ -449,13 +453,13 @@ uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq) {
 		}
 		if (xhci_port_reset(this_ctrlr,current_port)) {
 			dbgprintf("[xHCI] Reset port %d (USB%c) SUCCESS\n",current_port,this_ctrlr->ports[current_port].legacy&XHCI_PORT_LEGACY_USB2?'2':'3');
-			xhci_init_port_dev(this_ctrlr,current_port);
+			xhci_init_port_dev(this_ctrlr,current_port,5);
 		} else {
 			dbgprintf("[xHCI] Reset port %d (USB3) FAILED\n",current_port);
 			if (this_ctrlr->ports[current_port].port_pair!=0xFF) {
 				if (xhci_port_reset(this_ctrlr,this_ctrlr->ports[current_port].port_pair)) {
 					dbgprintf("[xHCI] Reset port %d (USB2) SUCCESS\n",this_ctrlr->ports[current_port].port_pair);
-					xhci_init_port_dev(this_ctrlr,current_port);
+					xhci_init_port_dev(this_ctrlr,current_port,5);
 				} else
 					dbgprintf("[xHCI] Reset port %d (USB2) FAILED\n",this_ctrlr->ports[current_port].port_pair);
 			}
@@ -478,12 +482,15 @@ uint8_t xhci_get_unused_device(xhci_controller *xc) {
 }
 
 void xhci_advance_trb(xhci_trb *ring_start, xhci_trb **current_pointer, uint8_t *current_cycle) {
+	uint8_t chain = 0;
+	if ((*current_pointer)->command&XHCI_TRB_CHAIN)
+		chain = 1;
 	(*current_pointer)++;
 	
 	if (XHCI_TRB_GTRBTYPE((*current_pointer)->command)==XHCI_TRBTYPE_LINK) {
 		(*current_pointer)->param = get_phys_addr(ring_start);
 		(*current_pointer)->status = 0;
-		(*current_pointer)->command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | *current_cycle;
+		(*current_pointer)->command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | *current_cycle | (chain*XHCI_TRB_CHAIN) | XHCI_TRB_EVALTRB; //EVALTRB = TOGGLECYCLE
 		dbgprintf("[xHCI] DATA: Send LINK TRB\n");
 		dbgprintf("[xHCI] DATA: Param: %#\n",(uint64_t)(*current_pointer)->param);
 		dbgprintf("[xHCI] DATA: Status: %#\n",(uint64_t)(*current_pointer)->status);
@@ -691,28 +698,9 @@ bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	return true;
 }
 
-bool xhci_assign_address(uint8_t ctrlrID, uint8_t port) {
-	/*xhci_controller *xc = get_xhci_controller(ctrlrID);
-	uint8_t dev_addr = xhci_get_unused_device(xc);
-	usb_device usbdev;
-	memset(&usbdev,0,sizeof(usb_device));
-	usbdev.valid = true;
-	usbdev.controller = xc;
-	usbdev.ctrlr_type = USB_CTRLR_XHCI;
-	usbdev.ctrlrID = ctrlrID;
-	usbdev.address = 0;
-	usbdev.port = port;
-	usbdev.max_pkt_size = 8;
-	if (!(xhci_set_address(&usbdev,XHCI_TRB_COMMAND_BLOCK)))//,dev_addr)))
-		return false;
-	usbdev.address = dev_addr;
-	usb_dev_desc devdesc = xhci_get_usb_dev_descriptor(&usbdev,sizeof(usb_dev_desc));
-	if (!devdesc.length)
-		return false;
-	usbdev.max_pkt_size = devdesc.max_pkt_size;
-	usbdev.driver_function = 0;
-	xc->devices[dev_addr] = usbdev;*/
-	return true;
+bool xhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t speed) {
+	xhci_controller *xc = get_xhci_controller(ctrlrID);
+	return xhci_init_port_dev(xc,port,speed);
 }
 
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
