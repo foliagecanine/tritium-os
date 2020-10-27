@@ -145,7 +145,7 @@ void init_paging(multiboot_info_t *mbi) {
 				release_phys_page((void *)(uint32_t)physptr);
 			}
 		}
-		printf("%d: 0x%#+0x%# %s\n",(uint32_t)i,(uint64_t)mmap[i].addr,(uint64_t)mmap[i].len,mem_types[type]);
+		printf("%u: %p+%p %s\n",i,(void *)mmap[i].addr,(void *)mmap[i].len,mem_types[type]);
 	}
 	
 	//Reclaim all the way up to 8MiB (for the kernel and the page tables)
@@ -210,9 +210,9 @@ void *get_phys_addr(void *vaddr) {
 }
 
 void* map_page_to(void *vaddr) {
-	if (kernel_tables[(uint32_t)vaddr/4096].present==1) {
+	if (kernel_tables[(uint32_t)vaddr/4096].present) {
 		kwarn("[WARN] Page mapped that is already present");
-		printf("===== %#\n",(uint64_t)(uint32_t)vaddr);
+		printf("===== %p\n",vaddr);
 		return 0;
 	}
 	for (uint32_t k=0; k<1048576; k++) {

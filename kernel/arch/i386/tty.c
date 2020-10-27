@@ -147,7 +147,7 @@ void terminal_refresh() {
 }
 
 uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y) {
-	//printf("Recieved: c%d x%d y%d\n",(uint32_t)command,(uint32_t)x,(uint32_t)y);
+	//printf("Recieved: c%$ x%$ y%$\n",(uint32_t)command,(uint32_t)x,(uint32_t)y);
 	if (command==0) {
 		terminal_column = x;
 		terminal_row = y;

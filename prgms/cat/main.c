@@ -20,7 +20,7 @@ void main(uint32_t argc, char **argv) {
 	f = fopen(fname,"r");
 	if (f.valid) {
 		if (!f.directory) {
-			printf("%d bytes\n",(uint32_t)f.size);
+			printf("%$ bytes\n",(uint32_t)f.size);
 			for (uint32_t i = 0; i < f.size; i+=512) {
 				fread(&f,buf,i,512);
 				printf("%s",buf);

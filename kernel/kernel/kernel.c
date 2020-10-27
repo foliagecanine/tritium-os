@@ -19,7 +19,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	disable_cursor();
 	if (magic!=0x2BADB002) {
 		kerror("ERROR: Multiboot info failed! Bad magic value:"); 
-		printf("%#\n",(uint64_t)magic);
+		printf("%lx\n",(uint64_t)magic);
 		abort();
 	}
 	printf("Hello, kernel World!\n");
@@ -42,7 +42,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	//Support up to 8 drives (for now)
 	for (uint8_t i = 0; i < 8; i++) {
 		if (!mountDrive(i)) {
-			printf("Mounted drive %d\n",i);
+			printf("Mounted drive %u\n",i);
 		} else if (i==0) {
 			printf("No valid drive found.\n");
 			printf("Press shift key to enter Kernel Debug Console.\n");
@@ -74,7 +74,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 			debug_console();
 		}
 	}
-	
+		
 	start_program("A:/bin/GUI.SYS");
 	//start_program("A:/bin/MEM.PRG");
 	//Idle program to prevent errors if the program above exits without any active children.

@@ -28,7 +28,7 @@ void init_tasking(uint32_t num_pages) {
 	threads = alloc_page(num_pages);
 	memset(threads,0,num_pages*4096);
 	max_threads = (num_pages*4096)/sizeof(thread_t);
-	printf("Max threads: %d\n",max_threads);
+	printf("Max threads: %$\n",max_threads);
 	kprint("[INIT] Tasking initialized.");
 }
 
@@ -90,7 +90,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].tss.edx = 0;
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process created:");
-	printf("====== pid=%d\n",pid);
+	printf("====== pid=%$\n",pid);
 #endif
 	return pid;
 }
@@ -235,7 +235,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	}
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
-	printf("====== pid=%d\n",old_pid);
+	printf("====== pid=%$\n",old_pid);
 #endif
 	//switch_tables(current_task->tables);
 	//asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));

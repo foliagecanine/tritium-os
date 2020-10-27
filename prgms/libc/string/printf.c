@@ -94,7 +94,7 @@ int printf(const char* restrict format, ...) {
 					return -1;
 				written+=size;
 			}
-		} else if (*format == 'd') {
+		} else if (*format == '$') {
 			format++;
 			long num = (long)va_arg(parameters, int);
 			if (num==0) {

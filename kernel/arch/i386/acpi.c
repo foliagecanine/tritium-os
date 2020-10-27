@@ -6,7 +6,7 @@ uint32_t acpi_find_rsdp() {
 	unmap_vaddr(0); //Unmap it so we dont get random stuff when null pointers occur.
 	ebdastart<<=10; //Value is in KiB. Convert to bytes.
 	uint32_t ebdalen = 0xA0000-ebdastart;
-	//printf("EBDA: %#, length: %d\n",(uint64_t)ebdastart,(uint32_t)ebdalen);
+	//printf("EBDA: %#, length: %$\n",(uint64_t)ebdastart,(uint32_t)ebdalen);
 	uint32_t ebdaend = ebdastart+ebdalen;
 	for (uint32_t i = ebdastart; i<ebdaend; i+=4096) {
 		identity_map((void *)i);
@@ -53,14 +53,14 @@ uint32_t acpi_find_fadt() {
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
-		printf("Address: %#\n",(uint64_t)rsdp->rsdt_addr);
+		printf("Address: %p\n",rsdp->rsdt_addr);
 		rsdt = (ACPI_SDTHeader *)rsdp->rsdt_addr;
 		identity_map(rsdt);
 	} else {
 		printf("Version 2.0\n");
 		ptr_size = 8;
 		ACPI_RSDPDescriptorV2 *xsdp = (ACPI_RSDPDescriptorV2 *)rsdp;
-		printf("Address: %#\n",(uint64_t)xsdp->xsdt_low_addr);
+		printf("Address: %p\n",xsdp->xsdt_low_addr);
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
@@ -90,14 +90,14 @@ uint32_t acpi_find_ssdt() {
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
-		printf("Address: %#\n",(uint64_t)rsdp->rsdt_addr);
+		printf("Address: %p\n",rsdp->rsdt_addr);
 		rsdt = (ACPI_SDTHeader *)rsdp->rsdt_addr;
 		identity_map(rsdt);
 	} else {
 		printf("Version 2.0\n");
 		ptr_size = 8;
 		ACPI_RSDPDescriptorV2 *xsdp = (ACPI_RSDPDescriptorV2 *)rsdp;
-		printf("Address: %#\n",(uint64_t)xsdp->xsdt_low_addr);
+		printf("Address: %p\n",xsdp->xsdt_low_addr);
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
@@ -128,14 +128,14 @@ void acpi_list_tables() {
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
-		printf("Address: %#\n",(uint64_t)rsdp->rsdt_addr);
+		printf("Address: %p\n",rsdp->rsdt_addr);
 		rsdt = (ACPI_SDTHeader *)rsdp->rsdt_addr;
 		identity_map(rsdt);
 	} else {
 		printf("Version 2.0\n");
 		ptr_size = 8;
 		ACPI_RSDPDescriptorV2 *xsdp = (ACPI_RSDPDescriptorV2 *)rsdp;
-		printf("Address: %#\n",(uint64_t)xsdp->xsdt_low_addr);
+		printf("Address: %p\n",xsdp->xsdt_low_addr);
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
@@ -156,7 +156,7 @@ void acpi_enable(ACPI_FADT *fadt) {
 	kprint("[ACPI] Enabling ACPI");
 	if (fadt->SMI_cmdport&&fadt->ACPI_enable&&fadt->ACPI_disable&&!(inw(fadt->PM1a_ctl_blk)&1)) {
 		printf("Enabling ACPI...\n");
-		printf("outb(0x%#,0x%#)\n",(uint64_t)fadt->SMI_cmdport,(uint64_t)fadt->ACPI_enable);
+		printf("outb(0x%X,0x%X)\n",fadt->SMI_cmdport,fadt->ACPI_enable);
 		outb(fadt->SMI_cmdport,fadt->ACPI_enable);
 		for (uint16_t i = 0; i < 300; i++) {
 			if (inw(fadt->PM1a_ctl_blk)&1)
@@ -170,7 +170,7 @@ void acpi_disable(ACPI_FADT *fadt) {
 	kprint("[ACPI] Disabling ACPI");
 	if (fadt->SMI_cmdport||fadt->ACPI_enable||fadt->ACPI_disable||!(inw(fadt->PM1a_ctl_blk)&1)) {
 		printf("Disabling ACPI...\n");
-		printf("outb(0x%#,0x%#)\n",(uint64_t)fadt->SMI_cmdport,(uint64_t)fadt->ACPI_enable);
+		printf("outb(0x%X,0x%X)\n",fadt->SMI_cmdport,fadt->ACPI_enable);
 		outb(fadt->SMI_cmdport,fadt->ACPI_disable);
 		for (uint16_t i = 0; i < 300; i++) {
 			if (!inw(fadt->PM1a_ctl_blk)&1)

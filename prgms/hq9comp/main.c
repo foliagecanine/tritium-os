@@ -51,8 +51,8 @@ void main(uint32_t argc, char **argv) {
 			printf("%s",buf);
 		else if (buf[i]=='9') {
 			for (int j = 99; j > 1; j--) {
-				printf("%d bottles of beer on the wall, %d bottles of beer.\n",j,j);
-				printf("Take one down, pass it around. %d bottles of beer on the wall.\n\n",j-1);
+				printf("%$ bottles of beer on the wall, %$ bottles of beer.\n",j,j);
+				printf("Take one down, pass it around. %$ bottles of beer on the wall.\n\n",j-1);
 			}
 			printf("1 bottle of beer on the wall, 1 bottle of beer.\n");
 			printf("Take one down, pass it around. No bottles of beer on the wall.\n");
@@ -60,7 +60,7 @@ void main(uint32_t argc, char **argv) {
 			if (!buf[i])
 				exit(0);
 			if (!ignore) {
-				printf("Syntax error in %d (ERR 127)\n",i);
+				printf("Syntax error in %$ (ERR 127)\n",i);
 				exit(127);
 			}
 		}

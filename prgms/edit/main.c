@@ -22,7 +22,7 @@ void update_cursor() {
 	terminal_setcursor(text_cursor_x-hscroll,text_cursor_y);
 	terminal_goto(30,24);
 	terminal_setcolor(0x70);
-	printf("Line %d, Col %d     ",text_cursor_y,text_cursor_x);
+	printf("Line %$, Col %$     ",text_cursor_y,text_cursor_x);
 }
 
 void parse(char *f) {

@@ -232,9 +232,9 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==1&&pci.subclass==6) {
 		if (k==0)
-			printf("Detected SATA Host on port %#:%#\n", (uint64_t)i,(uint64_t)j);
+			printf("Detected SATA Host on port %X:%X\n", i,j);
 		else
-			printf("Detected SATA Host on port %#:%#.%d\n", (uint64_t)i,(uint64_t)j,(uint32_t)k);
+			printf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
 		identity_map((void *)pci.BAR5);
 		initialize_abar((HBAData *)pci.BAR5);
 	}
@@ -303,7 +303,7 @@ void print_sector(uint8_t *read) {
 			if (read[(j*32)+i]<16) {
 				printf("0");
 			}
-			printf("%#", (uint64_t)(read[(j*32)+i]));
+			printf("%X", read[(j*32)+i]);
 		}
 		printf("\n");
 	}

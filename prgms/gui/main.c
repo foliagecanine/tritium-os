@@ -203,7 +203,7 @@ bool programselector() {
 			terminal_goto(32,11);
 			terminal_setcolor(0xF0);
 			if (f.valid) 
-				printf("Size: %d bytes",f.size);
+				printf("Size: %$ bytes",f.size);
 			else
 				printf("Could not open file.\n%s",program);
 			terminal_goto(38,13);

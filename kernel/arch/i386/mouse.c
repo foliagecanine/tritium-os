@@ -42,7 +42,7 @@ void mouse_set_override(uint32_t _x, uint32_t _y) {
 
 void mouse_buttons_override(uint8_t _buttons) {
 	buttons = _buttons;
-	dprintf("Mouse X: %d, Mouse Y: %d, Buttons: %#\n",x,y,(uint64_t)buttons);
+	dprintf("Mouse X: %$, Mouse Y: %$, Buttons: %#\n",x,y,(uint64_t)buttons);
 }
 
 //Mouse functions
@@ -75,7 +75,7 @@ void mouse_handler()
 				y += pkt[1];
 			buttons = pkt[2];
 			mouse_cycle=0;
-			//printf("X: %d Y: %d B: %d\n",(uint32_t)x,(uint32_t)y,(uint32_t)buttons);
+			//printf("X: %$ Y: %$ B: %$\n",(uint32_t)x,(uint32_t)y,(uint32_t)buttons);
 			break;
 	}
 }

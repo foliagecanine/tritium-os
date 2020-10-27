@@ -122,6 +122,7 @@ bool init_hid_kbd(uint16_t dev_addr, usb_config_desc config, usb_interface_desc 
 	}
 	if (endpoint_addr==0xFF)
 		return false;
+	usb_enable_endpoint(dev_addr,endpoint_addr,USB_ENDPOINT_IN | USB_ENDPOINT_INTERRUPT, calc_interval(endpoint.interval));
 	
 	// Use boot protocol
 	usb_setup_pkt sp;
@@ -176,6 +177,7 @@ bool init_hid_mouse(uint16_t dev_addr, usb_config_desc config, usb_interface_des
 	}
 	if (endpoint_addr==0xFF)
 		return false;
+	usb_enable_endpoint(dev_addr, endpoint_addr, USB_ENDPOINT_IN | USB_ENDPOINT_INTERRUPT, calc_interval(endpoint.interval));
 	
 	// Use boot protocol
 	usb_setup_pkt sp;
@@ -221,6 +223,6 @@ bool init_hid(uint16_t dev_addr, usb_config_desc config) {
 		return init_hid_kbd(dev_addr,config,interface);
 	else if (interface.iprotocol==2)
 		return init_hid_mouse(dev_addr,config,interface);
-	printf("Unknown protocol %d.\n",(uint32_t)interface.iprotocol);
+	printf("Unknown protocol %$.\n",(uint32_t)interface.iprotocol);
 	return false;
 }

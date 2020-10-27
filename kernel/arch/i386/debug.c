@@ -25,7 +25,7 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "ver")||strcmp(command, "version")) {
-		printf("TritiumOS Kernel v0.1\n");
+		printf("TritiumOS Kernel v0.2\n");
 		cmdAck=true;
 	}
 	
@@ -51,7 +51,7 @@ bool check_command(char* command) {
 				for (uint8_t k = 0; k < 128; k++) {
 					uint16_t usbdev = usb_dev_addr(i,j,k);
 					if (usb_device_from_addr(usbdev)->valid) {
-						dprintf("Valid device found at %d.%d.%d\n",(uint32_t)i,(uint32_t)j,(uint32_t)k);
+						dprintf("Valid device found at %u.%u.%u\n",i,j,k);
 						usb_dev_desc devdesc = usb_get_dev_desc(usbdev);
 						if (devdesc.length) {
 							printf("---USB-DEVICE---\n");
@@ -72,17 +72,17 @@ bool check_command(char* command) {
 	}
 	
 	if (strcmp(command, "fdelete")) {
-		printf("Return: %d\n",fdelete("A:/TESTFILE.TXT"));
+		printf("Return: %u\n",fdelete("A:/TESTFILE.TXT"));
 		cmdAck=true;
 	}
 	
 	if (strcmp(command, "fcreate")) {
-		printf("Return: %d\n",fcreate("A:/TESTFILE.TXT").valid);
+		printf("Return: %u\n",fcreate("A:/TESTFILE.TXT").valid);
 		cmdAck=true;
 	}
 	
 	if (strcmp(command, "fwrite")) {
-		printf("Deleting. Return value: %d\n",fdelete("A:/TESTFILE.TXT"));
+		printf("Deleting. Return value: %u\n",fdelete("A:/TESTFILE.TXT"));
 		FILE f = fcreate("A:/TESTFILE.TXT");
 		//FILE f = fopen("A:/TESTFILE.TXT","w");
 		if (!f.valid) {
@@ -90,15 +90,15 @@ bool check_command(char* command) {
 		}
 		char text[] = "Hello world.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n";
 		uint32_t len = strlen(text)+1;
-		printf("Writing %d bytes...\n",len);
+		printf("Writing %u bytes...\n",len);
 		uint8_t r = fwrite(&f,text,0,(uint64_t)len);
-		printf("Return value: %d\n",r);
+		printf("Return value: %hhu\n",r);
 		cmdAck = true;
 	}
 	
 	if (strcmp(command,"lsmnt")) {
 		for (uint8_t i = 0; i < 8; i++) {
-				if (getDiskMount(i).mountEnabled) printf("mnt%d (%c): %s%d, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", getDiskMount(i).drive, getDiskMount(i).type);
+				if (getDiskMount(i).mountEnabled) printf("mnt%$ (%c): %s%$, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", getDiskMount(i).drive, getDiskMount(i).type);
 		}
 		usingNewline = false;
 		cmdAck=true;
@@ -116,12 +116,12 @@ bool check_command(char* command) {
 			for (uint8_t j = 0; j < 32; j++) {
 				pci_t pcidevice = getPCIData((uint8_t)i,j,0);
 				if (pcidevice.vendorID!=0xFFFF) {
-					printf("PCI %d.%d: V%# D%# Class %# Subclass %# PIF %# IRQ %d\n",(uint32_t)i,(uint32_t)j,(uint64_t)pcidevice.vendorID,(uint64_t)pcidevice.deviceID,(uint64_t)pcidevice.classCode,(uint64_t)pcidevice.subclass,(uint64_t)pcidevice.progIF,(uint32_t)pcidevice.irq);
+					printf("PCI %u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
 					if (getPCIData((uint8_t)i,j,1).vendorID!=0xFFFF) {
 						for (uint8_t k = 1; k < 8; k++) {
 							pcidevice = getPCIData((uint8_t)i,j,k);
 							if (pcidevice.vendorID!=0xFFFF)
-								printf("    PCI %d.%d.%d: V%# D%# Class %# Subclass %# PIF %# IRQ %d\n",(uint32_t)i,(uint32_t)j,(uint32_t)k,(uint64_t)pcidevice.vendorID,(uint64_t)pcidevice.deviceID,(uint64_t)pcidevice.classCode,(uint64_t)pcidevice.subclass,(uint64_t)pcidevice.progIF,(uint32_t)pcidevice.irq);
+								printf("    PCI %u.%u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,k,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
 						}
 					}
 				}
@@ -132,9 +132,9 @@ bool check_command(char* command) {
 	
 	if (strcmp(command, "acpi")) {
 		uint32_t rsdptr = acpi_find_rsdp();
-		printf("ACPI RSD PTR is at %#\n",(uint64_t)rsdptr);
+		printf("ACPI RSD PTR is at %p\n",rsdptr);
 		uint32_t fadtptr = acpi_find_fadt();
-		printf("ACPI FADT PTR is at %#\n",(uint64_t)fadtptr);
+		printf("ACPI FADT PTR is at %p\n",fadtptr);
 		acpi_list_tables();
 		cmdAck=true;
 	}
@@ -390,7 +390,7 @@ void debug_console() {
 /*void VGA_write_register(uint32_t reg, uint8_t value) {
 	uint16_t port = (reg>>16)&0xFFFF;
 	uint8_t addr = reg&0xFF;
-	//printf("Writing %d to %# index %#\n",(uint32_t)value,(uint64_t)port,(uint64_t)addr);
+	//printf("Writing %$ to %# index %#\n",(uint32_t)value,(uint64_t)port,(uint64_t)addr);
 	outb(port,addr);
 	outb(port+1,value);
 }
@@ -1048,11 +1048,10 @@ void graphicstest() {
 		if ((mode_err&3)>0)
 			break;
 		if (mode_bpp>23) {
-			//printf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
-			dprintf("Available resolution: %d x %d x %d.\n",(uint32_t)mode_width,(uint32_t)mode_height,(uint32_t)mode_bpp);
+			dprintf("Available resolution: %u x %u x %u.\n",mode_width,mode_height,mode_bpp);
 		}
 	}
-	//printf("Encountered error %d\n",(uint32_t)mode_err);
+	//printf("Encountered error %$\n",(uint32_t)mode_err);
 	
 	/*for (uint8_t b = 0; b < 5; b++) {
 		for (uint8_t i = 0; i < 18; i++) {
@@ -1066,7 +1065,7 @@ void graphicstest() {
 				dprintf("Error is zero\n");
 			} else {
 				kerror("Error is NONZERO!!!");
-				dprintf("%d\n",(uint32_t)error);
+				dprintf("%$\n",(uint32_t)error);
 			}
 			if (!framebuffer) {
 				kerror("Framebuffer is zero!");
@@ -1201,8 +1200,8 @@ void graphicstest() {
 		//dprintf("ok ");
 		draw_bitmap_alpha(gx,gy,cursor,o);
 		syncvideo();
-		//dprintf("%d %d ",mouse_getx(),mouse_gety());
-		uint8_t k = getkey();
+		//dprintf("%$ %$ ",mouse_getx(),mouse_gety());
+		/*uint8_t k = getkey();
 		char c = scancode_to_char(k);
 		if (c=='4'||c=='w') {
 			if (gx>0)
@@ -1216,7 +1215,7 @@ void graphicstest() {
 		} else if (c=='2'||c=='s') {
 			if (gy<framebuffer_height)
 				mouse_set_override(gx,gy+1);
-		}
+		}*/
 	}
 	
 	kprint("All tests are complete");

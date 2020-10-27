@@ -2,7 +2,7 @@
 
 char name[5];
 
-uint8_t ctrlrcounts[4] = {1,0,0,1};
+uint8_t ctrlrcounts[4] = {0,0,0,0};
 
 void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==0xC&&pci.subclass==3) {
@@ -17,20 +17,20 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 		else
 			strcpy(name,"ERR!");
 		if (k==0)
-			printf("Detected USB %s Controller on port %#:%#\n", name, (uint64_t)i,(uint64_t)j);
+			printf("Detected USB %s Controller on port %X:%X\n", name, i,j);
 		else
-			printf("Detected USB %s Controller on port %#:%#.%d\n", name, (uint64_t)i,(uint64_t)j,(uint32_t)k);
+			printf("Detected USB %s Controller on port %X:%X.%u\n", name, i,j,k);
 		
 		if (strcmp(name,"UHCI")) {
 			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3,pci.irq);
 			if (rval) {
-				printf("Initialized UHCI controller ID %d with %d ports IRQ %d.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports,pci.irq);
+				printf("Initialized UHCI controller ID %u with %u ports IRQ %u.\n",(uint8_t)rval-1,get_uhci_controller(rval-1)->num_ports,pci.irq);
 				ctrlrcounts[0]++;
 			}
 		} else if (strcmp(name,"xHCI")) {
 			uint8_t rval = init_xhci_ctrlr((void *)(pci.BAR0&~15),pci.irq);
 			if (rval) {
-				printf("Initialized xHCI controller ID %d with %d ports IRQ %d.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports,pci.irq);
+				printf("Initialized xHCI controller ID %u with %u ports IRQ %u.\n",(uint8_t)rval-1,get_xhci_controller(rval-1)->num_ports,pci.irq);
 				ctrlrcounts[3]++;
 			}
 		}
@@ -69,7 +69,7 @@ void init_usb() {
 	}
 	kprint("[USB ] Assigning drivers to devices...");
 	for (uint8_t ctype = 0; ctype < USB_CTRLR_XHCI+1; ctype++) {
-		for (uint8_t cid = 0; cid < ctrlrcounts[ctype]; cid++) {
+		for (uint8_t cid = 0; cid <= ctrlrcounts[ctype]; cid++) {
 			for (uint8_t dev_num = 1; dev_num < 128; dev_num++) {
 				uint16_t devaddr = usb_dev_addr(ctype,cid,dev_num);
 				if (!usb_device_from_addr(devaddr)->valid)
@@ -117,12 +117,13 @@ usb_device *usb_device_from_addr(uint16_t dev_addr) {
 	uint8_t ctrlrtype = (dev_addr&0xF000)>>12;
 	uint8_t ctrlrID = (dev_addr&0x0F00)>>8;
 	uint8_t devID = dev_addr&0x007F;
-	if (ctrlrtype==USB_CTRLR_UHCI) {
-		return &get_uhci_controller(ctrlrID)->devices[devID];
-	} else if (ctrlrtype==USB_CTRLR_XHCI) {
-		return &get_xhci_controller(ctrlrID)->devices[devID];
-	} else {
-		return &device_null;
+	switch (ctrlrtype) {
+		case USB_CTRLR_UHCI:
+			return &get_uhci_controller(ctrlrID)->devices[devID];
+		case USB_CTRLR_XHCI:
+			return &get_xhci_controller(ctrlrID)->devices[devID];
+		default:
+			return &device_null;
 	}
 }
 
@@ -209,6 +210,23 @@ usb_endpoint_desc usb_get_endpoint_desc(uint16_t dev_addr, uint8_t config_index,
 	return retnull;
 }
 
+bool usb_enable_endpoint(uint16_t dev_addr, uint8_t endpoint, uint8_t flags, uint8_t interval) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				// UHCI does not require endpoints to be enabled.
+				return true;
+			case USB_CTRLR_XHCI:
+				xhci_enable_endpoint(device, endpoint, flags, interval);
+				return true;
+			default:
+				break;
+		}
+	}
+	return false;
+}
+
 bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
 	usb_device *device = usb_device_from_addr(dev_addr);
 	if (device->valid) {
@@ -255,20 +273,32 @@ bool usb_assign_address(uint16_t port_addr, uint8_t speed) {
 
 void *usb_create_interval_in(uint16_t dev_addr, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_create_interval_in(device, out, interval, endpoint_addr, max_pkt_size, size);
-	} else {
-		return 0;
+	if (device->valid) {
+			switch (device->ctrlr_type) {
+				case USB_CTRLR_UHCI:
+					return uhci_create_interval_in(device, out, interval, endpoint_addr, max_pkt_size, size);
+				case USB_CTRLR_XHCI:
+					return xhci_create_interval_in(device, out, interval, endpoint_addr, max_pkt_size, size);
+				default:
+					break;
+			}
 	}
+	return 0;
 }
 
 bool usb_refresh_interval(uint16_t dev_addr, void *data) {
 	usb_device *device = usb_device_from_addr(dev_addr);
-	if (device->controller&&!device->ctrlr_type) {
-		return uhci_refresh_interval(data);
-	} else {
-		return false;
+	if (device->valid) {
+		switch (device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return uhci_refresh_interval(data);
+			case USB_CTRLR_XHCI:
+				return xhci_refresh_interval(data);
+			default:
+				break;
+		}
 	}
+	return false;
 }
 
 void dump_memory(uint8_t *mem, size_t size) {

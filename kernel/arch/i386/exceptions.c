@@ -85,13 +85,13 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		kwarn("[WARN] Pre-Pagefault: Attempt to access unavailable page.");
 		if (!map_page_to((void *)(address&0xFFFFF000))) {
 			kerror("[Exception.Fault] Usermode Page Privelage Fault!");
-			printf("Fault address: 0x%#\n",(uint64_t)address);
-			printf("Return address: 0x%#\n",(uint64_t)retaddr);
-			printf("Current PID: %d\n",getpid());
-			printf("Error: 0x%#\n",(uint64_t)error&7);
+			printf("Fault address: %p\n",address);
+			printf("Return address: %p\n",retaddr);
+			printf("Current PID: %u\n",getpid());
+			printf("Error: 0x%X\n",error&7);
 			dprintf("Fault address: 0x%#\n",(uint64_t)address);
 			dprintf("Return address: 0x%#\n",(uint64_t)retaddr);
-			dprintf("Current PID: %d\n",getpid());
+			dprintf("Current PID: %$\n",getpid());
 			dprintf("Error: 0x%#\n",(uint64_t)error&7);
 			kprint("\n    If you are a user seeing this, your computer has crashed.");
 			kprint("    Reboot your computer. If the error happens again...");
@@ -106,9 +106,9 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		return;
 	} else {
 		kerror("[Exception.Fault] Kernel Page Fault!");
-		printf("Fault address: 0x%#\n",(uint64_t)address);
-		printf("Return address: 0x%#\n",(uint64_t)retaddr);
-		printf("Error: 0x%#\n",(uint64_t)error&7);
+		printf("Fault address: %p\n",(uint64_t)address);
+		printf("Return address: %p\n",(uint64_t)retaddr);
+		printf("Error: 0x%X\n",(uint64_t)error&7);
 		dprintf("Fault address: 0x%#\n",(uint64_t)address);
 		dprintf("Return address: 0x%#\n",(uint64_t)retaddr);
 		dprintf("Error: 0x%#\n",(uint64_t)error&7);

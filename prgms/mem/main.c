@@ -7,5 +7,5 @@ void main() {
 	asm("mov $8,%%eax;int $0x80;mov %%eax,%0":"=m"(mem_pages));
 	uint64_t t_mem = mem_pages;
 	t_mem*=4096;
-	printf("Memory available: %d KiB (%d MiB)\n",(uint32_t)(t_mem/1024),(uint32_t)(t_mem/1048576));
+	printf("Memory available: %$ KiB (%$ MiB)\n",(uint32_t)(t_mem/1024),(uint32_t)(t_mem/1048576));
 }

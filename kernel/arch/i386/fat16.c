@@ -56,7 +56,7 @@ void print_fat16_values(uint8_t drive_num) {
 	
 	//Print Start Code
 	uint8_t *startcode = (uint8_t *)bootsect->StartCode;
-	printf("Start code: %# %# %#\n",(uint64_t)startcode[0],(uint64_t)startcode[1],(uint64_t)startcode[2]);
+	printf("Start code: %X %X %X\n",startcode[0],startcode[1],startcode[2]);
 	
 	//Print OEM Name
 	char OEMName[9];
@@ -65,18 +65,18 @@ void print_fat16_values(uint8_t drive_num) {
 	printf("OEMName: %s\n", OEMName);
 	
 	//Other stuff
-	printf("Bytes Per Sector: %d\n",(uint32_t)bpb.BytesPerSector);
-	printf("Sectors Per Cluster: %d\n",(uint32_t)bpb.SectorsPerCluster);
-	printf("Number of Reserved Sectors: %d\n",(uint32_t)bpb.NumReservedSectors);
-	printf("Number of FATs: %d\n",(uint32_t)bpb.NumFATs);
-	printf("Number of Root Directory Entries: %d\n",(uint32_t)bpb.NumRootDirectoryEntries);
-	printf("Number of Total Sectors: %d\n",(uint32_t)bpb.NumTotalSectors);
-	printf("Media Descriptor Type: %#\n",(uint64_t)bpb.MediaDescriptorType);
-	printf("Number of Sectors Per FAT: %d\n",(uint32_t)bpb.NumSectorsPerFAT);
-	printf("Number of Sectors Per Track: %d\n",(uint32_t)bpb.NumSectorsPerTrack);
-	printf("Number of Heads: %d\n",(uint32_t)bpb.NumHeads);
-	printf("Number of Hidden Sectors: %d\n",(uint32_t)bpb.NumHiddenSectors);
-	printf("Signature: %#\n",(uint64_t)bootsect->Signature);
+	printf("Bytes Per Sector: %u\n",bpb.BytesPerSector);
+	printf("Sectors Per Cluster: %u\n",bpb.SectorsPerCluster);
+	printf("Number of Reserved Sectors: %u\n",bpb.NumReservedSectors);
+	printf("Number of FATs: %u\n",bpb.NumFATs);
+	printf("Number of Root Directory Entries: %u\n",bpb.NumRootDirectoryEntries);
+	printf("Number of Total Sectors: %u\n",bpb.NumTotalSectors);
+	printf("Media Descriptor Type: %X\n",bpb.MediaDescriptorType);
+	printf("Number of Sectors Per FAT: %u\n",bpb.NumSectorsPerFAT);
+	printf("Number of Sectors Per Track: %u\n",bpb.NumSectorsPerTrack);
+	printf("Number of Heads: %u\n",bpb.NumHeads);
+	printf("Number of Hidden Sectors: %u\n",bpb.NumHiddenSectors);
+	printf("Signature: %X\n",bootsect->Signature);
 }
 
 //Listing all the things as shown in https://forum.osdev.org/viewtopic.php?f=1&t=26639
@@ -122,7 +122,7 @@ bool detect_fat16(uint8_t drive_num) {
 	}
 	
 	//This is probably enough. If it is just a random string of digits, we'll probably have broken it by now.
-	//printf("Success in %d.\n",(uint32_t)drive_num);
+	//printf("Success in %$.\n",(uint32_t)drive_num);
 	return true;
 }
 
@@ -199,7 +199,7 @@ void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 	
 	uint8_t derr = ahci_read_sector(drive_num, location/512, read);
 	if (derr) {
-		printf("Drive error: %d!",derr);
+		printf("Drive error: %$!",derr);
 		free_page(read,((numEntries*32)/4096)+1);
 		return;
 	}
@@ -229,7 +229,7 @@ void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 			}
 			uint32_t nextCluster = (reading[27] << 8) | reading[26];
 			uint32_t size = *(uint32_t *)&reading[28];
-			printf(" [0x%#+%d]",(uint64_t)((nextCluster-2)*fm->SectorsPerCluster*512)+(fm->NumRootDirectoryEntries*32)+(fm->RootDirectoryOffset*512),size);
+			printf(" [0x%lX+%u]",(uint64_t)((nextCluster-2)*fm->SectorsPerCluster*512)+(fm->NumRootDirectoryEntries*32)+(fm->RootDirectoryOffset*512),size);
 			printf("\n");
 		}
 		reading+=32;
@@ -356,7 +356,7 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 			curDiskLoc+=512;
 		}
 		rCluster = f16_getClusterValue(FAT,rCluster);
-		//printf("Next cluster is %# or %#. %d read, %d remaining.\n",(uint64_t)rCluster,(uint64_t)f16_getLocationFromCluster(rCluster,fm),curLoc-start,curLen);
+		//printf("Next cluster is %# or %#. %$ read, %$ remaining.\n",(uint64_t)rCluster,(uint64_t)f16_getLocationFromCluster(rCluster,fm),curLoc-start,curLen);
 		if (rCluster>=0xFFF0) {
 			break;
 		}
@@ -567,14 +567,14 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_
 		if (curDiskLoc>start+len)
 			break;
 		curDiskLoc+=fm.SectorsPerCluster*512;
-		//printf("Currently scanning %d to %d. Start is %d. Len is %d. Total is %d\n",curDiskLoc-512,curDiskLoc,start,len,start+len);
+		//printf("Currently scanning %$ to %$. Start is %$. Len is %$. Total is %$\n",curDiskLoc-512,curDiskLoc,start,len,start+len);
 		if (curDiskLoc>=start) {
 			uint32_t tLocation = f16_getLocationFromCluster(rCluster,fm);
 			for (uint8_t i = 0; i < fm.SectorsPerCluster; i++) {
 				ahci_read_sector(drive_num,tLocation/512,(uint8_t *)read);
 				uint32_t amt = curLen>512?512:curLen%512;
 				memcpy(read+(curLoc%512),buf+(len-curLen),amt);
-				//printf("Writing %s at %# (%d bytes)\n",read,(uint64_t)tLocation,amt);
+				//printf("Writing %s at %# (%$ bytes)\n",read,(uint64_t)tLocation,amt);
 				ahci_write_sector(drive_num,tLocation/512,(uint8_t *)read);
 				curLoc+=amt;
 				curLen-=amt;

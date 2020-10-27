@@ -2,6 +2,7 @@
 #define _USB_XHCI_H
 
 #include <kernel/stdio.h>
+#include <kernel/mutex.h>
 #include <usb/usb.h>
 
 #define XHCI_HCCAP_CAPLEN		0x00
@@ -98,6 +99,8 @@ typedef struct {
 
 #define XHCI_TRB_SETUP_DIRECTION(x)	((x)<<16)
 
+#define XHCI_TRB_LINK_FLIPCYCLE		(1<<1)
+
 #define XHCI_TRB_DATA_DIRECTION(x)	((x)<<16)
 #define XHCI_TRB_DATA_REMAINING(x)	((x)<<17)
 
@@ -111,6 +114,7 @@ typedef struct {
 #define XHCI_TRBTYPE_NOOP	8
 #define XHCI_TRBTYPE_ENSLOT	9
 #define XHCI_TRBTYPE_ADDR	11
+#define XHCI_TRBTYPE_CONFIG	12
 
 #define XHCI_TRBTYPE_EVT_COMPLETE	32
 
@@ -163,6 +167,7 @@ typedef struct {
 	uint8_t ctrlrID;
 	xhci_port ports[16];
 	usb_device devices[128];
+	mutex lock;
 } xhci_controller;
 
 typedef struct {
@@ -183,9 +188,13 @@ typedef struct {
 
 #define XHCI_SLOT_ENTRY_ROUTESTRING(x)	(x)
 #define XHCI_SLOT_ENTRY_SPEED(x)		((x)<<20)
-#define XHCI_SLOT_ENTRY_MULTITT				(1<<25)
+#define XHCI_SLOT_ENTRY_MULTITT			(1<<25)
 #define XHCI_SLOT_ENTRY_HUB				(1<<26)
 #define XHCI_SLOT_ENTRY_COUNT(x)		((x)<<27)
+
+#define XHCI_HUB_ROUTE					0x3FFFF
+#define XHCI_HUB_MULTITT				(1<<30)
+#define XHCI_HUB_HUB					(1<<31)
 
 #define XHCI_SLOT_STATE_D_E				0
 #define XHCI_SLOT_STATE_DEFAULT			1
@@ -207,6 +216,8 @@ typedef struct {
 	uint32_t reserved2;
 } __attribute__((packed)) xhci_endpt;
 
+#define XHCI_ENDPT_CONTROL				0
+
 #define XHCI_ENDPT_STATE_STATE(x)		(x)	
 #define XHCI_ENDPT_STATE_MULTI(x)		((x)<<8)
 #define XHCI_ENDPT_STATE_PSTREAMS(x)	((x)<<10)
@@ -222,6 +233,9 @@ typedef struct {
 #define XHCI_ENDPOINT_STATE_STOP		3
 #define XHCI_ENDPOINT_STATE_ERROR		4
 
+#define XHCI_ENDPOINT_MODE_CONTROL		0
+#define XHCI_ENDPOINT_MODE_INTERRUPT	1
+
 typedef struct {
 	void *slot_template;
 	xhci_slot *slot_ctx;
@@ -234,6 +248,7 @@ typedef struct {
 xhci_controller *get_xhci_controller(uint8_t id);
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
 bool xhci_set_address(usb_device *device, uint32_t command_params);
+bool xhci_enable_endpoint(usb_device *device, uint8_t endpoint, uint8_t direction, uint8_t interval);
 bool xhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t speed);
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);

@@ -14,7 +14,6 @@
 
 uhci_controller uhci_controllers[USB_MAX_CTRLRS] = {0};
 uint8_t uhci_num_ctrlrs = 0;
-CREATE_MUTEX(uhci_lock);
 
 void uhci_global_reset(uint16_t iobase) {
 	for (uint8_t i = 0; i < 5; i++) {
@@ -46,7 +45,7 @@ bool uhci_port_reset(uint16_t iobase, uint8_t port) {
 		return false;
 	}
 	
-	dbgprintf("[UHCI] Port %d determined valid.\n",(uint32_t)port);
+	dbgprintf("[UHCI] Port %$ determined valid.\n",(uint32_t)port);
 	
 	// Assume port exists. Try to reset it.
 	outw(portbase,inw(portbase) | UHCI_PORTSC_PRESET); // Issue port reset.
@@ -60,7 +59,7 @@ bool uhci_port_reset(uint16_t iobase, uint8_t port) {
 		
 		// If there's nothing attached, it can't clear.
 		if (!(in&UHCI_PORTSC_CSTS)) {
-			dbgprintf("[UHCI] Port %d reset but nothing attached.\n",(uint32_t)port);
+			dbgprintf("[UHCI] Port %$ reset but nothing attached.\n",(uint32_t)port);
 			return true; // Maybe should return false?
 		}
 		
@@ -72,14 +71,14 @@ bool uhci_port_reset(uint16_t iobase, uint8_t port) {
 		
 		// Return true if port says it's enabled.
 		if (in & UHCI_PORTSC_PE) {
-			dbgprintf("[UHCI] Port %d reset and enabled.\n",(uint32_t)port);
+			dbgprintf("[UHCI] Port %$ reset and enabled.\n",(uint32_t)port);
 			return true;
 		}
 		
 		outw(portbase,in | UHCI_PORTSC_PE);
 	}
 	
-	dbgprintf("[UHCI] Failed to reset port %d.\n",(uint32_t)port);
+	dbgprintf("[UHCI] Failed to reset port %$.\n",(uint32_t)port);
 	return false;
 }
 
@@ -94,7 +93,7 @@ void dump_ioregs(uint16_t iobase) {
 }
 
 void dump_xfr_desc(uhci_usb_xfr_desc td,uint8_t id) {
-	dbgprintf("[UHCI] TD%d: %# %# %# %#\n",(uint32_t)id,(uint64_t)td.linkptr,(uint64_t)td.flags0,(uint64_t)td.flags1,(uint64_t)td.bufferptr);
+	dbgprintf("[UHCI] TD%$: %# %# %# %#\n",(uint32_t)id,(uint64_t)td.linkptr,(uint64_t)td.flags0,(uint64_t)td.flags1,(uint64_t)td.bufferptr);
 }
 
 void dump_queue(uhci_usb_queue q) {
@@ -117,6 +116,10 @@ void uhci_interrupt() {
 }
 
 uint8_t data_table[] = {0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,7};
+
+uint8_t calculate_index(uint8_t index) {
+	return data_table[index];
+}
 
 uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 	dbgprintf("[UHCI] IOBase: %#\n",(uint64_t)iobase);
@@ -165,7 +168,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 	//Link the transfer descriptors to the queues.
 	for (uint16_t i = 0; i < 4096; i+=4) {
 		//*(uint32_t *)(this_ctrlr->framelist_vaddr+i) = UHCI_FRAMEPTR_TERM;
-		*(uint32_t *)(this_ctrlr->framelist_vaddr+i) = (this_ctrlr->framelist_paddr+4096+(data_table[(i/4)%128]*sizeof(uhci_usb_queue))) | UHCI_FRAMEPTR_QUEUE;
+		*(uint32_t *)(this_ctrlr->framelist_vaddr+i) = (this_ctrlr->framelist_paddr+4096+(calculate_index((i/4)%128)*sizeof(uhci_usb_queue))) | UHCI_FRAMEPTR_QUEUE;
 	}
 	
 	//Tell the USB controller to use this memory.
@@ -182,9 +185,9 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 	uint8_t current_port = 0;
 	
 	while (uhci_port_reset(iobase,current_port)) {
-		dbgprintf("[UHCI] Reset port %d\n",(uint32_t)current_port);
+		dbgprintf("[UHCI] Reset port %$\n",(uint32_t)current_port);
 		if (inw(iobase+UHCI_PORTSC1+(current_port*2))&1) {
-			dbgprintf("[UHCI] Found device at port %d, geting descriptor...\n",current_port);
+			dbgprintf("[UHCI] Found device at port %$, geting descriptor...\n",current_port);
 			usb_device usbdev;
 			memset(&usbdev,0,sizeof(usb_device));
 			usbdev.valid = true;
@@ -200,12 +203,12 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 			devdesc = uhci_get_usb_dev_descriptor(&usbdev,8);
 			if (devdesc.length) {
 				usbdev.max_pkt_size = devdesc.max_pkt_size;
-				dbgprintf("[UHCI] Max packet size: %d\n",devdesc.max_pkt_size);
+				dbgprintf("[UHCI] Max packet size: %$\n",devdesc.max_pkt_size);
 				uhci_port_reset(iobase,current_port);
 				uint8_t devaddr = uhci_get_unused_device(this_ctrlr);
 				if (uhci_set_address(&usbdev,devaddr)) {
 					this_ctrlr->devices[devaddr] = usbdev;
-					dbgprintf("[UHCI] Added device at address %d\n",(uint32_t)devaddr);
+					dbgprintf("[UHCI] Added device at address %$\n",(uint32_t)devaddr);
 				} else {
 					dbgprintf("[UHCI] Failed to set address\n");
 				}
@@ -216,7 +219,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 		
 		current_port++;
 	}
-	dbgprintf("[UHCI] Reset %d ports.\n",(uint32_t)current_port);
+	dbgprintf("[UHCI] Reset %$ ports.\n",(uint32_t)current_port);
 	this_ctrlr->num_ports = current_port;
 	dbgprintf("[UHCI] Finished initializing UHCI controller.\n");
 	return uhci_num_ctrlrs;
@@ -534,7 +537,7 @@ bool uhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	// Check to make sure there's no errors with any of the TDs
 	for (uint8_t j = 0; j < i; j++) {
 		if (td[j].flags0 & UHCI_XFRDESC_STATUS & ~UHCI_XFRDESC_STATUS_ACTIVE) {
-			dbgprintf("[UHCI] TD%d Error: %#\n",(uint32_t)j,(uint64_t)(td[j].flags0));
+			dbgprintf("[UHCI] TD%$ Error: %#\n",(uint32_t)j,(uint64_t)(td[j].flags0));
 			outw(uc->iobase+UHCI_USBINTR,UHCI_USBINTR_IOCE);
 			free_page(data_vaddr,num_pages);
 			return false;
@@ -669,7 +672,7 @@ bool uhci_get_usb_str_desc(usb_device *device, char *out, uint8_t index, uint16_
 	
 	sp.index = strdesc->langid[i];
 	sp.value = 0x300 | index;
-	//printf("Getting index %d, (0x%#)\n",(uint32_t)index,(uint64_t)sp.value);
+	//printf("Getting index %$, (0x%#)\n",(uint32_t)index,(uint64_t)sp.value);
 	sp.length = 2;
 	memset(buffer,0,256);
 	if (!uhci_usb_get_desc(device,&header,sp,2))

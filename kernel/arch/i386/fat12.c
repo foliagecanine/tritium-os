@@ -49,7 +49,7 @@ void print_fat12_values(uint8_t drive_num) {
 	
 	//Print Start Code
 	uint8_t *startcode = (uint8_t *)bootsect->StartCode;
-	printf("Start code: %# %# %#\n",(uint64_t)startcode[0],(uint64_t)startcode[1],(uint64_t)startcode[2]);
+	printf("Start code: %X %X %X\n",startcode[0],startcode[1],startcode[2]);
 	
 	//Print OEM Name
 	char OEMName[9];
@@ -58,17 +58,17 @@ void print_fat12_values(uint8_t drive_num) {
 	printf("OEMName: %s\n", OEMName);
 	
 	//Other stuff
-	printf("Bytes Per Sector: %d\n",(uint32_t)bpb.BytesPerSector);
-	printf("Sectors Per Cluster: %d\n",(uint32_t)bpb.SectorsPerCluster);
-	printf("Number of FATs: %d\n",(uint32_t)bpb.NumFATs);
-	printf("Number of Root Directory Entries: %d\n",(uint32_t)bpb.NumRootDirectoryEntries);
-	printf("Number of Total Sectors: %d\n",(uint32_t)bpb.NumTotalSectors);
-	printf("Media Descriptor Type: %#\n",(uint64_t)bpb.MediaDescriptorType);
-	printf("Number of Sectors Per FAT: %d\n",(uint32_t)bpb.NumSectorsPerFAT);
-	printf("Number of Sectors Per Track: %d\n",(uint32_t)bpb.NumSectorsPerTrack);
-	printf("Number of Heads: %d\n",(uint32_t)bpb.NumHeads);
-	printf("Number of Hidden Sectors: %d\n",(uint32_t)bpb.NumHiddenSectors);
-	printf("Signature: %#\n",(uint64_t)bootsect->Signature);
+	printf("Bytes Per Sector: %u\n",bpb.BytesPerSector);
+	printf("Sectors Per Cluster: %u\n",bpb.SectorsPerCluster);
+	printf("Number of FATs: %u\n",bpb.NumFATs);
+	printf("Number of Root Directory Entries: %u\n",bpb.NumRootDirectoryEntries);
+	printf("Number of Total Sectors: %u\n",bpb.NumTotalSectors);
+	printf("Media Descriptor Type: %X\n",bpb.MediaDescriptorType);
+	printf("Number of Sectors Per FAT: %u\n",bpb.NumSectorsPerFAT);
+	printf("Number of Sectors Per Track: %u\n",bpb.NumSectorsPerTrack);
+	printf("Number of Heads: %u\n",bpb.NumHeads);
+	printf("Number of Hidden Sectors: %u\n",bpb.NumHiddenSectors);
+	printf("Signature: %X\n",bootsect->Signature);
 }
 
 //Listing all the things as shown in https://forum.osdev.org/viewtopic.php?f=1&t=26639
@@ -109,7 +109,7 @@ bool detect_fat12(uint8_t drive_num) {
 	}
 	
 	//This is probably enough. If it is just a random string of digits, we'll probably have broken it by now.
-	//printf("Success in %d.\n",(uint32_t)drive_num);
+	//printf("Success in %u.\n",drive_num);
 	return true;
 }
 
@@ -172,7 +172,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 	
 	uint8_t derr = ahci_read_sector(drive_num, location/512, read);
 	if (derr) {
-		printf("Drive error: %d!",derr);
+		printf("Drive error: %$!",derr);
 		free_page(read,((numEntries*32)/4096)+1);
 		return;
 	}
@@ -200,7 +200,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 			}
 			uint32_t nextCluster = (reading[27] << 8) | reading[26];
 			uint32_t size = *(uint32_t *)&reading[28];
-			printf(" [0x%#+%d]",(uint64_t)((nextCluster-2)*512)+(224*32)+(19*512),size);
+			printf(" [0x%lX+%u]",(uint64_t)((nextCluster-2)*512)+(224*32)+(19*512),size);
 			printf("\n");
 		}
 		reading+=32;

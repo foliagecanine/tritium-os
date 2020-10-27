@@ -119,6 +119,10 @@ typedef struct {
 #define USB_CTRLR_EHCI		2
 #define USB_CTRLR_XHCI		3
 
+#define USB_ENDPOINT_OUT		0
+#define USB_ENDPOINT_IN			4
+#define USB_ENDPOINT_INTERRUPT	3
+
 #include <usb/hub.h>
 #include <usb/hid.h>
 
@@ -136,6 +140,7 @@ bool usb_get_str_desc(uint16_t dev_addr, void *out, uint8_t index, uint16_t targ
 usb_config_desc usb_get_config_desc(uint16_t dev_addr, uint8_t index);
 usb_interface_desc usb_get_interface_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index);
 usb_endpoint_desc usb_get_endpoint_desc(uint16_t dev_addr, uint8_t config_index, uint8_t interface_index, uint8_t endpoint_index);
+bool usb_enable_endpoint(uint16_t dev_addr, uint8_t endpoint, uint8_t flags, uint8_t interval);
 bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template);
 void *usb_create_interval_in(uint16_t dev_addr, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size);
 bool usb_refresh_interval(uint16_t dev_addr, void *data);
