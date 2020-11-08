@@ -18,6 +18,8 @@
 #define HUB_STATUS_PECHANGE		(1<<25)
 #define HUB_STATUS_RESET		(1<<28)
 
+#define HUB_SETUP_SETDEPTH		0xC
+
 typedef struct {
 	uint8_t length;
 	uint8_t type;

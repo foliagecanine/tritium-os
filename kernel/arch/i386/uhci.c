@@ -426,15 +426,15 @@ bool uhci_set_address(usb_device *device, uint8_t dev_address) {
 	return true;
 }
 
-bool uhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t lowspeed) {
-	uhci_controller *uc = get_uhci_controller(ctrlrID);
+bool uhci_assign_address(uint16_t parentaddr, uint8_t port, uint8_t lowspeed) {
+	uhci_controller *uc = usb_device_from_addr(parentaddr)->controller;
 	uint8_t dev_addr = uhci_get_unused_device(uc);
 	usb_device usbdev;
 	memset(&usbdev,0,sizeof(usb_device));
 	usbdev.valid = true;
 	usbdev.controller = uc;
 	usbdev.ctrlr_type = USB_CTRLR_UHCI;
-	usbdev.ctrlrID = ctrlrID;
+	usbdev.ctrlrID = usb_device_from_addr(parentaddr)->ctrlrID;
 	usbdev.address = 0;
 	usbdev.port = port;
 	usbdev.speed = lowspeed;

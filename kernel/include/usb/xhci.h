@@ -115,6 +115,7 @@ typedef struct {
 #define XHCI_TRBTYPE_ENSLOT	9
 #define XHCI_TRBTYPE_ADDR	11
 #define XHCI_TRBTYPE_CONFIG	12
+#define XHCI_TRBTYPE_EVAL	13
 
 #define XHCI_TRBTYPE_EVT_COMPLETE	32
 
@@ -249,7 +250,8 @@ xhci_controller *get_xhci_controller(uint8_t id);
 xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb);
 bool xhci_set_address(usb_device *device, uint32_t command_params);
 bool xhci_enable_endpoint(usb_device *device, uint8_t endpoint, uint8_t direction, uint8_t interval);
-bool xhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t speed);
+bool xhci_register_hub(usb_device *device);
+bool xhci_assign_address(uint16_t parentaddr, uint8_t port, uint8_t speed);
 bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template);
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);
 void *xhci_create_interval_in(usb_device *device, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size);

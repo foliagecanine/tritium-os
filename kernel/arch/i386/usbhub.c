@@ -57,7 +57,7 @@ bool hub_init_port(uint16_t dev_addr, uint8_t portnum, uint8_t potpgt) {
 
 bool init_hub(uint16_t dev_addr, usb_config_desc config) {
 	printf("Initializing hub at %X\n",dev_addr);
-	usb_device *device = usb_device_from_addr(dev_addr);
+	//usb_device *device = usb_device_from_addr(dev_addr);
 	usb_setup_pkt sp;
 	sp.type = 0;
 	sp.request = USB_SETUP_SETCONFIG;
@@ -66,6 +66,18 @@ bool init_hub(uint16_t dev_addr, usb_config_desc config) {
 	sp.length = 0;
 	if (!usb_generic_setup(dev_addr,sp))
 		return false;
+	if (!usb_register_hub(dev_addr)) {
+		printf("Error registering hub.\n");
+		return false;
+	}
+	//sp.type = 0x20;
+	//sp.request = HUB_SETUP_SETDEPTH;
+	//sp.value = usb_device_from_addr(dev_addr)->routing;
+	//printf("Route: %X\n",sp.value);
+	//sp.index = 0;
+	//sp.length = 0;
+	//if (!usb_generic_setup(dev_addr,sp))
+	//	return false;
 	usb_hub_desc hub;
 	sp.type = 0xA0;
 	sp.request = USB_SETUP_GETDESC;
@@ -85,7 +97,7 @@ bool init_hub(uint16_t dev_addr, usb_config_desc config) {
 			sp.length = 4;
 			if (!usb_get_desc(dev_addr,&status,sp,sp.length))
 				break;
-			usb_assign_address((dev_addr&0xFF00) | i, (status&HUB_STATUS_LS) ? 1 : 0);
+			usb_assign_address(dev_addr, i, (status&HUB_STATUS_LS) ? 1 : 0);
 		}
 	}
 	return true;

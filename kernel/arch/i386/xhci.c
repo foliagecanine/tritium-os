@@ -61,7 +61,7 @@ inline void _wr64(void *mem, uint64_t b, xhci_controller *xc) {
 }
 
 void ring_doorbell(xhci_controller* xc, uint8_t slot, uint32_t val) {
-	dbgprintf("[xHCI] Ringing doorbell %$ with value %$\n",(uint32_t)slot,val);
+	DATA("[xHCI] Ringing doorbell %$ with value %$\n",(uint32_t)slot,val);
 	_wr32(xc->dboff+(slot*sizeof(uint32_t)),val);
 }
 
@@ -227,7 +227,7 @@ bool xhci_port_reset(xhci_controller *xc, uint8_t port) {
 }
 
 void xhci_interrupt() {
-	dbgprintf("[xHCI] USB INTERRUPT\n");
+	DATA("[xHCI] USB INTERRUPT\n");
 	for (uint8_t i = 0; i < USB_MAX_CTRLRS; i++) {
 		xhci_controller *xc = get_xhci_controller(i);
 		if (!xc->hcops)
@@ -278,7 +278,7 @@ void *xhci_init_device(usb_device *usbdev, xhci_controller *xc, uint32_t routing
 	*(uint64_t *)(xc->dcbaap+(usbdev->slot*8)) = (uint64_t)(uint32_t)(void *)this_slot;
 	
 	xhci_slot slot;
-	slot.entries = XHCI_SLOT_ENTRY_COUNT(1) | XHCI_SLOT_ENTRY_SPEED(usbdev->speed) | XHCI_SLOT_ENTRY_ROUTESTRING(routing&XHCI_HUB_ROUTE) | ((routing&XHCI_HUB_HUB)?XHCI_SLOT_ENTRY_HUB:0) | ((routing&XHCI_HUB_MULTITT)?XHCI_SLOT_ENTRY_MULTITT:0);
+	slot.entries = XHCI_SLOT_ENTRY_COUNT(1) | XHCI_SLOT_ENTRY_SPEED(usbdev->speed) | XHCI_SLOT_ENTRY_ROUTESTRING(routing&XHCI_HUB_ROUTE);
 	slot.rh_port_num = usbdev->port+1;
 	slot.max_exit_latency = 0;
 	slot.int_target = 0; //IR_0
@@ -329,6 +329,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint32_t routing, uin
 	memset(usbdev,0,sizeof(usb_device));
 	usbdev->slot = XHCI_EVTTRB_COMMAND_GETSLOT(trb.command);
 	usbdev->port = port;
+	usbdev->routing = routing;
 	if (speed==5)
 		usbdev->speed = XHCI_PORTREGS_PORTSC_PORTSPD(_rd32(portbase+XHCI_PORTREGS_PORTSC));
 	else
@@ -337,7 +338,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint32_t routing, uin
 	usbdev->ctrlrID = xc->ctrlrID;
 	usbdev->ctrlr_type = USB_CTRLR_XHCI;
 	usbdev->max_pkt_size = default_speeds[usbdev->speed];
-	dbgprintf("[xHCI] Max Packet Size: %$\n",usbdev->max_pkt_size);
+	dbgprintf("[xHCI] Max Packet Size: %u\n",usbdev->max_pkt_size);
 	usbdev->data = alloc_page(1);
 	xhci_devdata *data = usbdev->data;
 	
@@ -480,13 +481,13 @@ uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq) {
 		}
 		if (xhci_port_reset(this_ctrlr,current_port)) {
 			dbgprintf("[xHCI] Reset port %$ (USB%c) SUCCESS\n",current_port,this_ctrlr->ports[current_port].legacy&XHCI_PORT_LEGACY_USB2?'2':'3');
-			xhci_init_port_dev(this_ctrlr,current_port,5,0);
+			xhci_init_port_dev(this_ctrlr,current_port,0,5);
 		} else {
 			dbgprintf("[xHCI] Reset port %$ (USB3) FAILED\n",current_port);
 			if (this_ctrlr->ports[current_port].port_pair!=0xFF) {
 				if (xhci_port_reset(this_ctrlr,this_ctrlr->ports[current_port].port_pair)) {
 					dbgprintf("[xHCI] Reset port %$ (USB2) SUCCESS\n",this_ctrlr->ports[current_port].port_pair);
-					xhci_init_port_dev(this_ctrlr,current_port,5,0);
+					xhci_init_port_dev(this_ctrlr,current_port,0,5);
 				} else
 					dbgprintf("[xHCI] Reset port %$ (USB2) FAILED\n",this_ctrlr->ports[current_port].port_pair);
 			}
@@ -695,8 +696,8 @@ bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 	
 	xc->lock = MUTEX_STATE_UNLOCKED;
 	
-	dbgprintf("[xHCI] Looking at PhysAddr %llX\n",get_phys_addr(status));
-	dbgprintf("[xHCI] Recieved status code %X\n",*status);
+	DATA("[xHCI] Looking at PhysAddr %llX\n",get_phys_addr(status));
+	DATA("[xHCI] Recieved status code %X\n",*status);
 	
 	if (XHCI_EVTTRB_STATUS_GETCODE(*status)==XHCI_TRBCODE_SUCCESS) {
 		dbgprintf("[xHCI] Successfully sent generic setup packet.\n");
@@ -704,7 +705,7 @@ bool xhci_generic_setup(usb_device *device, usb_setup_pkt setup_pkt_template) {
 		return true;
 	}
 	
-	dbgprintf("[xHCI] Error: Timed out or bad code\n");
+	dbgprintf("[xHCI] Error: Setup Packet timed out or bad code\n");
 	free_page(data,1);
 	return false;
 }
@@ -718,14 +719,23 @@ bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	xhci_slot *active_slot = data->slot_ctx;
 	xhci_endpt *active_endpt = (xhci_endpt *)((void *)(data->slot_ctx)+xc->ctx_size);
 	
+	dbgdump_memory32(slot_copy,xc->ctx_size/4);
+	
 	xhci_trb trb;
 	trb.param = get_phys_addr(data->slot_template);
 	trb.status = 0;
 	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_ADDR) | command_params;
+	
+	dbgprintf("Param: %llX\n",trb.param);
+	dbgprintf("Status: %X\n",trb.status);
+	dbgprintf("Command: %X\n",trb.command);
+	
 	trb = xhci_send_cmdtrb(xc,trb);
 	
-	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS)
+	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS) {
+		dbgprintf("Error: SetAddress returned %X\n",trb.status);
 		return false;
+	}
 	
 	//dbgprintf("\n------------------------------------------------------------\n");
 	dbgprintf("[xHCI] Got Device Address %$\n",active_slot->devaddr);
@@ -805,9 +815,58 @@ bool xhci_enable_endpoint(usb_device *device, uint8_t endpoint, uint8_t flags, u
 	return XHCI_EVTTRB_STATUS_GETCODE(trb.status)==XHCI_TRBCODE_SUCCESS;
 }
 
-bool xhci_assign_address(uint8_t ctrlrID, uint8_t port, uint8_t speed) {
-	xhci_controller *xc = get_xhci_controller(ctrlrID);
-	return xhci_init_port_dev(xc,port,speed,port);
+bool xhci_register_hub(usb_device *device) {
+	dbgprintf("[xHCI] Attempting to register hub\n");
+	xhci_controller *xc = (xhci_controller *)device->controller;
+	xhci_devdata *data = device->data;
+	void *slot_template = data->slot_template;
+	xhci_slot *slot_ctx = slot_template+xc->ctx_size;
+	uint32_t *input_context = slot_template;
+	
+	slot_ctx->entries |= XHCI_SLOT_ENTRY_HUB;
+	
+	input_context[0] = 0;
+	input_context[1] = 1;
+	
+	dbgdump_memory32(slot_ctx,xc->ctx_size/4);
+	
+	xhci_trb trb;
+	trb.param = get_phys_addr(data->slot_template);
+	trb.status = 0;
+	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_EVAL);
+	
+	DATA("[xHCI] DATA: Send CONFIG TRB\n");
+	DATA("[xHCI] DATA: Param: %#\n",trb.param);
+	DATA("[xHCI] DATA: Status: %#\n",(uint64_t)trb.status);
+	DATA("[xHCI] DATA: Command: %#\n",(uint64_t)trb.command);
+	
+	trb = xhci_send_cmdtrb(xc,trb);
+	
+	DATA("[xHCI] DATA: Recieved EVENT TRB\n");
+	DATA("[xHCI] DATA: Param: %#\n",trb.param);
+	DATA("[xHCI] DATA: Status: %#\n",(uint64_t)trb.status);
+	DATA("[xHCI] DATA: Command: %#\n",(uint64_t)trb.command);
+	
+	return XHCI_EVTTRB_STATUS_GETCODE(trb.status)==XHCI_TRBCODE_SUCCESS;
+}
+
+uint32_t xhci_next_route(uint32_t routing, uint8_t port) {
+	dbgprintf("[xHCI] Routing port %u through %X\n",port,routing);
+	uint8_t shift = 0;
+	for (uint8_t i = 0; i < 4; i++) {
+		if (!(routing&(0xF<<shift)))
+			return routing|(port<<shift);
+		shift+=4;
+	}
+	dbgprintf("[xHCI] Failed to find available route\n");
+	return 0;
+}
+
+bool xhci_assign_address(uint16_t parentaddr, uint8_t port, uint8_t speed) {
+	usb_device *parent = usb_device_from_addr(parentaddr);
+	xhci_controller *xc = parent->controller;
+	dbgprintf("[xHCI] Assigning address via routing: %X\n",xhci_next_route(parent->routing,port+1));
+	return xhci_init_port_dev(xc,parent->port,xhci_next_route(parent->routing,port+1),speed);
 }
 
 bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
@@ -827,8 +886,8 @@ bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 	
 	xc->lock = MUTEX_STATE_UNLOCKED;
 	
-	dbgprintf("[xHCI] Looking at PhysAddr %#\n",(uint64_t)(uint32_t)get_phys_addr(status));
-	dbgprintf("[xHCI] Recieved status code %#\n",(uint64_t)*status);
+	DATA("[xHCI] Looking at PhysAddr %#\n",(uint64_t)(uint32_t)get_phys_addr(status));
+	DATA("[xHCI] Recieved status code %#\n",(uint64_t)*status);
 	
 	if (XHCI_EVTTRB_STATUS_GETCODE(*status)==XHCI_TRBCODE_SUCCESS) {
 		memcpy(out,buffer,size);
@@ -837,7 +896,7 @@ bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 		return true;
 	}
 	
-	dbgprintf("[xHCI] Error: Timed out or bad code\n");
+	dbgprintf("[xHCI] Error: Device Descriptor timed out or bad code\n");
 	return false;
 }
 

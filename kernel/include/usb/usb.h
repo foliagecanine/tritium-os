@@ -28,6 +28,7 @@ typedef struct {
 	uint8_t ctrlrID;
 	uint8_t port;
 	uint8_t address;
+	uint32_t routing; //Used with xHCI
 	uint8_t slot; // Used with xHCI
 	uint8_t speed;
 	uint16_t max_pkt_size;
@@ -133,7 +134,8 @@ typedef struct {
 void init_usb();
 uint16_t usb_dev_addr(uint8_t ctrlrtype, uint8_t ctrlrID, uint8_t devID);
 usb_device *usb_device_from_addr(uint16_t dev_addr);
-bool usb_assign_address(uint16_t port_addr, uint8_t lowspeed);
+bool usb_register_hub(uint16_t dev_addr);
+bool usb_assign_address(uint16_t parentaddr, uint8_t port, uint8_t speed);
 bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size);
 usb_dev_desc usb_get_dev_desc(uint16_t dev_addr);
 bool usb_get_str_desc(uint16_t dev_addr, void *out, uint8_t index, uint16_t targetlang);

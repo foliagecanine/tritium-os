@@ -261,12 +261,26 @@ bool usb_generic_setup(uint16_t dev_addr, usb_setup_pkt setup_pkt_template) {
 	return false;
 }
 
-bool usb_assign_address(uint16_t port_addr, uint8_t speed) {
-	switch((port_addr&0xF000)>>12) {
+bool usb_register_hub(uint16_t dev_addr) {
+	usb_device *device = usb_device_from_addr(dev_addr);
+	if (device->valid) {
+		switch(device->ctrlr_type) {
+			case USB_CTRLR_UHCI:
+				return true;
+			case USB_CTRLR_XHCI:
+				return xhci_register_hub(device);
+			default:
+				break;
+		}
+	}
+}
+
+bool usb_assign_address(uint16_t parentaddr, uint8_t port, uint8_t speed) {
+	switch((parentaddr&0xF000)>>12) {
 		case USB_CTRLR_UHCI:
-			return uhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
+			return uhci_assign_address(parentaddr, port, speed);
 		case USB_CTRLR_XHCI:
-			return xhci_assign_address((port_addr&0x0F00)>>8,port_addr&0xFF, speed);
+			return xhci_assign_address(parentaddr, port, speed);
 	}
 	return false;
 }
