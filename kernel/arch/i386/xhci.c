@@ -271,6 +271,7 @@ void xhci_interrupt() {
 }
 
 void *xhci_init_device(usb_device *usbdev, xhci_controller *xc, uint32_t routing) {
+	dbgprintf("Routing: %X\n",routing);
 	xhci_devdata *data = usbdev->data;
 	data->slot_ctx = alloc_page(1);
 	memset(data->slot_ctx,0,4096);
@@ -342,7 +343,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint32_t routing, uin
 	usbdev->data = alloc_page(1);
 	xhci_devdata *data = usbdev->data;
 	
-	xhci_init_device(usbdev,xc,0);
+	xhci_init_device(usbdev,xc,routing);
 	data->slot_template = alloc_page(1);
 	memset(data->slot_template,0,4096);
 	memcpy((void *)(data->slot_template)+xc->ctx_size,data->slot_ctx,2048);
