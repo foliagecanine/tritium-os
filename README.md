@@ -105,7 +105,8 @@ Here's the checklist:
 - [x] UHCI USB support  
 - [x] Generic USB Driver (mostly)
 - [x] Basic USB HID Driver
-- [ ] xHCI USB support (partially finished)  
+- [x] xHCI USB support
+- [ ] OHCI USB support  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
 Programs:
