@@ -2,7 +2,11 @@
 #define _KERNEL_PCI_H
 
 #include <kernel/stdio.h>
+
+uint32_t pci_read_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
 uint16_t pci_read_config_word(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
+void pci_write_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint32_t value);
+void pci_write_config_byte(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint8_t value);
 
 typedef struct {
 	uint16_t vendorID;

@@ -130,6 +130,18 @@ bool check_command(char* command) {
 		cmdAck=true;
 	}
 	
+	if (!memcmp(command,"pci-dump ", strlen("pci-dump "))) {
+		pci_t pcidevice = getPCIData(command[9]-'0',command[10]-'0',command[11]-'0');
+		uint32_t *dump = (char *)&pcidevice;
+		for (uint8_t i = 0; i < sizeof(pci_t)/4; i++) {
+			if (i&&!(i%4))
+				printf("\n");
+			printf("%X ",dump[i]);
+		}
+		pci_write_config_dword(command[9]-'0',command[10]-'0',command[11]-'0',4,pci_read_config_dword(command[9]-'0',command[10]-'0',command[11]-'0',4)|7); // Enable Bus Mastering, IO space, and Mem IO
+		cmdAck=true;
+	}
+	
 	if (strcmp(command, "acpi")) {
 		uint32_t rsdptr = acpi_find_rsdp();
 		printf("ACPI RSD PTR is at %p\n",rsdptr);

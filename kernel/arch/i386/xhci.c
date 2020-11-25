@@ -68,7 +68,7 @@ void ring_doorbell(xhci_controller* xc, uint8_t slot, uint32_t val) {
 bool xhci_global_reset(xhci_controller *xc) {
 	uint32_t *dump = (uint32_t *)xc->hcops;
 	for (uint8_t i = 0; i < 4; i++) {
-		dbgprintf("%X %X %X %X\n", dump[0+(i*4)], dump[1+(i*4)], dump[2+(i*4)], dump[3+(i*4)]);
+		dbgprintf("%lX %lX %lX %lX\n", dump[0+(i*4)], dump[1+(i*4)], dump[2+(i*4)], dump[3+(i*4)]);
 	}
 	
 	dbgprintf("[xHCI] Clear RunStop\n");
@@ -173,7 +173,7 @@ void xhci_pair_ports(xhci_controller *xc) {
 				}
 			}
 			uint8_t legacy = xc->ports[i].legacy;
-			dbgprintf("[xHCI] Port %$: %s%s%s, Phys %$, PortPair %$\n", (uint32_t)i,legacy&1?"USB 2 ":"USB 3 ",legacy&2?"HSO ":"",legacy&4?"Paired":"",(uint32_t)xc->ports[i].phys_portID,(uint32_t)xc->ports[i].port_pair);
+			dbgprintf("[xHCI] Port %$: %s%s%s, Phys %$, PortPair %$\n", (uint32_t)i,legacy&1?"USB 2":"USB 3",legacy&2?" HSO":"",legacy&4?" Paired":"",(uint32_t)xc->ports[i].phys_portID,(uint32_t)xc->ports[i].port_pair);
 		}
 	}
 }
@@ -316,6 +316,7 @@ void *xhci_init_device(usb_device *usbdev, xhci_controller *xc, uint32_t routing
 const uint16_t default_speeds[] = {64,8,64,512};
 
 bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint32_t routing, uint8_t speed) {
+	dbgprintf("[xHCI] Attempting to initialize device\n");
 	void *portbase = xc->hcops+XHCI_HCOPS_PORTREGS+(port*16);
 	xhci_trb trb;
 	trb.param = 0;
@@ -324,7 +325,7 @@ bool xhci_init_port_dev(xhci_controller *xc, uint8_t port, uint32_t routing, uin
 	
 	trb = xhci_send_cmdtrb(xc,trb);
 	if (XHCI_EVTTRB_STATUS_GETCODE(trb.status)!=XHCI_TRBCODE_SUCCESS)
-		return false;
+		return ERROR("Failed when enabling slot: ") & dbgprintf("Error code 0x%X\n",XHCI_EVTTRB_STATUS_GETCODE(trb.status));
 	
 	usb_device *usbdev = &xc->devices[0];
 	memset(usbdev,0,sizeof(usb_device));
@@ -488,7 +489,7 @@ uint8_t init_xhci_ctrlr(void *baseaddr, uint8_t irq) {
 			if (this_ctrlr->ports[current_port].port_pair!=0xFF) {
 				if (xhci_port_reset(this_ctrlr,this_ctrlr->ports[current_port].port_pair)) {
 					dbgprintf("[xHCI] Reset port %$ (USB2) SUCCESS\n",this_ctrlr->ports[current_port].port_pair);
-					xhci_init_port_dev(this_ctrlr,current_port,0,5);
+					xhci_init_port_dev(this_ctrlr,this_ctrlr->ports[current_port].port_pair,0,5);
 				} else
 					dbgprintf("[xHCI] Reset port %$ (USB2) FAILED\n",this_ctrlr->ports[current_port].port_pair);
 			}
@@ -897,7 +898,7 @@ bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 		return true;
 	}
 	
-	dbgprintf("[xHCI] Error: Device Descriptor timed out or bad code\n");
+	dbgprintf("[xHCI] Error: Device Descriptor timed out or bad code: %X%s\n", XHCI_EVTTRB_STATUS_GETCODE(*status),XHCI_EVTTRB_STATUS_GETCODE(*status)?"":" (timeout detected)");
 	return false;
 }
 
@@ -929,6 +930,8 @@ void *xhci_create_interval_in(usb_device *device, void *out, uint8_t interval, u
 }
 
 bool xhci_refresh_interval(void *data) {
+	if (!data)
+		return false;
 	xhci_trb *trbs = data;
 	bool rval = false;
 	

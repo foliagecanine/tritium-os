@@ -218,8 +218,7 @@ bool usb_enable_endpoint(uint16_t dev_addr, uint8_t endpoint, uint8_t flags, uin
 				// UHCI does not require endpoints to be enabled.
 				return true;
 			case USB_CTRLR_XHCI:
-				xhci_enable_endpoint(device, endpoint, flags, interval);
-				return true;
+				return xhci_enable_endpoint(device, endpoint, flags, interval);
 			default:
 				break;
 		}
