@@ -72,8 +72,36 @@ Command: 1002C00
 [xHCI]  NumCfgs: 1
 [xHCI] No port reset change on 1
 [xHCI] Reset port 1 (USB3) FAILED
-[xHCI] No port reset change on 3
-[xHCI] Reset port 3 (USB2) FAILED
+[xHCI] Reset port 3 (USB2) SUCCESS
+[xHCI] Attempting to initialize device
+[xHCI] Max Packet Size: 64
+Routing: 0
+08200000 00040000 00000000 00000000 00000000 00000000 00000000 00000000 
+00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 Param: 890000
+Status: 0
+Command: 2002C00
+[xHCI] Got Device Address 3
+12 01 10 01 00 00 00 08 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Retrieving full descriptor...
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Got Descriptor
+[xHCI]   Length: 18
+[xHCI]     Type: 1
+[xHCI]  Version: 110
+[xHCI]    Class: 0
+[xHCI] Subclass: 0
+[xHCI] Protocol: 0
+[xHCI] MaxPktSz: 8
+[xHCI] VendorID: 4B4
+[xHCI] PrductID: 101
+[xHCI] ReleaseV: 1
+[xHCI] ManufIdx: 1
+[xHCI] PrdctIdx: 2
+[xHCI] SrialIdx: 3
+[xHCI]  NumCfgs: 1
 [USB ] Assigning drivers to devices...
 12 01 10 01 09 00 00 40 09 04 5A 00 00 01 01 02 
 03 01 
@@ -106,6 +134,46 @@ Command: 1002C00
 [xHCI] Successfully sent generic setup packet.
 [xHCI] Successfully sent generic setup packet.
 00 01 00 00 
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+[xHCI] Successfully got USB interface descriptor
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+[xHCI] Successfully got USB interface descriptor
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A [xHCI] Endpoint: 10A901B
+[xHCI] Successfully got USB endpoint descriptor
+[xHCI] Attempting to enable endpoint 1 as type 7
+[xHCI] Endpoint index is 2
+[xHCI] Input Context Enable: 9
+[xHCI] Successfully sent generic setup packet.
 [INIT] Initialized USB driver
 [KMSG] Kernel initialized successfully
 Valid device found at 3.0.2
@@ -118,3 +186,15 @@ Valid device found at 3.0.2
 1C 03 42 00 4F 00 43 00 48 00 53 00 20 00 55 00 
 53 00 42 00 20 00 48 00 55 00 42 00 
 [xHCI] Successfully got USB string descriptor.
+Valid device found at 3.0.3
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+04 03 
+04 03 09 04 
+1E 03 
+1E 03 55 00 53 00 42 00 2F 00 50 00 53 00 32 00 
+20 00 4B 00 65 00 79 00 70 00 61 00 64 00 
+[xHCI] Successfully got USB string descriptor.
+It is safe to turn off your computer.
+[KMSG] Attempting shutdown using ACPI.

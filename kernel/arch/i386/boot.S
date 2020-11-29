@@ -18,10 +18,11 @@
 .long 0
 .long 0
 .long 0
-.long 1
-.long 0
-.long 0
-.long 0
+.long 1 # Set to 0 to enable framebuffer by default
+.long 0 # Number of horizontal pixels
+.long 0 # Number of vertical pixels
+.long 0 # Bit depth
+# Note that these values do not DICTATE what the bootloader will give us. It will only tell the bootloader what we PREFER.
 
 # Allocate the initial stack.
 .section .bootstrap_stack, "aw", @nobits

@@ -29,7 +29,7 @@ info: action=report
 error: action=report
 panic: action=ask
 keyboard: type=mf, serial_delay=250, paste_delay=100000, user_shortcut=none
-mouse: type=ps2, enabled=false, toggle=ctrl+mbutton
+mouse: type=ps2, enabled=false
 #sound: waveoutdrv=alsa, waveout=none, waveindrv=alsa, wavein=none, midioutdrv=alsa, midiout=none
 #speaker: enabled=true, mode=sound
 parport1: enabled=true, file=none
@@ -38,6 +38,6 @@ com1: enabled=true, mode=file, dev="BochsLog.txt"
 com2: enabled=false
 com3: enabled=false
 com4: enabled=false
-usb_xhci: enabled=1, port1=none, options1=none, port2=none, options2=none, port3=hub:7, options3=none, port4=none, options4=none
+usb_xhci: enabled=1, port1=none, options1=none, port2=none, options2=none, port3=hub:7, options3=none, port4=keypad, options4=none
 usb_uhci: enabled=1, port1=none, options1=none, port2=none, options2=none
 #gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0

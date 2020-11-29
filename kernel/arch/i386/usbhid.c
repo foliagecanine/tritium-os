@@ -19,8 +19,8 @@ const uint8_t usb_scancode_to_ps2[256] = {
 uint8_t keyboard_buffer_cmp[8];
 uint64_t repeat_key_press_time = 0;
 uint8_t keyboard_repeat_key = 0;
-uint16_t usb_keyboard_repeat_initial_delay = 5000; // 500 ms, measured in 100us
-uint16_t usb_keyboard_repeat_repeat_delay = 250; // 25 ms
+uint16_t usb_keyboard_repeat_initial_delay = 500; // 500 ms
+uint16_t usb_keyboard_repeat_repeat_delay = 25; // 25 ms
 usb_device *dev_kbd = 0;
 
 bool key_exists(uint8_t key, uint8_t *keylist) {
