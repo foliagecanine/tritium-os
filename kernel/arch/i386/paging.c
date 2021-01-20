@@ -313,6 +313,50 @@ void free_page(void *start, size_t pages) {
 	}
 }
 
+// Similar to alloc_page, but requires physical pages to be sequential
+void *alloc_sequential(size_t pages) {
+	for(uint32_t i = 4096; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				successful_pages = 1;
+				for (uint32_t j = 4096; j < 1048576; j++) {
+					if (!check_page_cluster((void *)(j*4096))==255)
+						j+=7;
+					else if (!check_phys_page((void *)(j*4096))) {
+						for (uint32_t k = j+1; k-j<pages+1; k++) {
+							if (successful_pages==pages)
+									break;
+							if (!check_phys_page((void *)(k*4096))) {
+								successful_pages++;
+							}
+							else
+								break;
+						}
+						if (successful_pages==pages) {
+							for (uint32_t k = 0; k < pages; k++) {
+								map_addr((i+k)*4096,(j+k)*4096);
+							}
+							return (void *)(i*4096);							
+						}
+					}
+				}
+			}
+		}
+	}
+	PANIC("OUT OF MEMORY");
+	return 0;
+}
+
 uint32_t *get_current_tables() {
 	return (uint32_t *)kernel_tables;
 }
@@ -327,7 +371,7 @@ void use_kernel_map() {
 }
 
 void *clone_tables() {
-	void * new = alloc_page(1025);
+	void * new = alloc_sequential(1025);
 	memset(new,0,4096*1025);
 	page_table_entry * new_page_tables = new+4096;
 	page_dir_entry * new_page_dir = new;

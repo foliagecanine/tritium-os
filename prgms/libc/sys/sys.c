@@ -61,3 +61,10 @@ uint32_t getpid() {
 	asm volatile("mov %%eax,%0":"=m"(retval):);
 	return retval;
 }
+
+uint32_t fork() {
+	uint32_t retval;
+	syscall(25);
+	asm volatile("mov %%eax,%0":"=m"(retval));
+	return retval;
+}

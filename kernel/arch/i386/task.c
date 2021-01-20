@@ -63,10 +63,9 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		mark_user((void *)0xF00000+(i*4096),true);
 	}
 
-	
 	//Program arguments 0xF04000 to 0xF05000
 	if (argl_paddr) {
-		map_addr((void *)0xF04000,(void *)argl_paddr);
+		map_page_secretly((void *)0xF04000,(void *)argl_paddr);
 	} else {
 		map_page_to((void *)0xF04000);
 	}
@@ -74,7 +73,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	
 	//Environment variables 0xF05000 to 0xF06000
 	if (envl_paddr) {
-		map_addr((void *)0xF05000,(void *)envl_paddr);
+		map_page_secretly((void *)0xF05000,(void *)envl_paddr);
 	} else {
 		map_page_to((void *)0xF05000);
 	}
@@ -215,7 +214,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	current_task->waitpid = 0;
 	uint32_t old_pid = current_task->pid;
 	current_task->pid = 0;
-	volatile uint32_t new_pid = 0;
+	uint32_t new_pid = 0;
 	for (uint32_t i = old_pid+1; i < max_threads; i++) {
 		if (threads[i-1].pid!=0) {
 			new_pid = i;
@@ -357,7 +356,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 void *p_copybuffer[1024+4+1+1];
 
 // Fork will simply duplicate the process's memory and thread data and assign a new PID.
-uint32_t fork_process(uint32_t eip, uint32_t esp) {
+uint32_t fork_process() {
 	disable_tasking();
 	uint32_t current_cr3;
 	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
@@ -404,9 +403,9 @@ uint32_t fork_process(uint32_t eip, uint32_t esp) {
 	threads[pid-1].cr3 = new;
 	threads[pid-1].pid = pid;
 	threads[pid-1].tables = get_current_tables();
+	threads[pid-1].tss = syscall_temp_tss;
 	threads[pid-1].tss.eax = 0;
-	threads[pid-1].tss.eip = syscall_temp_tss.eip;
-	threads[pid-1].tss.esp = syscall_temp_tss.esp;
+	threads[pid-1].parent = current_task;
 	
 	switch_tables((void *)current_tables);
 	asm volatile("mov %0,%%cr3"::"r"(current_cr3));

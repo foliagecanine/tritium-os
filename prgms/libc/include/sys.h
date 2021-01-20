@@ -8,5 +8,6 @@ uint32_t exec_args(char *name, char **arguments, char **environment);
 void yield();
 uint32_t waitpid(uint32_t pid);
 uint32_t getpid();
+uint32_t fork();
 
 #endif

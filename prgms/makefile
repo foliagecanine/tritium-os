@@ -12,6 +12,7 @@ LS.PRG \
 GUI.SYS \
 EDIT.PRG \
 KEYREAD.PRG \
+FORK.PRG \
 
 all: $(PRGMS)
 
