@@ -1,7 +1,7 @@
 #include <kernel/task.h>
 #include <kernel/sysfunc.h>
 
-#define TASK_DEBUG
+//#define TASK_DEBUG
 
 #define TASK_STATE_NULL 0
 #define TASK_STATE_IDLE 1
@@ -131,6 +131,28 @@ void create_process(void *prgm,size_t size) {
 	");
 }
 
+bool is_task_runnable(uint8_t state) {
+	return (state==TASK_STATE_ACTIVE||state==TASK_STATE_IDLE);
+}
+
+uint32_t next_task() {
+	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
+		if (threads[i-1].pid!=0) {
+			if (is_task_runnable(threads[i-1].state)) {
+				return i;
+			}
+		}
+	}
+	for (uint32_t i = 1; i < max_threads; i++) {
+		if (threads[i-1].pid!=0) {
+			if (is_task_runnable(threads[i-1].state)) {
+				return i;
+			}
+		}
+	}
+	return 0;
+}
+
 uint32_t temp_resp;
 volatile tss_entry_t new_temp_tss;
 extern void switch_task();
@@ -139,29 +161,7 @@ void task_switch(tss_entry_t tss, uint32_t ready_esp) {
 	disable_tasking();
 	//asm volatile("mov %0, %%cr3":: "r"(kernel_directory));
 	current_task->tss = tss; //Save the program's state
-	volatile uint32_t new_pid = 0;
-	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
-		if (threads[i-1].pid!=0) {
-			if (threads[i-1].state==TASK_STATE_WAITPID&&threads[threads[i-1].waitpid-1].state==TASK_STATE_NULL)
-				threads[i-1].state = TASK_STATE_ACTIVE;
-			if (threads[i-1].state!=TASK_STATE_WAITPID&&threads[i-1].state!=TASK_STATE_NULL) {
-				new_pid = i;
-				break;
-			}
-		}
-	}
-	if (!new_pid) {
-		for (uint32_t j = 1; j < max_threads; j++) {
-			if (threads[j-1].pid!=0) {
-				if (threads[j-1].state==TASK_STATE_WAITPID&&threads[threads[j-1].waitpid-1].state==TASK_STATE_NULL)
-					threads[j-1].state = TASK_STATE_ACTIVE;
-				if (threads[j-1].state!=TASK_STATE_WAITPID&&threads[j-1].state!=TASK_STATE_NULL) {
-					new_pid = j;
-					break;
-				}
-			}
-		}
-	}
+	uint32_t new_pid = next_task();
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
 	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
@@ -214,21 +214,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	current_task->waitpid = 0;
 	uint32_t old_pid = current_task->pid;
 	current_task->pid = 0;
-	uint32_t new_pid = 0;
-	for (uint32_t i = old_pid+1; i < max_threads; i++) {
-		if (threads[i-1].pid!=0) {
-			new_pid = i;
-			break;
-		}
-	}
-	if (!new_pid) {
-		for (uint32_t j = 1; j < max_threads; j++) {
-			if (threads[j-1].pid!=0) {
-				new_pid = j;
-				break;
-			}
-		}
-	}
+	uint32_t new_pid = next_task();
 	if (!new_pid) {
 		kerror("CRITICAL ERROR: NO PROGRAMS REMAINING");
 		for(;;);
