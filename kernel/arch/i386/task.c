@@ -33,7 +33,7 @@ void init_tasking(uint32_t num_pages) {
 }
 
 uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t envl_paddr) {
-	volatile uint32_t pid;
+	uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
 		if (threads[pid-1].pid==0)
 			break;
@@ -91,6 +91,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process created:");
 	printf("====== pid=%$\n",pid);
+	dprintf("====== pid=%$\n",pid);
 #endif
 	return pid;
 }
@@ -236,6 +237,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
 	printf("====== pid=%$\n",old_pid);
+	dprintf("====== pid=%u\n",old_pid);
 #endif
 	//switch_tables(current_task->tables);
 	//asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
@@ -350,6 +352,72 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 		return 0;
 	}
+}
+
+void *p_copybuffer[1024+4+1+1];
+
+// Fork will simply duplicate the process's memory and thread data and assign a new PID.
+uint32_t fork_process(uint32_t eip, uint32_t esp) {
+	disable_tasking();
+	uint32_t current_cr3;
+	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	uint32_t *current_tables = get_current_tables();
+	
+	uint32_t pid;
+	for (pid = 1; pid < max_threads; pid++) {
+		if (threads[pid-1].pid==0)
+			break;
+	}
+	if (pid>=max_threads) {
+		kerror("[KERR] Process tried to start, but no available PID!");
+		return 0;
+	}
+	
+	void *copybuffer = alloc_page(1024 + 4 + 1 + 1); //Program + Stack + envp + argv
+	
+	// Program
+	memcpy(copybuffer,(void *)0x100000,1024*4096);
+	// Stack + envp + argv
+	memcpy(copybuffer+1024*4096,(void *)0xF00000,6*4096);
+	
+	// Copy all the pages' physical addresses into p_copybuffer
+	for (uint32_t i = 0; i < 1024 + 4 + 1 + 1; i++) {
+		p_copybuffer[i] = get_phys_addr(copybuffer+(i*4096));
+	}
+	
+	use_kernel_map();
+	void *new = clone_tables();
+	
+	// Map the memory stored in the copybuffer to the correct places in virtual memory
+	// Program
+	for (uint16_t i = 0; i < 0x400; i++) {
+		map_page_secretly((void *)((i*4096)+0x100000),p_copybuffer[i]);
+		mark_user((void *)((i*4096)+0x100000),true);
+	}
+	// Stack + envp + argv
+	for (uint16_t i = 0; i < 4 + 1 + 1; i++) {
+		map_page_secretly((void *)((i*4096)+0xF00000),p_copybuffer[i+0x400]);
+		mark_user((void *)((i*4096)+0xF00000),true);
+	}
+	
+	memcpy(&threads[pid-1],current_task,sizeof(thread_t));
+	threads[pid-1].cr3 = new;
+	threads[pid-1].pid = pid;
+	threads[pid-1].tables = get_current_tables();
+	threads[pid-1].tss.eax = 0;
+	threads[pid-1].tss.eip = syscall_temp_tss.eip;
+	threads[pid-1].tss.esp = syscall_temp_tss.esp;
+	
+	switch_tables((void *)current_tables);
+	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+	
+#ifdef TASK_DEBUG
+	kprint("[KDBG] New process created:");
+	printf("====== pid=%$\n",pid);
+	dprintf("====== pid=%$\n",pid);
+#endif
+	enable_tasking();
+	return pid;
 }
 
 uint32_t getpid() {

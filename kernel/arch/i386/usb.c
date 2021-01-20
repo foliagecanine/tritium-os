@@ -44,8 +44,10 @@ void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass
 	//usb_get_endpoint_desc(dev_addr,0,0,0);
 	if (class==USB_CLASS_HUB)
 		init_hub(dev_addr,config);
-	if (class==USB_CLASS_HID)
+	else if (class==USB_CLASS_HID)
 		init_hid(dev_addr,config);
+	else
+		printf("No driver for class %u subclass %u protocol %u\n");
 }
 
 void init_usb() {

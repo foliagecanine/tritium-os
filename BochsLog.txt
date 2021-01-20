@@ -196,5 +196,3 @@ Valid device found at 3.0.3
 1E 03 55 00 53 00 42 00 2F 00 50 00 53 00 32 00 
 20 00 4B 00 65 00 79 00 70 00 61 00 64 00 
 [xHCI] Successfully got USB string descriptor.
-It is safe to turn off your computer.
-[KMSG] Attempting shutdown using ACPI.
