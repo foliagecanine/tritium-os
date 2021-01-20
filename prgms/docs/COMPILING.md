@@ -336,3 +336,10 @@ eax = return value of ticks (low 32 bits).
 edx = return value of ticks (high 32 bits)?
 
 ```
+
+```C
+int 0x80, eax=25: fork
+Return:
+eax = pid of new process, or 0 for child
+
+```
