@@ -35,7 +35,7 @@ void initialize_port(ahci_port *aport) {
 	HBACommandHeader *cmdheader = (HBACommandHeader *)mapped_clb;
 	
 	for (uint8_t i=0;i<32;i++) {
-		cmdheader[i].prdtl = 8;
+		cmdheader[i].prdtl = 1;
 		void *ctba_buf = alloc_page(1);
 		memset(ctba_buf,0,4096);
 		aport->ctba[i] = ctba_buf;
@@ -104,7 +104,6 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
 	cmdheader->w = 0;
-	cmdheader->prdtl = (uint16_t)count;//(uint16_t)((count-1)>>4)+1;
 	
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 	
@@ -164,7 +163,6 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
 	cmdheader->w = 1; //We are writing this time
-	cmdheader->prdtl = (uint16_t)((count-1)>>4)+1;
 	
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 	
