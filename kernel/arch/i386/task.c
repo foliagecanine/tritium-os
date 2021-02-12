@@ -204,7 +204,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 		}
 	}
 	//Free all the memory to prevent leaks
-	free_page((void *)0x100000,16);
+	free_page((void *)0x100000,1024);
 	free_page((void *)0xF00000,6);
 	use_kernel_map();
 	free_page(current_task->tables-4096,1025);
