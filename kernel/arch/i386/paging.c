@@ -276,7 +276,7 @@ void *map_paddr(void *paddr, size_t pages) {
 
 void* alloc_page(size_t pages) {
 	//First find consecutive virtual pages
-	for(volatile uint32_t i = 4096; i < 1048576; i++) {
+	for(uint32_t i = 4096; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -311,6 +311,11 @@ void free_page(void *start, size_t pages) {
 	for (uint32_t i = 0; i < pages; i++) {
 		unmap_vaddr((void *)((uint32_t)start+(i*4096)));
 	}
+}
+
+void *calloc_page(size_t pages) {
+	void *out = alloc_page(pages);
+	memset(out, 0, 4096*pages);
 }
 
 // Similar to alloc_page, but requires physical pages to be sequential

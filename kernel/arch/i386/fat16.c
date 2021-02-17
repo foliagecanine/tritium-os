@@ -194,7 +194,7 @@ uint8_t f16_wipecluster(uint32_t clusterNum,FAT16_MOUNT fm,uint8_t drive_num) {
 }
 
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_num) {
-	uint8_t *read = alloc_page(((numEntries*32)/4096)+1);
+	uint8_t *read = alloc_sequential(((numEntries*32)/4096)+1);
 	memset(read,0,numEntries*32);
 	
 	uint8_t derr = ahci_read_sector(drive_num, location/512, read);
@@ -267,7 +267,7 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t
 		return retFile;
 	}
 	uint32_t num_pages = ((numEntries*32)/4096)+1;
-	uint8_t *read = alloc_page(num_pages); //See free below
+	uint8_t *read = alloc_sequential(num_pages); //See free below
 	memset(read,0,num_pages*4096);
 	
 	uint8_t derr = ahci_read_sectors(drive_num, (location/512), (numEntries*32)/512, read);

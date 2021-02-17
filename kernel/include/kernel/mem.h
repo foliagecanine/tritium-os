@@ -16,6 +16,7 @@ void unmap_vaddr(void *vaddr);
 void trade_vaddr(void *vaddr);
 void *alloc_page(size_t pages);
 void free_page(void *start, size_t pages);
+void *calloc_page(size_t pages);
 void *alloc_sequential(size_t pages);
 void *get_phys_addr(void *vaddr);
 void *map_page_to(void *vaddr);

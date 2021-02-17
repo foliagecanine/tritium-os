@@ -34,10 +34,9 @@ void initialize_port(ahci_port *aport) {
 	
 	HBACommandHeader *cmdheader = (HBACommandHeader *)mapped_clb;
 	
-	for (uint8_t i=0;i<32;i++) {
+	for (uint8_t i=0; i<32; i++) {
 		cmdheader[i].prdtl = 1;
-		void *ctba_buf = alloc_page(1);
-		memset(ctba_buf,0,4096);
+		void *ctba_buf = calloc_page(1);
 		aport->ctba[i] = ctba_buf;
 		cmdheader[i].ctba = (uint32_t)get_phys_addr(ctba_buf);
 		cmdheader[i].ctbau = 0;

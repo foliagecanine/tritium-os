@@ -19,6 +19,7 @@ void main(uint32_t argc, char **argv) {
 	} else {
 		strcpy(fname,cd);
 	}
+	printf("%s",fname);
 	f = fopen(fname,"r");
 	FILE r;
 	r.valid = true;
