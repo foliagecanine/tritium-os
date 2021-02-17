@@ -13,7 +13,8 @@ Demo:
 Demo made on 07/06/20 with commit b406b609857eab945c813f9d93f506bcf30133fe
 
 ## How do you build this?
-Before you start I will warn you: this will take a LOT of space (~4-5GB)  
+Before you start I will warn you: building a cross-compiler will take a LOT of space (~4-5GB).  
+If you already have an i386-elf cross-compiler, this should not take much space at all.  
 If you don't neccesarily want to build this, you can see the "What if I just want to use the ISO..." section below.
 
 ### Prerequisites
