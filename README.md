@@ -14,13 +14,13 @@ Demo made on 07/06/20 with commit b406b609857eab945c813f9d93f506bcf30133fe
 
 ## How do you build this?
 Before you start I will warn you: building a cross-compiler will take a LOT of space (~4-5GB).  
-If you already have an i386-elf cross-compiler, this should not take much space at all.  
+If you already have an i686-elf cross-compiler, this should not take much space at all.  
 If you don't neccesarily want to build this, you can see the "What if I just want to use the ISO..." section below.
 
 ### Prerequisites
 First you will need to build a compiler.  
 See [https://wiki.osdev.org/Building_GCC] for info on how to do that.  
-You will need an i686-elf or x86_64-elf GCC compiler to build this project.
+You will need an i686-elf C (GCC) compiler to build this project.
 
 Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu, etc.) by running this command:
 `sudo apt-get install qemu`
