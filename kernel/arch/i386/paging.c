@@ -17,7 +17,18 @@ const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","N
 
 multiboot_memory_map_t *mmap;
 
+_Bool check_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	_Bool r = (_Bool)(pmem_used[page/8] & (1 << (page%8)));
+	return r;
+}
+
 void claim_phys_page(void *addr) {
+	// FOR DEBUGGING
+	if (check_phys_page(addr)) {
+		dprintf("[WARN] Attempting to claim already claimed page: %p\n", addr);
+	}
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
 	pmem_used[page/8]|=1<<(page%8);
@@ -27,13 +38,6 @@ void release_phys_page(void *addr) {
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
 	pmem_used[page/8]&= ~(1 << (page%8));
-}
-
-_Bool check_phys_page(void *addr) {
-	uint32_t page = (uint32_t)addr;
-	page/=4096;
-	_Bool r = (_Bool)(pmem_used[page/8] & (1 << (page%8)));
-	return r;
 }
 
 uint8_t check_page_cluster(void *addr) {
@@ -132,6 +136,7 @@ void init_paging(multiboot_info_t *mbi) {
 	
 	//Clear out the current map so all entries are "claimed"
 	memset((void *)&pmem_used[0],255,131072);
+	memset((void *)&pmem_used[0],0,0x10000);
 	
 	//Scan the memory map for areas that we can use for general purposes
 	for (uint8_t i = 0; i < 15; i++) {
@@ -333,8 +338,8 @@ void *alloc_sequential(size_t pages) {
 					break;
 			}
 			if (successful_pages==pages) {
-				successful_pages = 1;
 				for (uint32_t j = 4096; j < 1048576; j++) {
+					successful_pages = 1;
 					if (!check_page_cluster((void *)(j*4096))==255)
 						j+=7;
 					else if (!check_phys_page((void *)(j*4096))) {
@@ -441,5 +446,13 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 			unmap_vaddr(ptr+(new_pages*4096)+(i*4096));
 		}
 		return ptr;
+	}
+}
+
+void free_all_user_pages() {
+	for (uint32_t i = 0; i < 1024*1024; i++) {
+		if (kernel_tables[i].user) {
+			free_page(i*4096,1);
+		}
 	}
 }

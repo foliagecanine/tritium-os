@@ -1,17 +1,19 @@
 #ifndef _KERNEL_ELF_H
 #define _KERNEL_ELF_H
 
+#include <kernel/ksetup.h>
+
 typedef struct {
 	char magic[4];
 	uint8_t arch_class;
 	uint8_t arch_endian;
-	uint8_t elf_version;
+	uint8_t file_version;
 	uint8_t os_abi;
 	uint8_t abi_version;
 	uint8_t pad[7];
 	uint16_t type;
 	uint16_t arch_target;
-	uint32_t elf_version2;
+	uint32_t elf_version;
 	uint32_t entrypoint;
 	uint32_t ph_offset;
 	uint32_t sh_offset;

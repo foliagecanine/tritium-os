@@ -27,6 +27,7 @@ void *clone_tables();
 void use_kernel_map();
 void switch_tables(void *new);
 uint32_t *get_current_tables();
+void free_all_user_pages();
 void power_shutdown();
 void power_reboot();
 
