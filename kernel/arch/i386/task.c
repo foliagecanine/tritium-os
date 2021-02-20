@@ -16,6 +16,7 @@ struct thread_t {
 	thread_t *parent;
 	uint8_t state;
 	uint8_t waitpid;
+	bool elf;
 	void *cr3;
 	void *tables;
 };
@@ -51,6 +52,8 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	
 	void *elf_enter = load_elf(prgm);
 	if (!elf_enter) {
+		dprintf("[DBG ] Loading program in legacy mode.\n");
+		threads[pid-1].elf = false;
 		//Program code and variables: 0x100000 to 0x500000 = 4 MiB
 		for (uint32_t i = 0; i < 1024; i++) {
 			map_page_to((void *)0x100000+(i*4096));
@@ -87,6 +90,8 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
 	
 	} else {
+		dprintf("[DBG ] Loading program in ELF mode.\n");
+		threads[pid-1].elf = true;
 		threads[pid-1].tss.eip = elf_enter;
 		for (uint8_t i = 0; i < 4; i++) {
 			map_page_to(0xBFFFC000+(i*4096));
@@ -369,32 +374,8 @@ uint32_t fork_process() {
 		return 0;
 	}
 	
-	void *copybuffer = alloc_page(1024 + 4 + 1 + 1); //Program + Stack + envp + argv
-	
-	// Program
-	memcpy(copybuffer,(void *)0x100000,1024*4096);
-	// Stack + envp + argv
-	memcpy(copybuffer+1024*4096,(void *)0xF00000,6*4096);
-	
-	// Copy all the pages' physical addresses into p_copybuffer
-	for (uint32_t i = 0; i < 1024 + 4 + 1 + 1; i++) {
-		p_copybuffer[i] = get_phys_addr(copybuffer+(i*4096));
-	}
-	
-	use_kernel_map();
 	void *new = clone_tables();
-	
-	// Map the memory stored in the copybuffer to the correct places in virtual memory
-	// Program
-	for (uint16_t i = 0; i < 0x400; i++) {
-		map_page_secretly((void *)((i*4096)+0x100000),p_copybuffer[i]);
-		mark_user((void *)((i*4096)+0x100000),true);
-	}
-	// Stack + envp + argv
-	for (uint16_t i = 0; i < 4 + 1 + 1; i++) {
-		map_page_secretly((void *)((i*4096)+0xF00000),p_copybuffer[i+0x400]);
-		mark_user((void *)((i*4096)+0xF00000),true);
-	}
+	clone_user_pages();
 	
 	memcpy(&threads[pid-1],current_task,sizeof(thread_t));
 	threads[pid-1].cr3 = new;

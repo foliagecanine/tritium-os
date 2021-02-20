@@ -1,39 +1,30 @@
-GCC=i686-elf-gcc
-LIBDIR=../libc
-CFLAGS=-m32 -Os -s -fno-pie -ffreestanding -nostartfiles
-
-include $(LIBDIR)/make.config
-
-OBJS=\
-../libc/sys/sys.o\
-main.o \
-$(LIB_OBJS)\
+GCC=i686-tritium-gcc
+CFLAGS=
+OUTPRG=KEYREAD.PRG
+OUTFLDR=prgms
 
 .PHONY: all clean upload
 .SUFFIXES: .o .c
 
-all: KEYREAD.PRG
+all: $(OUTPRG)
 
-KEYREAD.PRG: $(OBJS) linker.ld
-	ld -T linker.ld $(OBJS) -o KEYREAD.PRG
+$(OUTPRG):
+	$(GCC) $(CFLAGS) main.c -o $(OUTPRG)
+
+dump: FORK.PRG
+	i686-tritium-objdump -D $(OUTPRG)
 	
-.c.o:
-	$(GCC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
-	
-dump: KEYREAD.PRG
-	objdump -D -b binary -mi386 KEYREAD.PRG
-	
-upload: KEYREAD.PRG
+upload: FORK.PRG
 	sudo mkdir -p /mnt/F1
 	sudo mount -o loop,rw ../../floppy.flp /mnt/F1
-	sudo cp KEYREAD.PRG /mnt/F1/PRGMS
+	sudo cp $(OUTPRG) /mnt/F1/$(OUTFLDR)
 	sudo umount /mnt/F1
 	sudo rmdir /mnt/F1
 	
 clean:
-	rm -f $(OBJS) *.o */*.o */*/*.objdump
-	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
-	rm KEYREAD.PRG
+	rm *.o
+	rm *.d
+	rm $(OUTPRG)
 
-install: KEYREAD.PRG
-	sudo cp KEYREAD.PRG /mnt/F1/PRGMS
+install: $(OUTPRG)
+	sudo cp $(OUTPRG) /mnt/F1/$(OUTFLDR)

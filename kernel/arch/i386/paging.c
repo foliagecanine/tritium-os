@@ -217,22 +217,32 @@ void *get_phys_addr(void *vaddr) {
 	return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
 }
 
+void *find_free_phys_page() {
+	for (uint32_t k=0x800; k<1048576; k++) {
+		if (check_page_cluster((void *)(k*4096))==255)
+			k+=7;
+		else if (!check_phys_page((void *)(k*4096))) {
+			return (void *)(k*4096);
+		}
+	}
+	dprintf("failed\n");
+	return 0;
+}
+
 void* map_page_to(void *vaddr) {
 	if (kernel_tables[(uint32_t)vaddr/4096].present) {
 		kwarn("[WARN] Page mapped that is already present");
 		printf("===== %p\n",vaddr);
 		return 0;
 	}
-	for (uint32_t k=0; k<1048576; k++) {
-		if (check_page_cluster((void *)(k*4096))==255)
-			k+=7;
-		else if (!check_phys_page((void *)(k*4096))) {
-			map_addr(vaddr,(void *)(k*4096));
-			return vaddr;
-		}
+	void *paddr = find_free_phys_page();
+	if (!paddr) {
+		PANIC("OUT OF MEMORY");
+		return 0;
+	} else {
+		map_addr(vaddr, paddr);
+		return vaddr;
 	}
-	PANIC("OUT OF MEMORY");
-	return 0;
 }
 
 void map_page_secretly(void *vaddr, void *paddr) {
@@ -298,14 +308,12 @@ void* alloc_page(size_t pages) {
 			}
 			if (successful_pages==pages) {
 				for (uint32_t step=0; step<pages;step++) {
-					for (uint32_t k=0; k<1048576; k++) {
-						if (check_page_cluster((void *)(k*4096))==255)
-							k+=7;
-						else if (!check_phys_page((void *)(k*4096))) {
-							map_addr((void *)((i+step)*4096),(void *)(k*4096));
-							break;
-						}
+					void *paddr = find_free_phys_page();
+					if (!paddr) {
+						PANIC("OUT OF MEMORY");
+						return 0;
 					}
+					map_addr((void *)((i+step)*4096), paddr);
 				}
 				return (void *)(i*4096);
 			}
@@ -454,8 +462,49 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 
 void free_all_user_pages() {
 	for (uint32_t i = 0; i < 1024*1024; i++) {
-		if (kernel_tables[i].user) {
+		if (kernel_tables[i].user&&kernel_tables[i].present) {
 			free_page(i*4096,1);
 		}
 	}
+}
+
+uint8_t clone_data[4096];
+
+bool clone_user_pages() {
+	dprintf("1 Free mem: %u\n",free_pages()*4L);
+	for (uint32_t i = 0; i < 1024*1024; i++) {
+		if (kernel_tables[i].user&&kernel_tables[i].present) {
+			// Find free physical page
+			void *paddr = find_free_phys_page();
+			if (!paddr) {
+				PANIC("OUT OF MEMORY");
+				return false;
+			}
+			
+			// Copy the data from the original page
+			memcpy(clone_data, (void *)(i*4096), 4096);
+			
+			// Swap the virtual address' physical page for the new physical page
+			kernel_tables[i].address = (uint32_t)paddr>>12;
+			claim_phys_page(paddr);
+			
+			// Set page to writeable when we are copying it
+			uint8_t rw = kernel_tables[i].readwrite;
+			kernel_tables[i].readwrite = true;
+			
+			// Flush TLB to update the map
+			asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
+			
+			// Copy the data into the new page
+			memcpy((void *)(i*4096), clone_data, 4096);
+
+			// Set page's write permission back to what it was before.
+			// This will be updated next time we flush the TLB.
+			kernel_tables[i].readwrite = rw;
+		}
+	}
+	// Fix last changed page's write permission
+	asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
+	dprintf("2 Free mem: %lu\n",free_pages()*4L);
+	return true;
 }

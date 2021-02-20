@@ -216,6 +216,48 @@ int __printf_template(bool (*printfn)(const char *, size_t), const char* restric
 					return -1;
 				written+=size;
 			}
+		} else if (*format == 'd') {
+			if (!format_specified)
+				vararg = (long long)(int)va_arg(parameters, int);
+			
+			format++;
+			if (!vararg) {
+				if (!printfn("0",1))
+					return -1;
+				written++;
+			} else {
+				// Convert negative number to positive number
+				if (vararg < 0) {
+					printfn("-",1);
+					vararg = ~vararg;
+					vararg++;
+				}
+				
+				// Count number of digits to create a new array
+				unsigned long long tnum = (unsigned long long)vararg; // Cast to unsigned since format is u
+				unsigned long long dig;
+				int count = 0;
+				while (tnum>0) {
+					tnum /= 10;
+					++count;
+				}
+				int size = count;
+
+				char outlist[size];
+				char numlist[] = {"0123456789"};
+				tnum = vararg;
+				count = 0;
+				while(tnum>0) {
+					dig = tnum % 10;
+					outlist[size-count-1] = numlist[dig];
+					tnum /= 10;
+					++count;
+				}
+				
+				if (!printfn(outlist, size))
+					return -1;
+				written+=size;
+			}
 		} else if (*format == '$') { // This implemation exists solely for backwards compatibility. Existing uses should be updated.
 			format++;
 			long long num = (long long)(long)va_arg(parameters, long); // For backwards compatibility for now. Should be reset to int.

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void main(uint32_t argc, char **argv) {
+int main(int argc, char *argv[]) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	uint32_t newprg = fork();
 	uint32_t retval;
