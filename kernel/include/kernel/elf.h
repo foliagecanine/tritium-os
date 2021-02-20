@@ -3,6 +3,12 @@
 
 #include <kernel/ksetup.h>
 
+#define ELF_TYPE_EXEC		2
+
+#define ELF_PH_TYPE_LOAD	1
+
+#define ELF_SH_TYPE_NOBITS	8
+
 typedef struct {
 	char magic[4];
 	uint8_t arch_class;
@@ -49,5 +55,7 @@ typedef struct {
 	uint32_t addralign;
 	uint32_t entry_size;
 } __attribute__((packed)) elfsh32;
+
+void *load_elf(void *elffile);
 
 #endif

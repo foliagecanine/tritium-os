@@ -94,7 +94,7 @@ void init_paging(multiboot_info_t *mbi) {
 	//Stage 3: 
 	//Create a new full page table so we can allocate things whenever we want
 	
-	//First let's do a memcpy so we dont have any random data
+	//First let's do a memset so we dont have any random data
 	memset((void*)0xC0400000,0,0x400000);
 	
 	for (uint16_t i = 0; i < 1023; i++) {
@@ -136,7 +136,6 @@ void init_paging(multiboot_info_t *mbi) {
 	
 	//Clear out the current map so all entries are "claimed"
 	memset((void *)&pmem_used[0],255,131072);
-	memset((void *)&pmem_used[0],0,0x10000);
 	
 	//Scan the memory map for areas that we can use for general purposes
 	for (uint8_t i = 0; i < 15; i++) {
@@ -151,12 +150,11 @@ void init_paging(multiboot_info_t *mbi) {
 			}
 		}
 		printf("%u: %p+%p %s\n",i,(void *)mmap[i].addr,(void *)mmap[i].len,mem_types[type]);
+		dprintf("%u: %p+%p %s\n",i,(void *)mmap[i].addr,(void *)mmap[i].len,mem_types[type]);
 	}
 	
 	//Reclaim all the way up to 8MiB (for the kernel and the page tables)
-	for (uint32_t i=0;i<0x800000;i+=4096) {
-		claim_phys_page((void *)i);
-	}
+	memset((void *)&pmem_used[0],255,256);
 	
 	kprint("[INIT] Kernel heap initialized");
 }
@@ -207,6 +205,11 @@ void trade_vaddr(void *vaddr) {
 
 void mark_user(void *vaddr,_Bool user) {
 	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void mark_write(void *vaddr,_Bool write) {
+	kernel_tables[(uint32_t)vaddr/4096].readwrite = write?1:0;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
@@ -280,8 +283,8 @@ void *map_paddr(void *paddr, size_t pages) {
 }
 
 void* alloc_page(size_t pages) {
-	//First find consecutive virtual pages
-	for(uint32_t i = 4096; i < 1048576; i++) {
+	//First find consecutive virtual pages in kernel memory.
+	for(uint32_t i = 786432; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {

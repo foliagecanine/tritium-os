@@ -5,6 +5,7 @@
 #include <kernel/tss.h>
 #include <kernel/ksetup.h>
 #include <kernel/stdio.h>
+#include <kernel/elf.h>
 
 void task_switch(tss_entry_t tss,uint32_t ready_esp);
 void task_set_kdir(uint32_t kdir);

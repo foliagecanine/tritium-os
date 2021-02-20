@@ -49,40 +49,52 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].cr3 = new;
 	threads[pid-1].tables = get_current_tables();
 	
-	//Program code and variables: 0x100000 to 0x500000 = 4 MiB
-	for (uint32_t i = 0; i < 1024; i++) {
-		map_page_to((void *)0x100000+(i*4096));
-		mark_user((void *)0x100000+(i*4096),true);
-		memset((void *)0x100000+(i*4096),0,4096);
-	}
-	
-	//Program stack: 0xF00000 to 0xF04000
-	memcpy((void *)0x100000,prgm,size);
-	for (uint8_t i = 0; i < 4; i++) {
-		map_page_to((void *)0xF00000+(i*4096));
-		mark_user((void *)0xF00000+(i*4096),true);
-	}
+	void *elf_enter = load_elf(prgm);
+	if (!elf_enter) {
+		//Program code and variables: 0x100000 to 0x500000 = 4 MiB
+		for (uint32_t i = 0; i < 1024; i++) {
+			map_page_to((void *)0x100000+(i*4096));
+			mark_user((void *)0x100000+(i*4096),true);
+			memset((void *)0x100000+(i*4096),0,4096);
+		}
+		
+		//Program stack: 0xF00000 to 0xF04000
+		memcpy((void *)0x100000,prgm,size);
+		for (uint8_t i = 0; i < 4; i++) {
+			map_page_to((void *)0xF00000+(i*4096));
+			mark_user((void *)0xF00000+(i*4096),true);
+		}
 
-	//Program arguments 0xF04000 to 0xF05000
-	if (argl_paddr) {
-		map_page_secretly((void *)0xF04000,(void *)argl_paddr);
+		//Program arguments 0xF04000 to 0xF05000
+		if (argl_paddr) {
+			map_page_secretly((void *)0xF04000,(void *)argl_paddr);
+		} else {
+			map_page_to((void *)0xF04000);
+		}
+		mark_user((void *)0xF04000,true);
+		
+		//Environment variables 0xF05000 to 0xF06000
+		if (envl_paddr) {
+			map_page_secretly((void *)0xF05000,(void *)envl_paddr);
+		} else {
+			map_page_to((void *)0xF05000);
+		}
+		mark_user((void *)0xF05000,true);
+		
+		//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
+		
+		threads[pid-1].tss.eip = 0x100000;
+		threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
+	
 	} else {
-		map_page_to((void *)0xF04000);
+		threads[pid-1].tss.eip = elf_enter;
+		for (uint8_t i = 0; i < 4; i++) {
+			map_page_to(0xBFFFC000+(i*4096));
+			mark_user(0xBFFFC000+(i*4096), true);
+		}
+		threads[pid-1].tss.esp = 0xBFFFFFFB;
 	}
-	mark_user((void *)0xF04000,true);
 	
-	//Environment variables 0xF05000 to 0xF06000
-	if (envl_paddr) {
-		map_page_secretly((void *)0xF05000,(void *)envl_paddr);
-	} else {
-		map_page_to((void *)0xF05000);
-	}
-	mark_user((void *)0xF05000,true);
-	
-	//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
-	
-	threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
-	threads[pid-1].tss.eip = 0x100000;
 	threads[pid-1].tss.eax = 0;
 	threads[pid-1].tss.ebx = 0;
 	threads[pid-1].tss.ecx = 0;
@@ -204,8 +216,7 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 		}
 	}
 	//Free all the memory to prevent leaks
-	free_page((void *)0x100000,1024);
-	free_page((void *)0xF00000,6);
+	free_all_user_pages();
 	use_kernel_map();
 	free_page(current_task->tables-4096,1025);
 	current_task->state = TASK_STATE_NULL;
