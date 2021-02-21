@@ -4,6 +4,8 @@
 uint8_t buf[513];
 char fname[4096];
 
+extern char **envp;
+
 void main(uint32_t argc, char **argv) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	char *cd = getenv("CD");
@@ -20,10 +22,10 @@ void main(uint32_t argc, char **argv) {
 		strcpy(fname,cd);
 	}
 	f = fopen(fname,"r");
-	FILE r;
-	r.valid = true;
 	if (f.valid) {
 		if (f.directory) {
+			FILE r;
+			r.valid = true;
 			for (uint8_t i = 0; i<16&&r.valid; i++) {
 				r = readdir(&f,buf,i);
 				if (r.valid&&buf[0])

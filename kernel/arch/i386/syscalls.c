@@ -104,12 +104,17 @@ void init_syscalls() {
 	kprint("[INIT] Initialized Syscalls.");
 }
 
-bool check_range(void *addr, uint32_t size, uint32_t start, uint32_t end) {
-	return (uint32_t)addr>start&&(uint32_t)addr+size<end;
+// Make sure the program is not writing to kernel memory.
+bool check_range(void *addr, uint32_t size) {
+	for (void *i = addr; i < addr+size; i+=4096) {
+		if (!check_user(i))
+			return false;
+	}
+	return true;
 }
 
 void fopen_usermode(FILE *f, const char* filename, const char* mode) {
-	if (check_range(f,sizeof(FILE),0x100000,0xF04000)) {
+	if (check_range(f,sizeof(FILE))) {
 		*f = fopen(filename,mode);
 	}
 }
@@ -117,7 +122,7 @@ void fopen_usermode(FILE *f, const char* filename, const char* mode) {
 uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
 	uint64_t start = (((uint64_t)starth)<<32)|startl;
 	uint64_t len = (uint64_t)lenl;
-	if (check_range(buf,len,0x100000,0xF04000)) {
+	if (check_range(buf,len)) {
 		return fread(f,buf,start,len);
 	}
 }
@@ -125,7 +130,7 @@ uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uin
 uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
 	uint64_t start = (((uint64_t)starth)<<32)|startl;
 	uint64_t len = (uint64_t)lenl;
-	if (check_range(buf,len,0x100000,0xF04000)) {
+	if (check_range(buf,len)) {
 		return fwrite(f,buf,start,len);
 	}
 }
@@ -133,28 +138,28 @@ uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, ui
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
 	if (!f->directory)
 		return;
-	if (check_range(buf,256,0x100000,0xF04000)&&check_range(f,sizeof(FILE),0x100000,0xF04000)) {
+	if (check_range(buf,256)&&check_range(f,sizeof(FILE))) {
 		*o = readdir(f, buf, n);
 	}
 }
 
 void fcreate_usermode(char *filename, FILE *o) {
 	if (filename) {
-		if (check_range(filename,strlen(filename),0x100000,0xF04000)&&check_range(o,sizeof(FILE),0x100000,0xF04000)) {
+		if (check_range(filename,strlen(filename))&&check_range(o,sizeof(FILE))) {
 			*o = fcreate(filename);
 		}
 	}
 }
 
 uint8_t fdelete_usermode(char *filename) {
-	if (check_range(filename,strlen(filename),0x100000,0xF04000)) {
+	if (check_range(filename,strlen(filename))) {
 		return fdelete(filename);
 	}
 	return UNKNOWN_ERROR;
 }
 
 uint8_t ferase_usermode(char *filename) {
-	if (check_range(filename,strlen(filename),0x100000,0xF04000)) {
+	if (check_range(filename,strlen(filename))) {
 		return ferase(filename);
 	}
 	return UNKNOWN_ERROR;

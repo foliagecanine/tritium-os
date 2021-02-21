@@ -101,6 +101,7 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		} else {
 			mark_user((void *)(address&0xFFFFF000),true);
 			kwarn("[WARN] A page was given to a process after a page fault.");
+			dprintf("Access attempted: %p\n",address);
 		}
 		//asm("mov %0,%%esp; popa; mov %1,%%esp; add $4,%%esp; iret"::"m"(temp_post_esp),"m"(a_err));
 		return;

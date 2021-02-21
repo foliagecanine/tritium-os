@@ -471,7 +471,6 @@ void free_all_user_pages() {
 uint8_t clone_data[4096];
 
 bool clone_user_pages() {
-	dprintf("1 Free mem: %u\n",free_pages()*4L);
 	for (uint32_t i = 0; i < 1024*1024; i++) {
 		if (kernel_tables[i].user&&kernel_tables[i].present) {
 			// Find free physical page
@@ -505,6 +504,11 @@ bool clone_user_pages() {
 	}
 	// Fix last changed page's write permission
 	asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
-	dprintf("2 Free mem: %lu\n",free_pages()*4L);
 	return true;
+}
+
+bool check_user(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	return kernel_tables[vaddr_page].user;
 }

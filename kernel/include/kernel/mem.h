@@ -26,6 +26,7 @@ void *map_paddr(void *paddr, size_t pages);
 void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages);
 void mark_user(void *vaddr,_Bool user);
 void mark_write(void *vaddr,_Bool write);
+bool check_user(void *vaddr);
 kheap_t heap_create(uint32_t pages);
 void heap_free(kheap_t heap);
 void set_current_heap(kheap_t heap);

@@ -8,7 +8,7 @@ OUTFLDR=prgms
 
 all: $(OUTPRG)
 
-$(OUTPRG):
+$(OUTPRG): main.c
 	$(GCC) $(CFLAGS) main.c -o $(OUTPRG)
 
 dump: FORK.PRG

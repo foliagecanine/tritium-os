@@ -61,28 +61,28 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 			memset((void *)0x100000+(i*4096),0,4096);
 		}
 		
-		//Program stack: 0xF00000 to 0xF04000
+		//Program stack: 0xF00000 to 0xBFFFE000
 		memcpy((void *)0x100000,prgm,size);
 		for (uint8_t i = 0; i < 4; i++) {
 			map_page_to((void *)0xF00000+(i*4096));
 			mark_user((void *)0xF00000+(i*4096),true);
 		}
 
-		//Program arguments 0xF04000 to 0xF05000
+		//Program arguments 0xBFFFE000 to 0xBFFFF000
 		if (argl_paddr) {
-			map_page_secretly((void *)0xF04000,(void *)argl_paddr);
+			map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
 		} else {
-			map_page_to((void *)0xF04000);
+			map_page_to((void *)0xBFFFE000);
 		}
-		mark_user((void *)0xF04000,true);
+		mark_user((void *)0xBFFFE000,true);
 		
-		//Environment variables 0xF05000 to 0xF06000
+		//Environment variables 0xBFFFF000 to 0xF06000
 		if (envl_paddr) {
-			map_page_secretly((void *)0xF05000,(void *)envl_paddr);
+			map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
 		} else {
-			map_page_to((void *)0xF05000);
+			map_page_to((void *)0xBFFFF000);
 		}
-		mark_user((void *)0xF05000,true);
+		mark_user((void *)0xBFFFF000,true);
 		
 		//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
 		
@@ -93,9 +93,27 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		dprintf("[DBG ] Loading program in ELF mode.\n");
 		threads[pid-1].elf = true;
 		threads[pid-1].tss.eip = elf_enter;
+		
+		// Map arguments to the process
+		if (argl_paddr) {
+			map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
+		} else {
+			map_page_to((void *)0xBFFFE000);
+		}
+		mark_user((void *)0xBFFFE000,true);
+		
+		// Map environment variables to the process
+		if (envl_paddr) {
+			map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
+		} else {
+			map_page_to((void *)0xBFFFF000);
+		}
+		mark_user((void *)0xBFFFF000,true);
+		
+		// Create stack: 4 pages = 16KiB
 		for (uint8_t i = 0; i < 4; i++) {
-			map_page_to(0xBFFFC000+(i*4096));
-			mark_user(0xBFFFC000+(i*4096), true);
+			map_page_to(0xBFFFA000+(i*4096));
+			mark_user(0xBFFFA000+(i*4096), true);
 		}
 		threads[pid-1].tss.esp = 0xBFFFFFFB;
 	}
@@ -285,7 +303,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		
 		if (environment) {
 			for (uint32_t i = 0; i < envc; i++) {
-				envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xF05000);
+				envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xBFFFF000);
 				strcpy(eptr,environment[i]);
 				eptr+=strlen(environment[i]);
 				eptr++;
@@ -307,7 +325,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		}
 		
 		aptr+=sizeof(char *)*(argc+2); //Reserve space for the pointers
-		argv[0] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
+		argv[0] = (char *)(((uint32_t)aptr%0x1000)+0xBFFFE000);
 		strcpy(aptr,name);
 		aptr+=strlen(name);
 		aptr++;
@@ -316,7 +334,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		//Make sure arguments are present
 		if (arguments) {
 			for (uint32_t i = 0; i < argc-1; i++) {
-				argv[i+1] = (char *)(((uint32_t)aptr%0x1000)+0xF04000);
+				argv[i+1] = (char *)(((uint32_t)aptr%0x1000)+0xBFFFE000);
 				strcpy(aptr,arguments[i]);
 				aptr+=strlen(arguments[i]);
 				aptr++;
@@ -332,8 +350,8 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 			threads[pid-1].parent=current_task;
 			threads[pid-1].tss.eax=argc;
 			threads[pid-1].tss.ebx=envc;
-			threads[pid-1].tss.ecx=0xF04000;
-			threads[pid-1].tss.edx=0xF05000;
+			threads[pid-1].tss.ecx=0xBFFFE000;
+			threads[pid-1].tss.edx=0xBFFFF000;
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
@@ -354,8 +372,6 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		return 0;
 	}
 }
-
-void *p_copybuffer[1024+4+1+1];
 
 // Fork will simply duplicate the process's memory and thread data and assign a new PID.
 uint32_t fork_process() {

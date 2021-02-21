@@ -10,9 +10,26 @@ char args[256] = "";
 char temp[256] = "";
 char cd[256] = "A:/";
 char *_envp[4096];
-uint8_t index = 0;
+uint8_t idx = 0;
 uint8_t child_pid = 0;
 bool failed = false;
+
+void change_dir() {
+	memcpy(temp,cmd+3,253);
+	temp[255]=0;
+	if (temp[1]==':') {
+		memcpy(cd,temp,256);
+	} else {
+		memcpy(cd+strlen(cd),temp,256-strlen(cd));
+	}
+	if (strlen(cd)!=3&&cd[strlen(cd)-1]=='/') {
+		cd[strlen(cd)-1]=0;
+	}
+	if (cd[strlen(cd)-1]!='/') {
+		cd[strlen(cd)+1]=0;
+		cd[strlen(cd)]='/';
+	}
+}
 
 void commandline() {
 	failed = false;
@@ -22,12 +39,12 @@ void commandline() {
 		while (!c) {
 			c = getchar();
 			if (!c) {
-				if (getkey()==14&&index) {
+				if (getkey()==14&&idx) {
 					terminal_backup();
 					putchar(' ');
 					terminal_backup();
-					index--;
-					cmd[index]=0;
+					idx--;
+					cmd[idx]=0;
 				}
 			}
 			yield();
@@ -36,36 +53,23 @@ void commandline() {
 			printf("\n");
 			break;
 		}
-		if (index!=249) {
+		if (idx!=249) {
 			putchar(c);
-			cmd[index] = c;
-			cmd[index+1] = 0;
-			index++;
+			cmd[idx] = c;
+			cmd[idx+1] = 0;
+			idx++;
 		}
 	}
 	memset(temp,0,256);
 	memcpy(temp,cmd,3);
 	temp[4]=0;
 	if (strcmp(temp,"cd ")) {
-		memcpy(temp,cmd+3,253);
-		temp[255]=0;
-		if (temp[1]==':') {
-			memcpy(cd,temp,256);
-		} else {
-			memcpy(cd+strlen(cd),temp,256-strlen(cd));
-		}
-		if (strlen(cd)!=3&&cd[strlen(cd)-1]=='/') {
-			cd[strlen(cd)-1]=0;
-		}
-		if (cd[strlen(cd)-1]!='/') {
-			cd[strlen(cd)+1]=0;
-			cd[strlen(cd)]='/';
-		}
+		change_dir();
 	} else if (strcmp(cmd,"cls")||strcmp(cmd,"clear")) {
 		terminal_clear();
 	} else if (strcmp(cmd,"exit")) {
 		if (getpid()!=1) {
-			syscall(2);
+			exit(0);
 		}
 	} else {
 		/*cmd[strlen(cmd)]='.';
@@ -243,13 +247,12 @@ void commandline() {
 				}
 			}
 		}
+		if (!failed) {
+			waitpid(child_pid);
+		}
 	}
 	
-	if (!failed) {
-		waitpid(child_pid);
-	}
-	
-	index = 0;
+	idx = 0;
 	memset(cmd,0,256);
 }
 
