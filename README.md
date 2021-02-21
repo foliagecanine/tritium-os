@@ -20,12 +20,12 @@ If you don't neccesarily want to build this, you can see the "What if I just wan
 ### Prerequisites
 First you will need to build a compiler.  
 See [https://wiki.osdev.org/Building_GCC] for info on how to do that.  
-You will need an i686-elf C (GCC) compiler to build this project.
-
-Additionally, to compile ELF programs for TritiumOS you will need an i686-tritium compiler to build this project.
-You can build one using the [tritium-compiler](https://github.com/foliagecanine/tritium-compiler) repository.
-You can build the C library using the [libc-tritium](https://github.com/foliagecanine/libc-tritium) repository.
-
+You will need an i686-elf C (GCC) compiler to build this project.  
+  
+Additionally, to compile ELF programs for TritiumOS you will need an i686-tritium compiler to build this project.  
+You can build one using the [tritium-compiler](https://github.com/foliagecanine/tritium-compiler) repository.  
+You can build the C library using the [libc-tritium](https://github.com/foliagecanine/libc-tritium) repository.  
+  
 Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu, etc.) by running this command:
 `sudo apt-get install qemu`
 or for other distributions
