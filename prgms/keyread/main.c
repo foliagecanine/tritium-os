@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void main() {
+int main(int argc, char **argv) {
 	terminal_setcolor(0x07);
 	printf("Release Esc (code 0x81) to exit\n");
 	printf("0x00\n");

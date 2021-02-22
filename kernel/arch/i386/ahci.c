@@ -212,10 +212,13 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 
 void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==1&&pci.subclass==6) {
-		if (k==0)
+		if (k==0) {
 			printf("Detected SATA Host on port %X:%X\n", i,j);
-		else
+			dprintf("Detected SATA Host on port %X:%X\n", i,j);
+		} else {
 			printf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+			dprintf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+		}
 		identity_map((void *)pci.BAR5);
 		initialize_abar((HBAData *)pci.BAR5);
 	}
