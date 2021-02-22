@@ -22,7 +22,6 @@ i686-tritium-ld input.o -o OUTPUT.PRG
 ```
   
 ### Compiling C
-For C programs, it's a little more complicated.
 It is recommended to use a program like GNU Make for automation of the compilation.  
 
 Compiling a single C file into an executable (GCC):  
