@@ -274,6 +274,7 @@ bool usb_register_hub(uint16_t dev_addr) {
 				break;
 		}
 	}
+	return false;
 }
 
 bool usb_assign_address(uint16_t parentaddr, uint8_t port, uint8_t speed) {

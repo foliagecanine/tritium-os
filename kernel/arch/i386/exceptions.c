@@ -95,7 +95,7 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 			dprintf("Fault address: 0x%X\n",address);
 			dprintf("Return address: 0x%X\n",retaddr);
 			dprintf("Current PID: %u\n",getpid());
-			dprintf("Error: 0x%X\n",error&7 | error&0x10);
+			dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
 			dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
 			kprint("\n    If you are a user seeing this, your computer has crashed.");
 			kprint("    Reboot your computer. If the error happens again...");
@@ -113,11 +113,11 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		kerror("[Exception.Fault] Kernel Page Fault!");
 		printf("Fault address: %p\n",address);
 		printf("Return address: %p\n",retaddr);
-		printf("Error: 0x%X\n",error&7 | error&0x10);
+		printf("Error: 0x%X\n",(error&7) | (error&0x10));
 		printf("Permissions: 0x%X\n",get_page_permissions((void *)address));
 		dprintf("Fault address: 0x%X\n",address);
 		dprintf("Return address: 0x%X\n",retaddr);
-		dprintf("Error: 0x%X\n",error&7 | error&0x10);
+		dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
 		dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
 		kprint("\nIf you are a user seeing this, your computer has crashed.");
 		kprint("Reboot your computer. If the error happens again...");

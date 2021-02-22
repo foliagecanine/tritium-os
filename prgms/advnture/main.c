@@ -73,7 +73,7 @@ char *cr_texts[3][3] = {
 };
 
 uint8_t cmd[128];
-uint8_t index = 0;
+uint8_t idx = 0;
 char *current_room_text;
 uint8_t cr_y = 0;
 uint8_t cr_x = 0;
@@ -122,12 +122,12 @@ uint8_t run() {
 		while (!c) {
 			c = getchar();
 			if (!c) {
-				if (getkey()==14&&index) {
+				if (getkey()==14&&idx) {
 					terminal_backup();
 					putchar(' ');
 					terminal_backup();
-					index--;
-					cmd[index]=0;
+					idx--;
+					cmd[idx]=0;
 				}
 			}
 			yield();
@@ -136,11 +136,11 @@ uint8_t run() {
 			printf("\n");
 			break;
 		}
-		if (index!=127) {
+		if (idx!=127) {
 			putchar(c);
-			cmd[index] = c;
-			cmd[index+1] = 0;
-			index++;
+			cmd[idx] = c;
+			cmd[idx+1] = 0;
+			idx++;
 		}
 	}
 	
@@ -385,7 +385,7 @@ uint8_t run() {
 	if (strcmp(cmd,"exit"))
 		return 0;
 	else {
-		index = 0;
+		idx = 0;
 		memset(cmd,0,128);
 		return 1;
 	}

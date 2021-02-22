@@ -1,6 +1,6 @@
 #include <kernel/elf.h>
 
-bool verify_elf(void *elf_file) {
+bool verify_elf(void *elf_file, size_t size) {
 	elfhdr32 *elf_header = elf_file;
 	
 	if (elf_header->magic[0]!=0x7F ||
@@ -12,6 +12,18 @@ bool verify_elf(void *elf_file) {
 	
 	if (elf_header->type != ELF_TYPE_EXEC)
 		return false;
+		
+	if (elf_header->ph_offset>size)
+		return 0;
+	
+	elfph32 *program_headers = elf_file + elf_header->ph_offset;
+		
+	for (uint32_t i = 0; i < elf_header->ph_num; i++) {
+		if (program_headers[i].offset>size)
+			return false;
+		if (program_headers[i].offset+program_headers[i].filesize>size)
+			return false;
+	}
 		
 	return true;
 }
@@ -30,6 +42,7 @@ void load_elf_ph_section(elfph32 *ph, void *elf_file) {
 
 void *load_elf(void *elf_file) {
 	elfhdr32 *elf_header = elf_file;
+	
 	elfph32 *program_headers = elf_file + elf_header->ph_offset;
 	
 	for (uint32_t i = 0; i < elf_header->ph_num; i++) {

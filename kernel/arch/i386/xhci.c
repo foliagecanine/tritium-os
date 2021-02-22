@@ -515,7 +515,7 @@ void xhci_advance_trb(xhci_trb *ring_start, xhci_trb **current_pointer, uint8_t 
 	(*current_pointer)++;
 	
 	if (XHCI_TRB_GTRBTYPE((*current_pointer)->command)==XHCI_TRBTYPE_LINK) {
-		(*current_pointer)->param = get_phys_addr(ring_start);
+		(*current_pointer)->param = (uintptr_t)get_phys_addr(ring_start);
 		(*current_pointer)->status = 0;
 		(*current_pointer)->command = XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_LINK) | *current_cycle | XHCI_TRB_LINK_FLIPCYCLE;
 		DATA("[xHCI] DATA: Send LINK TRB\n");
@@ -567,7 +567,7 @@ xhci_trb xhci_send_cmdtrb(xhci_controller *xc, xhci_trb trb) {
 	if (!timeout||this_trb->param==trb.param)
 		return retval;
 	
-	retval = *(xhci_trb *)this_trb->param;
+	retval = *(xhci_trb *)(uintptr_t)this_trb->param;
 	
 	return retval;
 	
@@ -721,10 +721,10 @@ bool xhci_set_address(usb_device *device, uint32_t command_params) {
 	xhci_slot *active_slot = data->slot_ctx;
 	xhci_endpt *active_endpt = (xhci_endpt *)((void *)(data->slot_ctx)+xc->ctx_size);
 	
-	dbgdump_memory32(slot_copy,xc->ctx_size/4);
+	dbgdump_memory32((void *)(uintptr_t)slot_copy,xc->ctx_size/4);
 	
 	xhci_trb trb;
-	trb.param = get_phys_addr(data->slot_template);
+	trb.param = (uintptr_t)get_phys_addr(data->slot_template);
 	trb.status = 0;
 	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_ADDR) | command_params;
 	
@@ -798,7 +798,7 @@ bool xhci_enable_endpoint(usb_device *device, uint8_t endpoint, uint8_t flags, u
 	dbgprintf("[xHCI] Input Context Enable: %X\n",input_context[1]);
 	
 	xhci_trb trb;
-	trb.param = get_phys_addr(data->slot_template);
+	trb.param = (uintptr_t)get_phys_addr(data->slot_template);
 	trb.status = 0;
 	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_CONFIG);
 	
@@ -830,10 +830,10 @@ bool xhci_register_hub(usb_device *device) {
 	input_context[0] = 0;
 	input_context[1] = 1;
 	
-	dbgdump_memory32(slot_ctx,xc->ctx_size/4);
+	dbgdump_memory32((void *)(uintptr_t)slot_ctx,xc->ctx_size/4);
 	
 	xhci_trb trb;
-	trb.param = get_phys_addr(data->slot_template);
+	trb.param = (uintptr_t)get_phys_addr(data->slot_template);
 	trb.status = 0;
 	trb.command = XHCI_TRB_COMMAND_SLOT(device->slot) | XHCI_TRB_TRBTYPE(XHCI_TRBTYPE_EVAL);
 	
@@ -903,6 +903,8 @@ bool xhci_usb_get_desc(usb_device *device, void *out, usb_setup_pkt setup_pkt_te
 }
 
 void *xhci_create_interval_in(usb_device *device, void *out, uint8_t interval, uint8_t endpoint_addr, uint16_t max_pkt_size, uint16_t size) {
+	(void)interval;
+	(void)max_pkt_size;
 	uint8_t endpoint_index = endpoint_addr*2; // We know this must be an input, since the interval is only for input
 	
 	xhci_controller *xc = (xhci_controller *)device->controller;

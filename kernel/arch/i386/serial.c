@@ -34,6 +34,7 @@ static bool dprint(const char* data, size_t length) {
 int dprintf(const char* restrict format, ...) {
 	va_list parameters;
 	va_start(parameters, format);
-	__printf_template(dprint,format,parameters);
+	int ret = __printf_template(dprint,format,parameters);
 	va_end(parameters);
+	return ret;
 }

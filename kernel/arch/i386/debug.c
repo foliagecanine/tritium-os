@@ -132,7 +132,7 @@ bool check_command(char* command) {
 	
 	if (!memcmp(command,"pci-dump ", strlen("pci-dump "))) {
 		pci_t pcidevice = getPCIData(command[9]-'0',command[10]-'0',command[11]-'0');
-		uint32_t *dump = (char *)&pcidevice;
+		uint32_t *dump = (uint32_t *)&pcidevice;
 		for (uint8_t i = 0; i < sizeof(pci_t)/4; i++) {
 			if (i&&!(i%4))
 				printf("\n");

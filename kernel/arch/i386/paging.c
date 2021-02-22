@@ -151,8 +151,8 @@ void init_paging(multiboot_info_t *mbi) {
 				release_phys_page((void *)(uint32_t)physptr);
 			}
 		}
-		printf("%u: %p+%p %s\n",i,(void *)mmap[i].addr,(void *)mmap[i].len,mem_types[type]);
-		dprintf("%u: %p+%p %s\n",i,(void *)mmap[i].addr,(void *)mmap[i].len,mem_types[type]);
+		printf("%u: %p+%p %s\n",i,(uintptr_t)mmap[i].addr,(uintptr_t)mmap[i].len,mem_types[type]);
+		dprintf("%u: %p+%p %s\n",i,(uintptr_t)mmap[i].addr,(uintptr_t)mmap[i].len,mem_types[type]);
 	}
 	
 	//Reclaim all the way up to 8MiB (for the kernel and the page tables)
@@ -229,7 +229,7 @@ void *find_free_phys_page() {
 		if (check_page_cluster((void *)(k*4096))==255)
 			k+=7;
 		else if (!check_phys_page((void *)(k*4096))) {
-			return (void *)(k*4096);
+			return (void *)(uintptr_t)(k*4096);
 		}
 	}
 	dprintf("failed\n");
@@ -277,7 +277,7 @@ void unmap_secret_page(void *vaddr, size_t pages) {
 void *map_paddr(void *paddr, size_t pages) {
 	uint32_t paddr_page = (uint32_t)paddr;
 	paddr_page/=4096;
-	for(volatile uint32_t i = 4096; i < 1048576; i++) {
+	for(uint32_t i = 4096; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -291,12 +291,14 @@ void *map_paddr(void *paddr, size_t pages) {
 			}
 			if (successful_pages==pages) {
 				for (uint32_t step=0; step<pages;step++) {
-					map_page_secretly((void *)((i+step)*4096),(void *)((paddr_page+step)*4096));
+					map_page_secretly((void *)(uintptr_t)((i+step)*4096),(void *)(uintptr_t)((paddr_page+step)*4096));
 				}
-				return (void *)(i*4096)+((uint32_t)paddr&0xFFF);
+				return (void *)(uintptr_t)(i*4096)+((uintptr_t)paddr&0xFFF);
 			}
 		}
 	}
+	PANIC("OUT OF MEMORY");
+	return 0;
 }
 
 void* alloc_page(size_t pages) {
@@ -339,6 +341,7 @@ void free_page(void *start, size_t pages) {
 void *calloc_page(size_t pages) {
 	void *out = alloc_page(pages);
 	memset(out, 0, 4096*pages);
+	return out;
 }
 
 // Similar to alloc_page, but requires physical pages to be sequential
@@ -358,7 +361,7 @@ void *alloc_sequential(size_t pages) {
 			if (successful_pages==pages) {
 				for (uint32_t j = 4096; j < 1048576; j++) {
 					successful_pages = 1;
-					if (!check_page_cluster((void *)(j*4096))==255)
+					if (check_page_cluster((void *)(j*4096))==255)
 						j+=7;
 					else if (!check_phys_page((void *)(j*4096))) {
 						for (uint32_t k = j+1; k-j<pages+1; k++) {
@@ -372,7 +375,7 @@ void *alloc_sequential(size_t pages) {
 						}
 						if (successful_pages==pages) {
 							for (uint32_t k = 0; k < pages; k++) {
-								map_addr((i+k)*4096,(j+k)*4096);
+								map_addr((void *)(uintptr_t)((i+k)*4096),(void *)(uintptr_t)((j+k)*4096));
 							}
 							return (void *)(i*4096);							
 						}
@@ -470,7 +473,7 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 void free_all_user_pages() {
 	for (uint32_t i = 0; i < 1024*1024; i++) {
 		if (kernel_tables[i].user&&kernel_tables[i].present) {
-			free_page(i*4096,1);
+			free_page((void *)(uintptr_t)(i*4096),1);
 		}
 	}
 }

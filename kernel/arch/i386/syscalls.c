@@ -125,6 +125,7 @@ uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uin
 	if (check_range(buf,len)) {
 		return fread(f,buf,start,len);
 	}
+	return UNKNOWN_ERROR;
 }
 
 uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl) {
@@ -133,6 +134,7 @@ uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, ui
 	if (check_range(buf,len)) {
 		return fwrite(f,buf,start,len);
 	}
+	return UNKNOWN_ERROR;
 }
 
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {

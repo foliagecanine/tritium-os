@@ -45,7 +45,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		return 0;
 	}
 	
-	if (!verify_elf(prgm))
+	if (!verify_elf(prgm, size))
 		return 0;
 	
 	void * new = clone_tables();
@@ -55,28 +55,28 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].tables = get_current_tables();
 	
 	void *elf_enter = load_elf(prgm);
-	threads[pid-1].tss.eip = elf_enter;
+	threads[pid-1].tss.eip = (uintptr_t)elf_enter;
 	
 	// Map arguments to the process
 	if (argl_paddr) {
-		map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
+		map_page_secretly((void *)(uintptr_t)0xBFFFE000,(void *)argl_paddr);
 	} else {
-		map_page_to((void *)0xBFFFE000);
+		map_page_to((void *)(uintptr_t)0xBFFFE000);
 	}
-	mark_user((void *)0xBFFFE000,true);
+	mark_user((void *)(uintptr_t)0xBFFFE000,true);
 	
 	// Map environment variables to the process
 	if (envl_paddr) {
-		map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
+		map_page_secretly((void *)(uintptr_t)0xBFFFF000,(void *)envl_paddr);
 	} else {
-		map_page_to((void *)0xBFFFF000);
+		map_page_to((void *)(uintptr_t)0xBFFFF000);
 	}
-	mark_user((void *)0xBFFFF000,true);
+	mark_user((void *)(uintptr_t)0xBFFFF000,true);
 	
 	// Create stack: 4 pages = 16KiB
 	for (uint8_t i = 0; i < 4; i++) {
-		map_page_to(0xBFFFA000+(i*4096));
-		mark_user(0xBFFFA000+(i*4096), true);
+		map_page_to((void *)(uintptr_t)(0xBFFFA000+(i*4096)));
+		mark_user((void *)(uintptr_t)(0xBFFFA000+(i*4096)), true);
 	}
 	threads[pid-1].tss.esp = 0xBFFFFFFB;
 	last_entrypoint = elf_enter;
@@ -107,7 +107,7 @@ void create_process(void *prgm,size_t size) {
 	current_task = &threads[pid-1];
 	current_task->state = TASK_STATE_ACTIVE;
 	enable_tasking();
-	last_stack = current_task->tss.esp;
+	last_stack = (void *)(uintptr_t)current_task->tss.esp;
 	enter_usermode();
 }
 
@@ -170,7 +170,7 @@ void start_program(char *name) {
 	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 }
 
-extern exit_usermode();
+extern void exit_usermode();
 
 void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint32_t res3, uint32_t ready_esp) {
 	disable_tasking();
@@ -193,12 +193,11 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	current_task->cr3 = 0;
 	current_task->tables = 0;
 	current_task->waitpid = 0;
-	uint32_t old_pid = current_task->pid;
 	current_task->pid = 0;
 	uint32_t new_pid = next_task();
 	if (!new_pid) {
 		kerror("[KERR] No programs remaining. Shutting down.");
-		last_stack = temp_resp;
+		last_stack = (void *)(uintptr_t)temp_resp;
 		last_entrypoint = &kernel_exit;
 		exit_usermode();
 	}
