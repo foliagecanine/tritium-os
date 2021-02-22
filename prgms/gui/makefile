@@ -1,39 +1,30 @@
-GCC=i686-elf-gcc
-LIBDIR=../libc
-CFLAGS=-m32 -Os -s -fno-pie -ffreestanding -nostartfiles
-
-include $(LIBDIR)/make.config
-
-OBJS=\
-../libc/sys/sys.o\
-main.o \
-$(LIB_OBJS)\
+GCC=i686-tritium-gcc
+CFLAGS=
+OUTPRG=GUI.SYS
+OUTFLDR=bin
 
 .PHONY: all clean upload
 .SUFFIXES: .o .c
 
-all: GUI.SYS
+all: $(OUTPRG)
 
-GUI.SYS: $(OBJS) linker.ld
-	ld -T linker.ld $(OBJS) -o GUI.SYS
+$(OUTPRG): main.c
+	$(GCC) $(CFLAGS) main.c -o $(OUTPRG)
+
+dump: $(OUTPRG)
+	i686-tritium-objdump -D $(OUTPRG)
 	
-.c.o:
-	$(GCC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) -Iinclude -I$(LIBDIR)/include
-	
-dump: GUI.SYS
-	objdump -D -b binary -mi386 GUI.SYS
-	
-upload: GUI.SYS
+upload: $(OUTPRG)
 	sudo mkdir -p /mnt/F1
 	sudo mount -o loop,rw ../../floppy.flp /mnt/F1
-	sudo cp GUI.SYS /mnt/F1/bin
+	sudo cp $(OUTPRG) /mnt/F1/$(OUTFLDR)
 	sudo umount /mnt/F1
 	sudo rmdir /mnt/F1
 	
 clean:
-	rm -f $(OBJS) *.o */*.o */*/*.objdump
-	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
-	rm GUI.SYS
+	rm *.o
+	rm *.d
+	rm $(OUTPRG)
 
-install: GUI.SYS
-	sudo cp GUI.SYS /mnt/F1/bin
+install: $(OUTPRG)
+	sudo cp $(OUTPRG) /mnt/F1/$(OUTFLDR)

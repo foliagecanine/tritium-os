@@ -6,102 +6,44 @@ Welcome to COMPILING.MD. Here you will find how to compile programs for TritiumO
 ### Requirements
 For assembly programs
  - NASM, GAS, or other assembler for x86  
+ - i686-tritium-ld (or equivelant, untested)
  
 For C programs
- - GCC x86 compiler (May work with other compilers such as clang, but untested)
- - GNU ld (or equivelant, untested)
+ - i686-tritium-gcc compiler (May work with other compilers such as clang, but untested)
+ - i686-tritium-ld (or equivelant, untested)
  - GNU Make (recommended)
  
 ### Compiling Assembly
 For assembly programs, simply write the code as you would.
-Start with (NASM):  
-```NASM
-org 0x100000
-bits 32
-```  
 Compile it with (NASM): 
 ```bash
-nasm -fbin input.asm -o OUTPUT.PRG
+nasm -felf32 input.asm
+i686-tritium-ld input.o -o OUTPUT.PRG
 ```
   
 ### Compiling C
 For C programs, it's a little more complicated.
 It is recommended to use a program like GNU Make for automation of the compilation.  
 
-When linking, you MUST LINK *libc_directory*/sys/sys.o **FIRST**! This provides the initialization code to launch the "main" function.  
-Here's an example:  
+Compiling a single C file into an executable (GCC):  
 ```bash
-ld -T linker.ld $(LIBCDIR)/sys/sys.o main.o -o OUTPUT.PRG
+i686-tritium-gcc main.c -o OUTPUT.PRG
 ```
 
-Alternatively, you can use one of the following methods:  
-
-In the main c file, make sure you put code such as
-```C
-extern char **envp;
-extern uint32_t envc;
-asm ("push %ecx;\
-		push %eax;\
-		mov %ebx,(envc);\
-		mov %edx,(envp);\
-		call main;\
-		mov %eax,%ebx;\
-		mov $2,%eax;\
-		int $0x80;\
-		jmp .");
-```
-		
-This will save all arguments and environment variables then launch your code.  
-When it is done, it will return the return value from the main function. This happens even if the "main" function is type void.  
-
-At a minimum, you must have
-
-```C
-asm("jmp main");
-```
-
-The code doesn't know where to start, so by adding this you direct it to launch the "main" function.
-Also remember to exit your program with syscall 2. Otherwise your program will experience an error when it returns from the main function.
-
-Compile with the following flags (GCC):  
+Linking multiple C files into an executable (GCC and LD):  
 ```bash
-gcc -MD -c input.c -o output.o -std=gnu11 -m32 -Os -s -fno-pie -ffreestanding -nostartfiles
+i686-tritium-gcc -c file1.c
+i686-tritium-gcc -c file2.c
+i686-tritium-ld file1.o file2.o -o OUTPUT.PRG
 ```
-
-Note: The -m32 flag is only required when using a 64 bit compiler
-
-This effectively disables all of gcc's built in libraries and files and prepares it for linking.
-
-Link the program with the following flags (LD):  
-```bash
-ld -T linker.ld $(LIBCDIR)/sys/sys.o obj1.o obj2.o -o OUTPUT.PRG
-```
-
-or if you aren't using the startfile
-
-```bash
-ld -T linker.ld obj1.o obj2.o -o OUTPUT.PRG
-```
-
-The linker.ld file is provided in the prgms/docs folder.
 
 ## Inner Workings
-### Program Memory Layout
-Virtual Memory Map (for programs):
-
-|      Memory       |      Description      |
-| ----------------- | --------------------- |
-| 0x100000-0x500000 | Program code and data |
-| 0xF00000-0xF04000 | Stack                 |
-| 0xF04000-0xF05000 | Arguments             |
-| 0xF05000-0xF06000 | Environment variables |
-
 ### Variables from the Kernel
 The kernel provides four variables in the following registers  
 eax: Number of arguments to the main function (argc)  
 ebx: Number of environment variables, used by env.c in libc  
-ecx: Pointer to char\*\* of arguments (argv) (Should always be 0xF04000)  
-edx: Pointer to char\*\* of environment variables (Should always be 0xF05000)  
+ecx: Pointer to char\*\* of arguments (argv)  
+edx: Pointer to char\*\* of environment variables  
 
 ### Software Interrupts
 
