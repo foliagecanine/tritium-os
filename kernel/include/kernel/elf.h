@@ -56,6 +56,7 @@ typedef struct {
 	uint32_t entry_size;
 } __attribute__((packed)) elfsh32;
 
-void *load_elf(void *elffile);
+bool verify_elf(void *elf_file);
+void *load_elf(void *elf_file);
 
 #endif

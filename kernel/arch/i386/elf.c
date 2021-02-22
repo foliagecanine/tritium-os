@@ -30,10 +30,6 @@ void load_elf_ph_section(elfph32 *ph, void *elf_file) {
 
 void *load_elf(void *elf_file) {
 	elfhdr32 *elf_header = elf_file;
-	
-	if (!verify_elf(elf_file))
-		return 0;
-	
 	elfph32 *program_headers = elf_file + elf_header->ph_offset;
 	
 	for (uint32_t i = 0; i < elf_header->ph_num; i++) {

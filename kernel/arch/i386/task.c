@@ -46,6 +46,9 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		return 0;
 	}
 	
+	if (!verify_elf(prgm))
+		return 0;
+	
 	void * new = clone_tables();
 	threads[pid-1].pid = pid;
 	threads[pid-1].state = TASK_STATE_IDLE;
@@ -53,73 +56,32 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].tables = get_current_tables();
 	
 	void *elf_enter = load_elf(prgm);
-	if (!elf_enter) {
-		dprintf("[DBG ] Loading program in legacy mode.\n");
-		threads[pid-1].elf = false;
-		//Program code and variables: 0x100000 to 0x500000 = 4 MiB
-		for (uint32_t i = 0; i < 1024; i++) {
-			map_page_to((void *)0x100000+(i*4096));
-			mark_user((void *)0x100000+(i*4096),true);
-			memset((void *)0x100000+(i*4096),0,4096);
-		}
-		
-		//Program stack: 0xF00000 to 0xBFFFE000
-		memcpy((void *)0x100000,prgm,size);
-		for (uint8_t i = 0; i < 4; i++) {
-			map_page_to((void *)0xF00000+(i*4096));
-			mark_user((void *)0xF00000+(i*4096),true);
-		}
-
-		//Program arguments 0xBFFFE000 to 0xBFFFF000
-		if (argl_paddr) {
-			map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
-		} else {
-			map_page_to((void *)0xBFFFE000);
-		}
-		mark_user((void *)0xBFFFE000,true);
-		
-		//Environment variables 0xBFFFF000 to 0xF06000
-		if (envl_paddr) {
-			map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
-		} else {
-			map_page_to((void *)0xBFFFF000);
-		}
-		mark_user((void *)0xBFFFF000,true);
-		
-		//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
-		
-		threads[pid-1].tss.eip = 0x100000;
-		last_entrypoint = (void *)0x100000;
-		threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
+	threads[pid-1].elf = true;
+	threads[pid-1].tss.eip = elf_enter;
+	
+	// Map arguments to the process
+	if (argl_paddr) {
+		map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
 	} else {
-		dprintf("[DBG ] Loading program in ELF mode.\n");
-		threads[pid-1].elf = true;
-		threads[pid-1].tss.eip = elf_enter;
-		
-		// Map arguments to the process
-		if (argl_paddr) {
-			map_page_secretly((void *)0xBFFFE000,(void *)argl_paddr);
-		} else {
-			map_page_to((void *)0xBFFFE000);
-		}
-		mark_user((void *)0xBFFFE000,true);
-		
-		// Map environment variables to the process
-		if (envl_paddr) {
-			map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
-		} else {
-			map_page_to((void *)0xBFFFF000);
-		}
-		mark_user((void *)0xBFFFF000,true);
-		
-		// Create stack: 4 pages = 16KiB
-		for (uint8_t i = 0; i < 4; i++) {
-			map_page_to(0xBFFFA000+(i*4096));
-			mark_user(0xBFFFA000+(i*4096), true);
-		}
-		threads[pid-1].tss.esp = 0xBFFFFFFB;
-		last_entrypoint = elf_enter;
+		map_page_to((void *)0xBFFFE000);
 	}
+	mark_user((void *)0xBFFFE000,true);
+	
+	// Map environment variables to the process
+	if (envl_paddr) {
+		map_page_secretly((void *)0xBFFFF000,(void *)envl_paddr);
+	} else {
+		map_page_to((void *)0xBFFFF000);
+	}
+	mark_user((void *)0xBFFFF000,true);
+	
+	// Create stack: 4 pages = 16KiB
+	for (uint8_t i = 0; i < 4; i++) {
+		map_page_to(0xBFFFA000+(i*4096));
+		mark_user(0xBFFFA000+(i*4096), true);
+	}
+	threads[pid-1].tss.esp = 0xBFFFFFFB;
+	last_entrypoint = elf_enter;
 	
 	threads[pid-1].tss.eax = 0;
 	threads[pid-1].tss.ebx = 0;
@@ -337,16 +299,23 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		memset(buf,0,((prgm.size/4096)+1)*4096);
 		if (!fread(&prgm,buf,0,prgm.size)) {
 			uint32_t pid = init_new_process(buf,prgm.size,argl_v,envl_v);
-			threads[pid-1].parent=current_task;
-			threads[pid-1].tss.eax=argc;
-			threads[pid-1].tss.ebx=envc;
-			threads[pid-1].tss.ecx=0xBFFFE000;
-			threads[pid-1].tss.edx=0xBFFFF000;
+			if (pid) {
+				threads[pid-1].parent=current_task;
+				threads[pid-1].tss.eax=argc;
+				threads[pid-1].tss.ebx=envc;
+				threads[pid-1].tss.ecx=0xBFFFE000;
+				threads[pid-1].tss.edx=0xBFFFF000;
+			}
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
 			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
-			trade_vaddr(argv);
-			trade_vaddr(envp);
+			if (pid) {
+				trade_vaddr(argv);
+				trade_vaddr(envp);
+			} else {
+				free_page(argv,1);
+				free_page(envp,1);
+			}
 			return pid;
 		} else {
 			free_page(buf,(prgm.size/4096)+1);
