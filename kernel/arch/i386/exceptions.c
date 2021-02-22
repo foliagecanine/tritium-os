@@ -69,6 +69,8 @@ void exception_stack_segment_fault() {
 
 void exception_general_protection_fault() {
 	kerror("[Exception.Fault] General Protection Fault!");
+	printf("Current PID: %u\n",getpid());
+	dprintf("Current PID: %$\n",getpid());
 	for (;;);
 }
 

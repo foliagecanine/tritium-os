@@ -24,6 +24,8 @@ struct thread_t {
 thread_t *current_task;
 thread_t *threads;
 uint32_t max_threads;
+void *last_entrypoint;
+void *last_stack;
 
 void init_tasking(uint32_t num_pages) {
 	threads = alloc_page(num_pages);
@@ -87,8 +89,8 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		//Total space: 16+6 pages = 64KiB + 24 KiB = 88 KiB per process
 		
 		threads[pid-1].tss.eip = 0x100000;
+		last_entrypoint = (void *)0x100000;
 		threads[pid-1].tss.esp = 0xF03FFB; //Give space for imaginary return address (GCC needs this)
-	
 	} else {
 		dprintf("[DBG ] Loading program in ELF mode.\n");
 		threads[pid-1].elf = true;
@@ -116,6 +118,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 			mark_user(0xBFFFA000+(i*4096), true);
 		}
 		threads[pid-1].tss.esp = 0xBFFFFFFB;
+		last_entrypoint = elf_enter;
 	}
 	
 	threads[pid-1].tss.eax = 0;
@@ -135,6 +138,8 @@ void create_idle_process(void *prgm, size_t size) {
 	use_kernel_map();
 }
 
+extern void enter_usermode();
+
 void create_process(void *prgm,size_t size) {
 	uint32_t pid = init_new_process(prgm,size,0,0);
 	if (!pid)
@@ -142,28 +147,13 @@ void create_process(void *prgm,size_t size) {
 	current_task = &threads[pid-1];
 	current_task->state = TASK_STATE_ACTIVE;
 	enable_tasking();
+	last_stack = current_task->tss.esp;
 	//Load all the segment registers with the usermode data selector
 	//Then push the stack segment and the stack pointer (we need to change this)
 	//Then modify the flags so they enable interrupts on iret
 	//Push the code selector on the stack
 	//Push the location of the program in memory, then iret to enter usermode
-	asm volatile("\
-		cli; \
-		mov $0x23, %ax; \
-		mov %ax, %ds; \
-		mov %ax, %es; \
-		mov %ax, %fs; \
-		mov %ax, %gs; \
-		push $0x23; \
-		push $0xF03FFB; \
-		pushf; \
-		pop %eax; \
-		or $0x200,%eax; \
-		push %eax; \
-		push $0x1B; \
-		push $0x100000; \
-		iret; \
-	");
+	enter_usermode();
 }
 
 bool is_task_runnable(uint8_t state) {

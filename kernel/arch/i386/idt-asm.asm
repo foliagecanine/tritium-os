@@ -306,6 +306,30 @@ test_int:
 	int 0x80
 	ret
 	
+	extern last_stack
+	extern last_entrypoint
+	
+	global enter_usermode
+enter_usermode:
+	cli
+	mov ax,0x23
+	mov ax, ds
+	mov ax, es
+	mov ax, fs
+	mov ax, gs
+	push 0x23
+	mov eax,[last_stack]
+	push eax
+	pushf
+	pop eax
+	or eax,0x200
+	push eax
+	push 0x1B
+	mov eax,[last_entrypoint]
+	push eax
+	mov eax,0
+	iret
+	
 ; The following was modified from Omarrx024's VESA tutorial on the OSDev Wiki
 ; (https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial)
 ; This code is used under CC0 1.0 (see https://wiki.osdev.org/OSDev_Wiki:Copyrights for details)

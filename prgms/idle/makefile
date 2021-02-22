@@ -1,8 +1,6 @@
-GCC=i686-elf-gcc
-
 all: IDLE.SYS
 
-IDLE.SYS:
+IDLE.SYS: idle.asm
 	nasm -fbin idle.asm -o IDLE.SYS
 
 upload: IDLE.SYS
