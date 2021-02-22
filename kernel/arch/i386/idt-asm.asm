@@ -309,6 +309,11 @@ test_int:
 	extern last_stack
 	extern last_entrypoint
 	
+	; Load all the segment registers with the usermode data selector
+	; Then push the stack segment and the stack pointer (we need to change this)
+	; Then modify the flags so they enable interrupts on iret
+	; Push the code selector on the stack
+	; Push the entrypoint of the program in memory, then iret to enter usermode
 	global enter_usermode
 enter_usermode:
 	cli

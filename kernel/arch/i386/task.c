@@ -110,11 +110,6 @@ void create_process(void *prgm,size_t size) {
 	current_task->state = TASK_STATE_ACTIVE;
 	enable_tasking();
 	last_stack = current_task->tss.esp;
-	//Load all the segment registers with the usermode data selector
-	//Then push the stack segment and the stack pointer (we need to change this)
-	//Then modify the flags so they enable interrupts on iret
-	//Push the code selector on the stack
-	//Push the location of the program in memory, then iret to enter usermode
 	enter_usermode();
 }
 
