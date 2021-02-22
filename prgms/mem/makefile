@@ -1,5 +1,5 @@
 GCC=i686-tritium-gcc
-CFLAGS=
+CFLAGS?=
 OUTPRG=MEM.PRG
 OUTFLDR=bin
 

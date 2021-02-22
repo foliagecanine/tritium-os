@@ -1,3 +1,5 @@
+CFLAGS=-g
+
 PRGMS=\
 IDLE.SYS \
 SHELL.SYS \

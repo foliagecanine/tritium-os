@@ -64,6 +64,7 @@ bool diskselector() {
 }
 
 bool resetselection = true;
+char testdisk[] = "#:/";
 
 bool programselector() {
 	for (uint8_t i = min; i < min+12; i++) {
@@ -175,7 +176,7 @@ bool programselector() {
 			terminal_goto(24,7);
 			printf("Use the cursor to select a disk:");
 			numdisks = 0;
-			char *testdisk = "#:/";
+			
 			for (uint8_t i = 0; i < 8; i++) {
 				testdisk[0] = 65+i;
 				FILE f = fopen(testdisk,"r");

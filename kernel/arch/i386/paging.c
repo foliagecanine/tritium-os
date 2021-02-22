@@ -512,3 +512,11 @@ bool check_user(void *vaddr) {
 	vaddr_page/=4096;
 	return kernel_tables[vaddr_page].user;
 }
+
+uint8_t get_page_permissions(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	return kernel_tables[vaddr_page].present | 
+			(kernel_tables[vaddr_page].readwrite<<1) |
+			(kernel_tables[vaddr_page].user<<2);
+}

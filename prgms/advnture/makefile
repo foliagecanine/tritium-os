@@ -1,5 +1,5 @@
 GCC=i686-tritium-gcc
-CFLAGS=
+CFLAGS?=
 OUTPRG=ADVNTURE.PRG
 OUTFLDR=prgms
 
