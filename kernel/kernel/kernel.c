@@ -75,15 +75,21 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 		
-	start_program("A:/bin/GUI.SYS");
+	//start_program("A:/bin/GUI.SYS");
 	//start_program("A:/bin/MEM.PRG");
 	//Idle program to prevent errors if the program above exits without any active children.
-	FILE prgm = fopen("A:/bin/IDLE.SYS","r");
+	FILE prgm = fopen("A:/bin/GUI.SYS","r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);
 		fread(&prgm,buf,0,prgm.size);
 		create_process(buf,prgm.size);
 	}
 
-	kerror("Kernel has reached end of code.");
+	kerror("[KERR] Kernel has reached end of code.");
+}
+
+void kernel_exit() {
+	sleep(1000);
+	power_shutdown();
+	for(;;);
 }

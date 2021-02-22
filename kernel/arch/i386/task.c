@@ -16,7 +16,6 @@ struct thread_t {
 	thread_t *parent;
 	uint8_t state;
 	uint8_t waitpid;
-	bool elf;
 	void *cr3;
 	void *tables;
 };
@@ -56,7 +55,6 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	threads[pid-1].tables = get_current_tables();
 	
 	void *elf_enter = load_elf(prgm);
-	threads[pid-1].elf = true;
 	threads[pid-1].tss.eip = elf_enter;
 	
 	// Map arguments to the process
@@ -172,6 +170,8 @@ void start_program(char *name) {
 	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 }
 
+extern exit_usermode();
+
 void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint32_t res3, uint32_t ready_esp) {
 	disable_tasking();
 	(void)res0;
@@ -197,8 +197,10 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	current_task->pid = 0;
 	uint32_t new_pid = next_task();
 	if (!new_pid) {
-		kerror("CRITICAL ERROR: NO PROGRAMS REMAINING");
-		for(;;);
+		kerror("[KERR] No programs remaining. Shutting down.");
+		last_stack = temp_resp;
+		last_entrypoint = &kernel_exit;
+		exit_usermode();
 	}
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");

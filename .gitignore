@@ -11,3 +11,5 @@ umountall.sh
 test.img
 rpi-iso.sh
 rpi-qemu.sh
+*.PRG
+*.SYS

@@ -24,9 +24,11 @@ _Bool check_phys_page(void *addr) {
 	return r;
 }
 
+bool warn_claimed = true;
+
 void claim_phys_page(void *addr) {
 	// FOR DEBUGGING
-	if (check_phys_page(addr)) {
+	if (check_phys_page(addr)&&warn_claimed) {
 		dprintf("[WARN] Attempting to claim already claimed page: %p\n", addr);
 	}
 	uint32_t page = (uint32_t)addr;
@@ -160,9 +162,14 @@ void init_paging(multiboot_info_t *mbi) {
 }
 
 void identity_map(void *addr) {
-	claim_phys_page(addr);
 	uint32_t page = (uint32_t)addr;
 	page/=4096;
+	// Don't do anything if already mapped.
+	if (kernel_tables[page].present&&kernel_tables[page].readwrite&&kernel_tables[page].address==(uint32_t)addr>>12)
+		return;
+	warn_claimed = false;
+	claim_phys_page(addr);
+	warn_claimed = true;
 	/* volatile uint32_t directory_entry = page/1024;
 	volatile uint32_t table_entry = page % 1024; */
 	kernel_tables[page/* (directory_entry*1024)+table_entry */].address = page;

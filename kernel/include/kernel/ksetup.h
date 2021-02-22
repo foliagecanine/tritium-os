@@ -32,6 +32,7 @@ void free_all_user_pages();
 bool clone_user_pages();
 void power_shutdown();
 void power_reboot();
+void kernel_exit();
 
 typedef struct {
 	uint8_t present:1;

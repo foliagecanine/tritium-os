@@ -3,10 +3,6 @@
 #include <tty.h>
 #include <gui.h>
 
-static inline void syscall(unsigned int syscall_num) {
-	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
-}
-
 uint8_t min = 0;
 uint8_t selected = 0;
 uint8_t count = 0;
@@ -15,7 +11,6 @@ char name[16][31];
 char buf[31];
 char cd[4096];
 char program[4096];
-uint32_t g_argc;
 
 uint8_t disks[8];
 uint8_t numdisks;
@@ -164,11 +159,9 @@ bool programselector() {
 			}
 		}
 		if (g==0x01) {
-			if (g_argc>0) {
-				terminal_setcolor(0x0F);
-				terminal_clear();
-				exit(0);
-			}
+			terminal_setcolor(0x0F);
+			terminal_clear();
+			exit(0);
 		}
 		if (g==0x3B) {
 			drawrect(15,5,50,16,0x0F);
@@ -266,7 +259,6 @@ void gui() {
 }
 
 void main(uint32_t argc, char **argv) {
-	g_argc = argc;
 	//terminal_init();
 	char *env_cd = getenv("CD");
 	if (!env_cd) {

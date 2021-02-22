@@ -333,6 +333,33 @@ enter_usermode:
 	mov eax,[last_entrypoint]
 	push eax
 	mov eax,0
+	mov ebx,0
+	mov ecx,0xBFFFE000
+	mov edx,0xBFFFF000
+	mov esi,0
+	mov edi,0
+	mov ebp,0
+	iret
+	
+	; Exit usermode
+	global exit_usermode
+exit_usermode:
+	cli
+	mov ax,0x10
+	mov ax, ds
+	mov ax, es
+	mov ax, fs
+	mov ax, gs
+	push 0x10
+	mov eax,[last_stack]
+	push eax
+	pushf
+	pop eax
+	mov eax,0x200
+	push eax
+	push 0x8
+	mov eax,[last_entrypoint]
+	push eax
 	iret
 	
 ; The following was modified from Omarrx024's VESA tutorial on the OSDev Wiki
