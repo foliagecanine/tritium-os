@@ -361,7 +361,7 @@ uint32_t fork_process() {
 	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 	
 #ifdef TASK_DEBUG
-	kprint("[KDBG] New process created:");
+	kprint("[KDBG] New process forked:");
 	printf("====== pid=%$\n",pid);
 	dprintf("====== pid=%$\n",pid);
 #endif
