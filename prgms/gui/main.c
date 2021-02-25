@@ -101,11 +101,11 @@ bool programselector() {
 		}
 		if (g==0x1C) {
 			getchar();
-			if (strcmp(name[selected],"../                           ")) {
+			if (!strcmp(name[selected],"../                           ")) {
 				*strrchr(cd,'/')=0;
 				*(strrchr(cd,'/')+1)=0;
 				return true;
-			} else if (strcmp(name[selected],"./                            ")) {
+			} else if (!strcmp(name[selected],"./                            ")) {
 				return true;
 			} else if (strchr(name[selected],'/')) {
 				*(strrchr(name[selected],'/')+1)=0;
@@ -114,7 +114,7 @@ bool programselector() {
 			} else {
 				char *prgm = name[selected];
 				*strchr(prgm,' ')=0;
-				if (strcmp(prgm+strlen(prgm)-4,".PRG")||strcmp(prgm+strlen(prgm)-4,".SYS")) {
+				if (!strcmp(prgm+strlen(prgm)-4,".PRG")||!strcmp(prgm+strlen(prgm)-4,".SYS")) {
 					char *p_argv[1];
 					p_argv[0]=NULL;
 					char *p_envp[3];
@@ -133,7 +133,7 @@ bool programselector() {
 					while(g=getkey(),g==0||g>128)
 						yield();
 					return true;
-				} else if (strcmp(prgm+strlen(prgm)-4,".TXT")||strcmp(prgm+strlen(prgm)-4,".RTF")) {
+				} else if (!strcmp(prgm+strlen(prgm)-4,".TXT")||!strcmp(prgm+strlen(prgm)-4,".RTF")) {
 					char *p_argv[2];
 					p_argv[0]=prgm;
 					p_argv[1]=NULL;
@@ -197,7 +197,7 @@ bool programselector() {
 			terminal_goto(32,11);
 			terminal_setcolor(0xF0);
 			if (f.valid) 
-				printf("Size: %$ bytes",f.size);
+				printf("Size: %u bytes",f.size);
 			else
 				printf("Could not open file.\n%s",program);
 			terminal_goto(38,13);

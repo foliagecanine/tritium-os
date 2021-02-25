@@ -5,10 +5,14 @@ uint8_t buf[513];
 char fname[4096];
 
 extern char **envp;
+extern int **envc;
 
-void main(uint32_t argc, char **argv) {
+int main(uint32_t argc, char **argv) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	char *cd = getenv("CD");
+	if (!cd) {
+		cd = "A:/";
+	}
 	memset(fname,0,4096);
 	FILE f;
 	if (argc>1) {
@@ -38,5 +42,5 @@ void main(uint32_t argc, char **argv) {
 	} else {
 		printf("Error: file %s not found.\n",fname);
 	}
-	exit(0);
+	return 0;
 }

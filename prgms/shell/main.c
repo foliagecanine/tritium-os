@@ -63,11 +63,11 @@ void commandline() {
 	memset(temp,0,256);
 	memcpy(temp,cmd,3);
 	temp[4]=0;
-	if (strcmp(temp,"cd ")) {
+	if (!strcmp(temp,"cd ")) {
 		change_dir();
-	} else if (strcmp(cmd,"cls")||strcmp(cmd,"clear")) {
+	} else if (!strcmp(cmd,"cls")||!strcmp(cmd,"clear")) {
 		terminal_clear();
-	} else if (strcmp(cmd,"exit")) {
+	} else if (!strcmp(cmd,"exit")) {
 		if (getpid()!=1) {
 			exit(0);
 		}
