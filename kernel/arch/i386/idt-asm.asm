@@ -67,9 +67,9 @@ extern run_syscall
 global switch_task
 global run_syscall_asm
 
-orig_eax dw 0
-retaddr dw 0
-errcode dw 0
+orig_eax dd 0
+retaddr dd 0
+errcode dd 0
 
 global page_fault
 

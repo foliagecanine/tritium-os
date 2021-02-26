@@ -150,7 +150,6 @@ extern void exit_usermode();
 
 void task_switch(tss_entry_t tss) {
 	disable_tasking();
-	//asm volatile("mov %0, %%cr3":: "r"(kernel_directory));
 	current_task->tss = tss; //Save the program's state
 	uint32_t new_pid = next_task();
 	if (!new_pid) {
@@ -192,7 +191,7 @@ void kill_program(uint32_t pid, uint32_t retval) {
 	threads[pid-1].pid = 0;
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
-	printf("====== pid=%$\n",pid);
+	printf("====== pid=%u\n",pid);
 	dprintf("====== pid=%u\n",pid);
 #endif
 	// Check whether the process exited or was killed by another process
