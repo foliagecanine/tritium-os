@@ -63,7 +63,6 @@ extern ready_esp
 
 extern syscall_temp_tss
 extern run_syscall
-extern yield_esp
  
 global switch_task
 global run_syscall_asm
@@ -120,7 +119,7 @@ switch_task:
   iret
   
 run_syscall_asm:
-  mov dword [yield_esp],esp
+  mov dword [ready_esp],esp
   mov dword [syscall_temp_tss+40],eax
   mov dword [syscall_temp_tss+52],ebx
   mov dword [syscall_temp_tss+44],ecx
@@ -143,7 +142,7 @@ run_syscall_asm:
   
   call run_syscall
   
-  mov esp,dword [yield_esp]
+  mov esp,dword [ready_esp]
   
   add esp,0xC
   pop ebx

@@ -75,9 +75,6 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 		
-	//start_program("A:/bin/GUI.SYS");
-	//start_program("A:/bin/MEM.PRG");
-	//Idle program to prevent errors if the program above exits without any active children.
 	FILE prgm = fopen("A:/bin/GUI.SYS","r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);

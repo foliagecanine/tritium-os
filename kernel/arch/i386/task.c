@@ -1,7 +1,7 @@
 #include <kernel/task.h>
 #include <kernel/sysfunc.h>
 
-//#define TASK_DEBUG
+#define TASK_DEBUG
 
 #define TASK_STATE_NULL 0
 #define TASK_STATE_IDLE 1
@@ -16,7 +16,7 @@ struct thread_t {
 	thread_t *parent;
 	uint8_t state;
 	uint8_t waitpid;
-	void *cr3;
+	uint32_t cr3;
 	void *tables;
 };
 
@@ -51,7 +51,7 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	void * new = clone_tables();
 	threads[pid-1].pid = pid;
 	threads[pid-1].state = TASK_STATE_IDLE;
-	threads[pid-1].cr3 = new;
+	threads[pid-1].cr3 = (uint32_t)(uintptr_t)new;
 	threads[pid-1].tables = get_current_tables();
 	
 	void *elf_enter = load_elf(prgm);
@@ -133,125 +133,85 @@ uint32_t next_task() {
 	return 0;
 }
 
-uint32_t temp_resp;
+inline void set_cr3(uint32_t new_cr3) {
+	asm volatile("mov %0, %%cr3"::"r"(new_cr3));
+}
+
+inline uint32_t get_cr3() {
+	uint32_t retval;
+	asm volatile("mov %%cr3,%0":"=r"(retval));
+	return retval;
+}
+
+volatile uint32_t ready_esp;
 volatile tss_entry_t new_temp_tss;
 extern void switch_task();
-int i;
+extern void exit_usermode();
 
-void task_switch(tss_entry_t tss, uint32_t ready_esp) {
+void task_switch(tss_entry_t tss) {
 	disable_tasking();
 	//asm volatile("mov %0, %%cr3":: "r"(kernel_directory));
 	current_task->tss = tss; //Save the program's state
 	uint32_t new_pid = next_task();
 	if (!new_pid) {
-		kerror("[KERR] CRITICAL ERROR: No task!");
-		abort();
+		kerror("[KERR] No programs remaining. Shutting down.");
+		last_stack = (void *)(uintptr_t)ready_esp;
+		last_entrypoint = &kernel_exit;
+		exit_usermode();
 	}
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
-	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
-	temp_resp = (uint32_t)ready_esp;
+	set_cr3((current_task->cr3));
 	new_temp_tss = current_task->tss;
 	enable_tasking();
 	switch_task();
 }
 
-void start_program(char *name) {
- 	uint32_t current_cr3;
-	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
-	uint32_t *current_tables = get_current_tables();
-	
-	FILE prgm = fopen(name,"r");
-	if (prgm.valid) {
-		void *buf = alloc_page((prgm.size/4096)+1);
-		if (!fread(&prgm,buf,0,prgm.size)) {
-			use_kernel_map();
-			create_idle_process(buf,prgm.size);
-		} else
-			kerror("Failed to read file.");
-	} else
-		kerror("Failed to read file.");
-	switch_tables((void *)current_tables);
-	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
-}
-
-extern void exit_usermode();
-
-void exit_program(int retval) {
+void kill_program(uint32_t pid, uint32_t retval) {
 	disable_tasking();
-	thread_t *parent = current_task->parent;
-	if (parent) {
+	uint32_t old_pid = current_task->pid;
+	thread_t *parent = threads[pid-1].parent;
+	if (parent!=0) {
 		if (parent->state==TASK_STATE_WAITPID&&(parent->waitpid==current_task->pid||parent->waitpid==0)) {
 			parent->state = TASK_STATE_ACTIVE;
 			parent->waitpid = retval;
 		}
 	}
-	//Free all the memory to prevent leaks
-	free_all_user_pages();
-	use_kernel_map();
-	free_page(current_task->tables-4096,1025);
-#ifdef TASK_DEBUG
-	uint32_t old_pid = current_task->pid;
-#endif
-	current_task->state = TASK_STATE_NULL;
-	current_task->cr3 = 0;
-	current_task->tables = 0;
-	current_task->waitpid = 0;
-	current_task->pid = 0;
-	uint32_t new_pid = next_task();
-	if (!new_pid) {
-		kerror("[KERR] No programs remaining. Shutting down.");
-		last_stack = (void *)(uintptr_t)temp_resp;
-		last_entrypoint = &kernel_exit;
-		exit_usermode();
-	}
-#ifdef TASK_DEBUG
-	kprint("[KDBG] Process killed:");
-	printf("====== pid=%$\n",old_pid);
-	dprintf("====== pid=%u\n",old_pid);
-#endif
-	//switch_tables(current_task->tables);
-	//asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
-	current_task = &threads[new_pid-1];
-	switch_tables(threads[new_pid-1].tables);
-	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
-	new_temp_tss = current_task->tss;
-	enable_tasking();
-	switch_task();
-}
-
-void kill_program(uint32_t pid) {
-	disable_tasking();
-	thread_t *parent = threads[pid-1].parent;
-	if (parent!=0) {
-		if (parent->state==TASK_STATE_WAITPID&&(parent->waitpid==current_task->pid||parent->waitpid==0)) {
-			parent->state = TASK_STATE_ACTIVE;
-			parent->waitpid = 1;
-		}
-	}
 	uint32_t current_cr3;
-	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	current_cr3 = get_cr3();
 	uint32_t *current_tables = get_current_tables();
 	switch_tables(threads[pid-1].tables);
-	asm volatile("mov %0, %%cr3"::"r"(threads[pid-1].cr3));
+	set_cr3((threads[pid-1].cr3));
 	free_all_user_pages();
 	use_kernel_map();
-	free_page(current_task->tables-4096,1025);
+	free_page(threads[pid-1].tables-4096,1025);
 	threads[pid-1].state = TASK_STATE_NULL;
 	threads[pid-1].cr3 = 0;
 	threads[pid-1].tables = 0;
 	threads[pid-1].waitpid = 0;
 	threads[pid-1].pid = 0;
+#ifdef TASK_DEBUG
+	kprint("[KDBG] Process killed:");
+	printf("====== pid=%$\n",pid);
+	dprintf("====== pid=%u\n",pid);
+#endif
+	// Check whether the process exited or was killed by another process
+	if (pid==old_pid) {
+		task_switch(current_task->tss);
+	}
 	switch_tables(current_tables);
-	asm volatile("mov %0, %%cr3"::"r"(current_cr3));
+	set_cr3((current_cr3));
 	enable_tasking();
 }
 
+void exit_program(int retval) {
+	kill_program(current_task->pid,retval);
+}
+
 tss_entry_t syscall_temp_tss;
-uint32_t yield_esp;
 
 void yield() {
-	task_switch(syscall_temp_tss,yield_esp);
+	task_switch(syscall_temp_tss);
 }
 
 FILE prgm;
@@ -260,7 +220,7 @@ uint32_t envl_v;
 
 uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 	uint32_t current_cr3;
-	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	current_cr3 = get_cr3();
 	uint32_t *current_tables = get_current_tables();	
 	
 	prgm = fopen(name,"r");
@@ -334,7 +294,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 			}
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
-			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			set_cr3(current_cr3);
 			if (pid) {
 				trade_vaddr(argv);
 				trade_vaddr(envp);
@@ -346,7 +306,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 		} else {
 			free_page(buf,(prgm.size/4096)+1);
 			switch_tables((void *)current_tables);
-			asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+			set_cr3(current_cr3);
 			free_page(argv,1);
 			free_page(envp,1);
 			return 0;
@@ -360,7 +320,7 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 uint32_t fork_process() {
 	disable_tasking();
 	uint32_t current_cr3;
-	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	current_cr3 = get_cr3();
 	uint32_t *current_tables = get_current_tables();
 	
 	uint32_t pid;
@@ -377,7 +337,7 @@ uint32_t fork_process() {
 	clone_user_pages();
 	
 	memcpy(&threads[pid-1],current_task,sizeof(thread_t));
-	threads[pid-1].cr3 = new;
+	threads[pid-1].cr3 = (uint32_t)(uintptr_t)new;
 	threads[pid-1].pid = pid;
 	threads[pid-1].tables = get_current_tables();
 	threads[pid-1].tss = syscall_temp_tss;
@@ -385,7 +345,7 @@ uint32_t fork_process() {
 	threads[pid-1].parent = current_task;
 	
 	switch_tables((void *)current_tables);
-	asm volatile("mov %0,%%cr3"::"r"(current_cr3));
+	set_cr3(current_cr3);
 	
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process forked:");

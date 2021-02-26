@@ -200,7 +200,6 @@ void add_irq_function(uint8_t irq, void (*function)()) {
 
 _Bool ts_enabled = false;
 tss_entry_t temp_tss;
-uint32_t ready_esp;
 
 void irq0_handler(void) {
 	outb(0x20, 0x20); //EOI
@@ -209,7 +208,7 @@ void irq0_handler(void) {
 	pit_tick();
 	usb_keyboard_repeat();
 	if (ts_enabled&&!(get_ticks()%10))
-		task_switch(temp_tss,ready_esp);
+		task_switch(temp_tss);
 	execute_irq(0);
 }
  

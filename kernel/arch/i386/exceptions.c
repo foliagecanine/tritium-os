@@ -69,8 +69,6 @@ void exception_stack_segment_fault() {
 
 void exception_general_protection_fault() {
 	kerror("[Exception.Fault] General Protection Fault!");
-	printf("Current PID: %u\n",getpid());
-	dprintf("Current PID: %$\n",getpid());
 	for (;;);
 }
 
@@ -79,37 +77,25 @@ uint32_t address;
 void exception_page_fault(uint32_t retaddr, uint32_t error) {
 	disable_tasking();
 	asm volatile("mov %%cr2, %0":"=a"(address):);
-	terminal_setcolor(0x1F);
-	terminal_refresh();
 	if(error&4) {
-		//Try to correct the error by giving it a blank page. 
-		//We'll clear this so it doesn't see any other process data.
-		kwarn("[WARN] Pre-Pagefault: Attempt to access unavailable page.");
-		if (!map_page_to((void *)(address&0xFFFFF000))) {
-			kerror("[Exception.Fault] Usermode Page Privelage Fault!");
-			printf("Fault address: %p\n",address);
-			printf("Return address: %p\n",retaddr);
-			printf("Current PID: %u\n",getpid());
-			printf("Error: 0x%X\n",(error&7) | (error&0x10));
-			printf("Permissions: 0x%X\n",get_page_permissions((void *)address));
-			dprintf("Fault address: 0x%X\n",address);
-			dprintf("Return address: 0x%X\n",retaddr);
-			dprintf("Current PID: %u\n",getpid());
-			dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
-			dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
-			kprint("\n    If you are a user seeing this, your computer has crashed.");
-			kprint("    Reboot your computer. If the error happens again...");
-			kprint("    try to not do the thing that made it happen.\n");
-			abort();
-			for(;;);
-		} else {
-			mark_user((void *)(address&0xFFFFF000),true);
-			kwarn("[WARN] A page was given to a process after a page fault.");
-			dprintf("Access attempted: %p\n",address);
-		}
-		//asm("mov %0,%%esp; popa; mov %1,%%esp; add $4,%%esp; iret"::"m"(temp_post_esp),"m"(a_err));
+		kerror("[Exception.Fault] Usermode Page Privelage Fault!");
+		printf("Fault address: %p\n",address);
+		printf("Return address: %p\n",retaddr);
+		printf("Current PID: %u\n",getpid());
+		printf("Error: 0x%X\n",(error&7) | (error&0x10));
+		printf("Permissions: 0x%X\n",get_page_permissions((void *)address));
+		dprintf("Fault address: 0x%X\n",address);
+		dprintf("Return address: 0x%X\n",retaddr);
+		dprintf("Current PID: %u\n",getpid());
+		dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
+		dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
+		exit_program(1);
+		// Should not reach here.
+		for(;;);
 		return;
 	} else {
+		terminal_setcolor(0x1F);
+		terminal_refresh();
 		kerror("[Exception.Fault] Kernel Page Fault!");
 		printf("Fault address: %p\n",address);
 		printf("Return address: %p\n",retaddr);
