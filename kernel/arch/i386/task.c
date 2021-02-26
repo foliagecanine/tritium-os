@@ -30,7 +30,7 @@ void init_tasking(uint32_t num_pages) {
 	threads = alloc_page(num_pages);
 	memset(threads,0,num_pages*4096);
 	max_threads = (num_pages*4096)/sizeof(thread_t);
-	printf("Max threads: %$\n",max_threads);
+	printf("Max threads: %u\n",max_threads);
 	kprint("[INIT] Tasking initialized.");
 }
 
@@ -136,12 +136,17 @@ uint32_t next_task() {
 uint32_t temp_resp;
 volatile tss_entry_t new_temp_tss;
 extern void switch_task();
+int i;
 
 void task_switch(tss_entry_t tss, uint32_t ready_esp) {
 	disable_tasking();
 	//asm volatile("mov %0, %%cr3":: "r"(kernel_directory));
 	current_task->tss = tss; //Save the program's state
 	uint32_t new_pid = next_task();
+	if (!new_pid) {
+		kerror("[KERR] CRITICAL ERROR: No task!");
+		abort();
+	}
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
 	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
@@ -172,14 +177,10 @@ void start_program(char *name) {
 
 extern void exit_usermode();
 
-void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint32_t res3, uint32_t ready_esp) {
+void exit_program(int retval) {
 	disable_tasking();
-	(void)res0;
-	(void)res1;
-	(void)res2;
-	(void)res3;
 	thread_t *parent = current_task->parent;
-	if (parent!=0) {
+	if (parent) {
 		if (parent->state==TASK_STATE_WAITPID&&(parent->waitpid==current_task->pid||parent->waitpid==0)) {
 			parent->state = TASK_STATE_ACTIVE;
 			parent->waitpid = retval;
@@ -189,6 +190,9 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	free_all_user_pages();
 	use_kernel_map();
 	free_page(current_task->tables-4096,1025);
+#ifdef TASK_DEBUG
+	uint32_t old_pid = current_task->pid;
+#endif
 	current_task->state = TASK_STATE_NULL;
 	current_task->cr3 = 0;
 	current_task->tables = 0;
@@ -211,10 +215,23 @@ void exit_program(int retval, uint32_t res0, uint32_t res1, uint32_t res2, uint3
 	current_task = &threads[new_pid-1];
 	switch_tables(threads[new_pid-1].tables);
 	asm volatile("mov %0, %%cr3"::"r"(current_task->cr3));
-	temp_resp = (uint32_t)ready_esp;
 	new_temp_tss = current_task->tss;
 	enable_tasking();
 	switch_task();
+}
+
+void kill_program(uint32_t pid) {
+	disable_tasking();
+	thread_t *parent = threads[pid-1].parent;
+	if (parent!=0) {
+		if (parent->state==TASK_STATE_WAITPID&&(parent->waitpid==current_task->pid||parent->waitpid==0)) {
+			parent->state = TASK_STATE_ACTIVE;
+			parent->waitpid = 1;
+		}
+	}
+	switch_tables(threads[pid-1].tables);
+	asm volatile("mov %0, %%cr3"::"r"(threads[pid-1].cr3));
+	
 }
 
 tss_entry_t syscall_temp_tss;
@@ -322,8 +339,6 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 			return 0;
 		}
 	} else {
-		switch_tables((void *)current_tables);
-		asm volatile("mov %0,%%cr3"::"r"(current_cr3));
 		return 0;
 	}
 }
@@ -373,6 +388,8 @@ uint32_t getpid() {
 }
 
 void waitpid(uint32_t wait) {
+	if (threads[wait-1].parent!=current_task || threads[wait-1].pid==0)
+		yield(); // Assume child has exited before we could wait for it.
 	current_task->state = TASK_STATE_WAITPID;
 	current_task->waitpid = wait;
 	yield();

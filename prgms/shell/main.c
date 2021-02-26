@@ -155,7 +155,7 @@ void commandline() {
 		temp[strlen(temp)]='G';
 		temp[strlen(temp)]=0;
 		
-		printf("Running %s...\n",temp);
+		//printf("Running %s...\n",temp);
 		child_pid = exec_args(temp,argv,_envp);
 		
 		if (!child_pid) {
@@ -170,7 +170,7 @@ void commandline() {
 			temp[strlen(temp)]='G';
 			temp[strlen(temp)]=0;
 			
-			printf("Running %s...\n",temp);
+			//printf("Running %s...\n",temp);
 			child_pid = exec_args(temp,argv,_envp);
 			
 			if (!child_pid) {
@@ -188,7 +188,7 @@ void commandline() {
 				temp[strlen(temp)]='G';
 				temp[strlen(temp)]=0;
 
-				printf("Running %s...\n",temp);
+				//printf("Running %s...\n",temp);
 				child_pid = exec_args(temp,argv,_envp);
 				
 				if (!child_pid) {
@@ -203,7 +203,7 @@ void commandline() {
 					temp[strlen(temp)]='S';
 					temp[strlen(temp)]=0;
 
-					printf("Running %s...\n",temp);
+					//printf("Running %s...\n",temp);
 					child_pid = exec_args(temp,argv,_envp);
 					
 					if (!child_pid) {
@@ -218,7 +218,7 @@ void commandline() {
 						temp[strlen(temp)]='S';
 						temp[strlen(temp)]=0;
 
-						printf("Running %s...\n",temp);
+						//printf("Running %s...\n",temp);
 						child_pid = exec_args(temp,argv,_envp);
 						
 						if (!child_pid) {
@@ -236,7 +236,7 @@ void commandline() {
 							temp[strlen(temp)]='S';
 							temp[strlen(temp)]=0;
 							
-							printf("Running %s...\n",temp);
+							//printf("Running %s...\n",temp);
 							child_pid = exec_args(temp,argv,_envp);
 							if (!child_pid) {
 								printf("No file found.\n");

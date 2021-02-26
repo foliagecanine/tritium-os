@@ -68,24 +68,25 @@ extern yield_esp
 global switch_task
 global run_syscall_asm
 
-temp_eax1 dw 0
-temp_eax2 dw 0
-temp_eax3 dw 0
+orig_eax dw 0
+retaddr dw 0
+errcode dw 0
 
 global page_fault
 
 page_fault:
-  mov dword [temp_eax1],eax
+  mov dword [orig_eax],eax
   pop eax
-  mov dword [temp_eax2],eax
+  mov dword [errcode],eax
+  mov [ready_esp],esp
   pop eax
-  mov dword [temp_eax3],eax
+  mov dword [retaddr],eax
   push eax
-  mov eax, dword [temp_eax1]
+  mov eax, dword [orig_eax]
   pusha
-  mov eax, dword [temp_eax2]
+  mov eax, dword [errcode]
   push eax
-  mov eax, dword [temp_eax3]
+  mov eax, dword [retaddr]
   push eax
   call exception_page_fault
   popa
@@ -140,11 +141,6 @@ run_syscall_asm:
   mov dword [syscall_temp_tss+56],eax ;esp
   mov eax, dword [syscall_temp_tss+40]
   
-  cmp eax,1
-  jne a  
-  nop
-  
-a:
   call run_syscall
   
   mov esp,dword [yield_esp]
