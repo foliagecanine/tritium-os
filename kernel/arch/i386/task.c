@@ -229,9 +229,22 @@ void kill_program(uint32_t pid) {
 			parent->waitpid = 1;
 		}
 	}
+	uint32_t current_cr3;
+	asm volatile("mov %%cr3,%0":"=r"(current_cr3):);
+	uint32_t *current_tables = get_current_tables();
 	switch_tables(threads[pid-1].tables);
 	asm volatile("mov %0, %%cr3"::"r"(threads[pid-1].cr3));
-	
+	free_all_user_pages();
+	use_kernel_map();
+	free_page(current_task->tables-4096,1025);
+	threads[pid-1].state = TASK_STATE_NULL;
+	threads[pid-1].cr3 = 0;
+	threads[pid-1].tables = 0;
+	threads[pid-1].waitpid = 0;
+	threads[pid-1].pid = 0;
+	switch_tables(current_tables);
+	asm volatile("mov %0, %%cr3"::"r"(current_cr3));
+	enable_tasking();
 }
 
 tss_entry_t syscall_temp_tss;
