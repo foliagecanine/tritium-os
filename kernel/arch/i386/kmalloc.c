@@ -1,28 +1,55 @@
 #include <kernel/mem.h>
+
 /*
- * My malloc does as so -
- * AAAA[UUUUUUUUUUUUUUUU] -> AAAAFFFFFFFFFFFFFFFF -> AAAA[UUUU]AAAAFFFFFFFF
- * It just makes a new allocation entry (if there's room, otherwise it just marks as used)
+ * This is a rather simple malloc implementation (written by foliagecanine)
+ * It is not particularly efficient with small allocations, but handles large ones fairly well.
  *
- * Then my free reclaims near blocks - 
- * AAAAFFFFAAAA[UUUU]AAAAFFFF -> AAAAFFFFAAAAFFFFAAAAFFFF -> AAAAFFFFFFFFFFFFFFFFFFFF
+ * When an allocation is made, it attempts to make a new allocation in the remaining unused space.
+ * If there is not enough space, it will simply allocate more memory than needed.
+ *
+ * In some cases, a zero-length allocation will be made in the remaining space.
+ * The effect is no different than if no allocation were made EXCEPT if the allocation after the
+ * zero-length one is freed, it can reclaim the space used by the freed allocation's alloc_t structure.
+ *
+ * The free function will attempt to reclaim the allocation after the freed allocation, as well as
+ * before the freed allocation:
+ * [Used][Unused][To be freed][Unused][Used] -> [Used][Unused][Used]
+ * This should prevent any memory from being lost.
+ * 
+ * The realloc function will try to merge the allocation with the current alloc or the alloc after the current alloc (if it's free).
+ * If both of these fail, it will call malloc with the new size and copy the existing data.
+ * 
+ * The calloc function just calls the malloc function and memsets it.
+ *
+ * TODO:
+ * If the last allocation passes through a 4096 byte boundary and is freed, give the memory back to the kernel.
+ *
  */
 
-typedef struct {
-	_Bool status;
-	uint32_t size;
-} __attribute__ ((packed)) alloc_t;
+typedef struct alloc_t alloc_t;
+
+struct alloc_t {
+	size_t size;
+	bool used;
+	alloc_t *next;
+	alloc_t *prev;
+};
 
 kheap_t current_heap;
 
 kheap_t heap_create(uint32_t pages) {
 	kheap_t ret;
 	void *mem = alloc_page(pages);
-	ret.heap_start = (uint32_t)mem;
+	ret.heap_start = mem;
 	ret.last_alloc_loc = ret.heap_start;
-	ret.heap_end = ret.heap_start+(pages*4096);
+	ret.heap_end = ret.heap_start;
 	ret.heap_size = pages;
 	memset((char*)ret.heap_start, 0, ret.heap_end-ret.heap_start);
+	alloc_t *root_alloc = ret.heap_start;
+	root_alloc->used = false;
+	root_alloc->size = pages*4096;
+	root_alloc->next = NULL;
+	root_alloc->prev = NULL;
 	return ret;
 }
 
@@ -38,110 +65,90 @@ kheap_t get_current_heap() {
 	return current_heap;
 }
 
-void* malloc(size_t size) {
-	_Bool allocate_failed = false;
-	
-	if (size==0)
-		return 0; //No size? Why allocate?
-	
-	uint8_t *mem = (uint8_t *)current_heap.heap_start; //Searching memory
-	while ((uint32_t)mem < current_heap.last_alloc_loc) { //Keep going until we've reached the last allocation point
-		alloc_t *alloc = (alloc_t *)mem; //Allocation entry
-		
-		if (alloc->size==0) { //Missing allocation...
-			allocate_failed = true; //Fail flag
-			break; //Exit
+static bool grow_heap() {
+	current_heap.heap_end += 4096;
+	if ((uintptr_t)(current_heap.heap_end-current_heap.heap_start) < current_heap.heap_size)
+		return true;
+	return false;
+}
+
+void *malloc(size_t size) {
+	alloc_t *current_alloc = current_heap.heap_start;
+	while(true) {
+		while (current_alloc->used) {
+			current_alloc = current_alloc->next;
 		}
-		
-		if (alloc->status) { //If this space is used
-			mem+=alloc->size+sizeof(alloc_t); //Skip this
-			
-		} else { //It's not used
-			
-			if (alloc->size >= size) { //It's big enough
-				alloc->status = true; //Mark as used
-				
-				if (alloc->size==size||size+sizeof(alloc_t)+1<=alloc->size) { //Either perfect size (no wasted space) or not big enough to fit 2 allocs in.
-					memset(mem+sizeof(alloc_t), 0, size); //Initialize it with 0's (optional)
-					return (char *)(mem + sizeof(alloc_t)); //Give them the location of the actual data, not the allocation
-				} else { //Too big, but there's enough space to make a new allocation.
-					//Find where we'll put our extra alloc
-					uint8_t *extra_alloc_loc = mem; 
-					extra_alloc_loc+=size+sizeof(alloc_t);
-					
-					//Make this data into a new alloc.
-					alloc_t *extra_alloc = (alloc_t *)extra_alloc_loc;
-					extra_alloc->status = false;
-					extra_alloc->size = (alloc->size-size)-sizeof(alloc_t);
-					
-					//We do this at the end to make sure we dont change the location of the extra_alloc
-					alloc->size = size; 
-					return (char *)(mem+sizeof(alloc_t));
-				}
-				
+		if (current_alloc->size == size) {
+			// If it is the last alloc, we will need to create one after this.
+			// Grow the heap and treat it as current_alloc->size > size.
+			if (current_alloc == current_heap.last_alloc_loc) {
+				if (!grow_heap())
+					return 0;
+				current_alloc->size += 4096;
 			} else {
-				mem += alloc->size+sizeof(alloc_t);
+				current_alloc->used = true;
+				return (void *)(current_alloc) + sizeof(alloc_t);
 			}
-	}
-	}
-	
-	if (current_heap.last_alloc_loc+size+sizeof(alloc_t)>= current_heap.heap_end) {
-		kerror("Error: Out of Memory!");
-		return 0;
-	} else {	
-		if (!allocate_failed) {
-			//Create a new alloc at the end (we've got enough memory)
-			alloc_t *alloc = (alloc_t *)current_heap.last_alloc_loc;
-			alloc->status = true;
-			alloc->size = size;
+		}
+		if (current_alloc->size > size) {
+			if (current_alloc->size < size + sizeof(alloc_t)) {
+				// Not enough space for a new alloc. Treat as if equal.
+				if (current_alloc == current_heap.last_alloc_loc) {
+					grow_heap();
+					current_alloc->size += 4096;
+					// Assume sizeof(alloc_t) < 4096
+				} else {
+					current_alloc->used = true;
+					return (void *)(current_alloc) + sizeof(alloc_t);
+				}
+			}
+			alloc_t *new_alloc = (void *)(current_alloc) + sizeof(alloc_t) + size;
 			
-			current_heap.last_alloc_loc+=size+sizeof(alloc_t);
-			memset((char *)((uint32_t)alloc + sizeof(alloc_t)), 0, size);
-			return (char *)((uint32_t)alloc + sizeof(alloc_t));
-		} else {
-			kerror("Unknown memory allocation error.");
-			return 0;
+			new_alloc->used = false;
+			new_alloc->size = current_alloc->size - (sizeof(alloc_t) + size);
+			new_alloc->next = current_alloc->next;
+			new_alloc->prev = current_alloc;
+
+			if (new_alloc->next == NULL)
+				current_heap.last_alloc_loc = new_alloc;
+			
+			current_alloc->used = true;
+			current_alloc->size = size;
+			current_alloc->next = new_alloc;
+			// prev is same
+			
+			return (void *)(current_alloc) + sizeof(alloc_t);
+		}
+		if (current_alloc == current_heap.last_alloc_loc && current_alloc->size < size) {
+			while (true) {
+				if (!grow_heap())
+					return 0;
+				current_alloc->size += 4096;
+				if (current_alloc->size >= size)
+					break;
+			}
 		}
 	}
 }
 
-void free(void *__ptr) {
-	alloc_t *ptr_alloc = (__ptr - sizeof(alloc_t));
-	ptr_alloc->status = 0;
-
-	uint8_t *mem = (uint8_t *)current_heap.heap_start;
+void free(void *ptr) {
+	alloc_t *current_alloc = ptr - sizeof(alloc_t);
+	current_alloc->used = false;
 	
-	//Free upwards
-	volatile alloc_t *root_alloc = (alloc_t *)mem; 
-	//Start with the first free allocation
-	while ((uint32_t)mem < current_heap.last_alloc_loc) {
-		if (root_alloc->status) {
-			mem+=sizeof(alloc_t)+root_alloc->size;
-			root_alloc = (alloc_t *)mem;
-		} else {
-			break;
-		}
+	alloc_t *next_alloc = current_alloc->next;
+	alloc_t *prev_alloc = current_alloc->prev;
+
+	if (next_alloc && !next_alloc->used) {
+		current_alloc->next = next_alloc->next;
+		current_alloc->size += next_alloc->size + sizeof(alloc_t);
+		if (current_alloc->next == NULL)
+				current_heap.last_alloc_loc = current_alloc;
 	}
-	while ((uint32_t)mem < current_heap.last_alloc_loc) {
-		mem+=root_alloc->size+sizeof(alloc_t); //Find the next one in the list
-		alloc_t *alloc = (alloc_t *)mem;
-		
-		if (!alloc->status) { //Make sure its free
-			root_alloc->size+=alloc->size+sizeof(alloc_t); //Remember we're deleting the ENTIRE entry. This includes the alloc
-			mem+=alloc->size+sizeof(alloc_t); //Now see if we can absorb the next one
-		} else { //Otherwise the next free one after that becomes the new root_alloc
-			while((uint32_t)mem<current_heap.last_alloc_loc) {
-				alloc = (alloc_t *)mem;
-				mem+=alloc->size+sizeof(alloc_t);
-				if (!alloc->status) { //If this one is free
-					root_alloc = (alloc_t *)mem; //Make it the new root_alloc
-					break;
-				}
-			}
-		}
-	}
-	if ((uint32_t)root_alloc+root_alloc->size+sizeof(alloc_t)>=current_heap.last_alloc_loc) {
-		current_heap.last_alloc_loc = (uint32_t)root_alloc;
-		root_alloc->size = 0;
+	
+	if (prev_alloc && !prev_alloc->used) {
+		prev_alloc->next = current_alloc->next;
+		prev_alloc->size += current_alloc->size + sizeof(alloc_t);
+		if (prev_alloc->next == NULL)
+				current_heap.last_alloc_loc = prev_alloc;
 	}
 }
