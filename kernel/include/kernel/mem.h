@@ -4,10 +4,10 @@
 #include <kernel/stdio.h>
 
 typedef struct {
-	uint32_t heap_start;
-	uint32_t heap_end;
-	uint32_t last_alloc_loc;
-	uint32_t heap_size;
+	void *heap_start;
+	void *heap_end;
+	void *last_alloc_loc;
+	size_t heap_size;
 } kheap_t;
 
 void identity_map(void *addr);

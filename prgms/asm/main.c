@@ -48,7 +48,6 @@ char *default_output(char *inputname) {
 	char *lastdot = strrchr(inputname, '.');
 	char *outputname = def_out_buffer;
 	if (lastdot == NULL) {
-		printf("nolastdot\n");
 		strcpy(outputname, inputname);
 		strcpy(outputname+strlen(inputname),".o");
 	} else {
@@ -109,7 +108,7 @@ int main(int argc, char **argv) {
 	
 	FILE infile = fopen(inputfile,"r");
 	if (!infile.valid) {
-		printf("Error: cannot open input file.");
+		printf("Error: cannot open input file.\n");
 		return ERROR_MISSINGFILE;
 	}
 	

@@ -1,6 +1,6 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	26
+#define NUM_SYSCALLS	27
 
 extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
@@ -11,6 +11,7 @@ void fcreate_usermode(char *filename, FILE *o);
 uint8_t fdelete_usermode(char *filename);
 uint8_t ferase_usermode(char *filename);
 void debug_break();
+void *map_mem(void *address);
 void null_function();
 
 static void *syscalls[NUM_SYSCALLS] = {
@@ -40,6 +41,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&debug_break,			// 23
 	&get_ticks,				// 24
 	&fork_process,			// 25
+	&map_mem,				// 26
 };
 
 extern bool ts_enabled;
@@ -62,16 +64,18 @@ void run_syscall() {
 	asm("movl %%edi,%0" : "=m"(edi));
 	asm("movl %%ebp,%0" : "=m"(ebp));
 	asm("movl %%esp,%0" : "=m"(esp));
+	
 	if (syscall_num>=NUM_SYSCALLS) {
 		ts_enabled = true;
 		return; //We don't want to accidentally give them kernel mode access, do we?
 	}
-	if (syscall_num==1)
+	
+	if (syscall_num==23)
 		asm("nop");
 	
 	void *function = syscalls[syscall_num];
 	
-	int retVal;
+	int retval;
 	ts_enabled = true;
 	//Call the function
 	asm volatile("\
@@ -89,7 +93,7 @@ void run_syscall() {
 	pop %%ebx; \
 	pop %%ebx; \
 	ret;\
-	" : "=a" (retVal) : "r"(function),"m"(ebx),"m"(ecx),"m"(edx),"m"(esi),"m"(edi));
+	" : "=a" (retval) : "r"(function),"m"(ebx),"m"(ecx),"m"(edx),"m"(esi),"m"(edi));
 }
 
 void new_syscall(uint8_t inum, uint32_t irq_fn) {
@@ -169,6 +173,16 @@ uint8_t ferase_usermode(char *filename) {
 
 void debug_break() {
 	asm volatile("nop");
+}
+
+void *map_mem(void *address) {
+	if (address && address < (void *)0xC0000000) { // Don't map nullptrs or kernel memory.
+		void *retval = map_page_to(address);
+		memset(retval,0,4096);
+		mark_user(retval,true);
+		return retval;
+	}
+	return 0;
 }
 
 void null_function() {

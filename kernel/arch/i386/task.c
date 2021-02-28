@@ -1,7 +1,7 @@
 #include <kernel/task.h>
 #include <kernel/sysfunc.h>
 
-#define TASK_DEBUG
+//#define TASK_DEBUG
 
 #define TASK_STATE_NULL 0
 #define TASK_STATE_IDLE 1

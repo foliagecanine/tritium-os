@@ -1,7 +1,6 @@
 CFLAGS=-g
 
 PRGMS=\
-IDLE.SYS \
 SHELL.SYS \
 MEM.PRG \
 CAT.PRG \

@@ -238,7 +238,7 @@ void *find_free_phys_page() {
 
 void* map_page_to(void *vaddr) {
 	if (kernel_tables[(uint32_t)vaddr/4096].present) {
-		kwarn("[WARN] Page mapped that is already present");
+		kwarn("[WARN] Page map attempted on page that is already present");
 		printf("===== %p\n",vaddr);
 		return 0;
 	}
@@ -346,7 +346,7 @@ void *calloc_page(size_t pages) {
 
 // Similar to alloc_page, but requires physical pages to be sequential
 void *alloc_sequential(size_t pages) {
-	for(uint32_t i = 4096; i < 1048576; i++) {
+	for(uint32_t i = 786432; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
