@@ -47,9 +47,9 @@ void parse(char *f) {
 void load(char *filename) {
 	if (filename) {
 		memset(file,0,4096);
-		FILE f = fopen(fname,"r");
-		if (f.valid)
-			fread(&f,file,0,f.size<1024*32?f.size:1024*32);
+		FILE *fp = fopen(fname,"r");
+		if (fp->valid)
+			fread(fp,file,0,fp->size<1024*32?fp->size:1024*32);
 		parse(file);
 	}
 }
@@ -66,8 +66,8 @@ void save(char *filename) {
 			ptr = &lines[0][0]+strlen(lines[0]);
 	}
 	memset(&lines[0][0]+strlen(lines[0]),0,(2048*1024)-strlen(lines[0]));
-	FILE f = fopen(filename,"w");
-	fwrite(&f,&lines[0][0],0,strlen(lines[0]));
+	FILE *fp = fopen(filename,"w");
+	fwrite(fp,&lines[0][0],0,strlen(lines[0]));
 	load(filename);
 }
 
@@ -381,10 +381,10 @@ void gui() {
 					memset(fname,0,4096);
 					char *fs = fileselector(fname,true);
 					if ((uint32_t)fs>1) {
-						FILE f = fopen(fs,"r");
-						if (f.valid) {
+						FILE *fp = fopen(fs,"r");
+						if (fp->valid) {
 							memset(file,0,1024*32);
-							fread(&f,file,0,f.size<1024*32?f.size:1024*32);
+							fread(fp,file,0,fp->size<1024*32?fp->size:1024*32);
 						}
 						parse(file);
 						text_cursor_y = 1;

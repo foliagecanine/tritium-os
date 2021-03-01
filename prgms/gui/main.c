@@ -7,7 +7,7 @@
 uint8_t min = 0;
 uint8_t selected = 0;
 uint8_t count = 0;
-FILE currdir;
+FILE *currdir;
 char name[16][31];
 char buf[31];
 char cd[4096];
@@ -173,8 +173,8 @@ bool programselector() {
 			
 			for (uint8_t i = 0; i < 8; i++) {
 				testdisk[0] = 65+i;
-				FILE f = fopen(testdisk,"r");
-				if (f.valid) {
+				FILE *fp = fopen(testdisk,"r");
+				if (fp->valid) {
 					disks[numdisks] = i;
 					numdisks++;
 				}
@@ -194,11 +194,11 @@ bool programselector() {
 			char *a = strchr(program,' ');
 			if (a)
 				*a = 0;
-			FILE f = fopen(program,"r");
+			FILE *fp = fopen(program,"r");
 			terminal_goto(32,11);
 			terminal_setcolor(0xF0);
-			if (f.valid) 
-				printf("Size: %u bytes",f.size);
+			if (fp->valid) 
+				printf("Size: %u bytes",fp->size);
 			else
 				printf("Could not open file.\n%s",program);
 			terminal_goto(38,13);
@@ -277,11 +277,11 @@ void main(uint32_t argc, char **argv) {
 		min = 0;
 		currdir = fopen(cd,"r");
 		memset(name,0,sizeof(char)*16*31);
-		FILE r = currdir;
-		for (uint8_t i = 0; i < 16 && r.valid; i++) {
+		FILE *r = currdir;
+		for (uint8_t i = 0; i < 16; i++) {
 			memset(buf,0,31);
-			r = readdir(&currdir,buf,i);
-			if (r.valid&&buf[0]) {
+			r = readdir(currdir,buf,i);
+			if (r->valid&&buf[0]) {
 				memset(name[count],' ',30);
 				memcpy(name[count],buf,strlen(buf));
 				for (uint8_t j = 0; j < 30; j++) {

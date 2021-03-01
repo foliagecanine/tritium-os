@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 char *helpinfo = "usage: asm [options...] [-o outfile] filename\n\
 \n\
@@ -14,6 +15,7 @@ enum error {
 	ERROR_UNRECOGNISED,
 	ERROR_MISSINGPARAM,
 	ERROR_MISSINGFILE,
+	ERROR_OUTOFMEM,
 };
 
 #define TOTAL_ARGS 6
@@ -59,6 +61,7 @@ char *default_output(char *inputname) {
 
 char *outputfile = NULL;
 char *inputfile = NULL;
+char *inputdata;
 
 int main(int argc, char **argv) {
 	if (argc==1) {
@@ -106,12 +109,28 @@ int main(int argc, char **argv) {
 	if (outputfile == NULL)
 		outputfile = default_output(inputfile);
 	
-	FILE infile = fopen(inputfile,"r");
-	if (!infile.valid) {
+	FILE *infile = fopen(inputfile,"r");
+	if (!infile->valid) {
 		printf("Error: cannot open input file.\n");
 		return ERROR_MISSINGFILE;
 	}
 	
 	printf("Input file: %s\n",inputfile);
 	printf("Output file: %s\n",outputfile);
+	
+	inputdata = malloc(infile->size+1);
+	
+	if (!inputdata) {
+		printf("Error: cannot allocate memory.\n");
+		return ERROR_OUTOFMEM;
+	}
+	
+	inputdata[infile->size] = 0;
+	
+	if (fread(infile, inputdata, 0, infile->size)) {
+		printf("Error: failed to read input file.\n");
+		return ERROR_MISSINGFILE;
+	}
+	
+	printf("%s",inputdata);
 }

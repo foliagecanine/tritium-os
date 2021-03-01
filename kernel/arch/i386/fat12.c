@@ -219,12 +219,15 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 //This function is recursive! It will continue opening files & folders until error or success
 FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t drive_num, FAT12_MOUNT fm, uint8_t mode) {
 	FILE retFile;
-	char *searchpath = filename+1;
 	char searchname[13];
-	#pragma GCC diagnostic ignored "-Wint-conversion"
-	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
-	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
-	searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
+	char *searchpath = filename+1;
+	if (strlen(filename)>0) {
+		memcpy(searchname,searchpath,((int)strchr(searchpath,'/')-(int)searchpath));
+		searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
+		searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
+	} else {
+		strcpy(searchname,"");
+	}
 	
 	char shortfn[12];
 	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for

@@ -111,8 +111,10 @@ void init_syscalls() {
 // Make sure the program is not writing to kernel memory.
 bool check_range(void *addr, uint32_t size) {
 	for (void *i = addr; i < addr+size; i+=4096) {
-		if (!check_user(i))
+		if (!check_user(i)) {
+			dprintf("%p is not within range\n",i);
 			return false;
+		}
 	}
 	return true;
 }
@@ -142,9 +144,11 @@ uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, ui
 }
 
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n) {
-	if (!f->directory)
+	if (!check_range(f,sizeof(FILE)))
 		return;
-	if (check_range(buf,256)&&check_range(f,sizeof(FILE))) {
+	if (!f->directory || !f->valid)
+		return;
+	if (check_range(buf,256)&&check_range(o,sizeof(FILE))) {
 		*o = readdir(f, buf, n);
 	}
 }

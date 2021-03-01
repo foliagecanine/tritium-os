@@ -248,12 +248,15 @@ void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint8_t drive_nu
 //This function is recursive! It will continue opening files & folders until error or success
 FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint8_t drive_num, FAT16_MOUNT fm, uint8_t mode) {
 	FILE retFile;
-	char *searchpath = filename+1;
 	char searchname[13];
-	#pragma GCC diagnostic ignored "-Wint-conversion"
-	memcpy(searchname,searchpath,(strchr(searchpath,'/')-(int)searchpath));
-	searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
-	searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
+	char *searchpath = filename+1;
+	if (strlen(filename)>0) {
+		memcpy(searchname,searchpath,((int)strchr(searchpath,'/')-(int)searchpath));
+		searchname[((int)strchr(searchpath,'/')-(int)searchpath)] = 0;
+		searchpath+=((int)strchr(searchpath,'/')-(int)searchpath);
+	} else {
+		strcpy(searchname,"");
+	}
 	
 	char shortfn[12];
 	LongToShortFilename(searchname, shortfn); //Get the 8.3 name of the file/folder we are looking for
@@ -377,7 +380,7 @@ FILE FAT16_readdir(FILE *file, char *buf, uint32_t n, uint8_t drive_num) {
 	char read[512];
 	memset(read,0,512);
 	ahci_read_sector(drive_num,file->location/512,(uint8_t *)read);
-	FAT16DIR dir_entry = *(PFAT16DIR)(read+(32*n));
+	volatile FAT16DIR dir_entry = *(PFAT16DIR)(read+(32*n));
 	retfile.dir_entry = file->location+(32*n);
 	
 	if (dir_entry.FileAttributes&0x08||dir_entry.FileAttributes&0x02||dir_entry.Filename[0]==0||dir_entry.Filename[0]==0xE5) {

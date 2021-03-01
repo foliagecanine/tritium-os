@@ -75,7 +75,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 		
-	FILE prgm = fopen("A:/bin/GUI.SYS","r");
+	FILE prgm = fopen("A:/BIN/GUI.SYS","r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);
 		fread(&prgm,buf,0,prgm.size);

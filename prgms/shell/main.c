@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline void syscall(unsigned int syscall_num) {
-	asm volatile("mov %0,%%eax;int $0x80"::"r"(syscall_num));
-}
-
 char cmd[256] = "";
 char args[256] = "";
 char temp[256] = "";
@@ -69,9 +65,7 @@ void commandline() {
 	} else if (!strcmp(cmd,"cls")||!strcmp(cmd,"clear")) {
 		terminal_clear();
 	} else if (!strcmp(cmd,"exit")) {
-		if (getpid()!=1) {
-			exit(0);
-		}
+		exit(0);
 	} else {
 		/*cmd[strlen(cmd)]='.';
 		cmd[strlen(cmd)]='P';
@@ -263,21 +257,6 @@ void main(uint32_t argc, char **argv) {
 	writestring("Hello from SHELL.SYS!\n");
 	terminal_init();
 	printf("ElectronShell online.\n");
-	/* if (!argc||!argv) { //This only happens when the kernel launches us. User-launched programs always have at least one argument
-		FILE f = fopen("A:/MOTD.TXT","r");
-		if (f.valid) {
-			if (!f.directory) {
-				for (uint32_t i = 0; i < f.size; i+=512) {
-					fread(&f,buf,i,512);
-					printf("%s",buf);
-				}
-			} else {
-				printf("Error: cannot read MOTD.\n");
-			}
-		} else {
-			printf("Error: cannot read MOTD.\n");
-		}
-	} */
 	for(;;) {
 		commandline();
 	}
