@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "encode.h"
+#include "macros.h"
+#include "elf.h"
 
 char *helpinfo = "usage: asm [options...] [-o outfile] filename\n\
 \n\
 Options:\n\
 	--help, -h, -?	print this help info\n\
-	--version, -v	print version information\n";
+	--version, -v	print version information\n\
+	-p				process mnemonics only\n";
 
 char *version = "0.1";
 
@@ -16,9 +20,10 @@ enum error {
 	ERROR_MISSINGPARAM,
 	ERROR_MISSINGFILE,
 	ERROR_OUTOFMEM,
+	ERROR_PROCESSING,
 };
 
-#define TOTAL_ARGS 6
+#define TOTAL_ARGS 7
 enum option {
 	OPTION_HELP_1,
 	OPTION_HELP_2,
@@ -26,6 +31,7 @@ enum option {
 	OPTION_VERSION_1,
 	OPTION_VERSION_2,
 	OPTION_OUTPUTFILE,
+	OPTION_PROCESSOPS,
 };
 
 char *options[TOTAL_ARGS] = {
@@ -35,6 +41,7 @@ char *options[TOTAL_ARGS] = {
 	"--version",
 	"-v",
 	"-o",
+	"-p",
 };
 
 int get_option_index(char *arg) {
@@ -45,6 +52,7 @@ int get_option_index(char *arg) {
 }
 
 char def_out_buffer[4096];
+bool option_only_process_ops = false;
 
 char *default_output(char *inputname) {
 	char *lastdot = strrchr(inputname, '.');
@@ -54,7 +62,10 @@ char *default_output(char *inputname) {
 		strcpy(outputname+strlen(inputname),".o");
 	} else {
 		strcpy(outputname, inputname);
-		strcpy(strrchr(outputname, '.')+1, "o");
+		if (option_only_process_ops)
+			strcpy(strrchr(outputname, '.')+1, "ops");
+		else
+			strcpy(strrchr(outputname, '.')+1, "o");
 	}
 	return outputname;
 }
@@ -90,6 +101,9 @@ int main(int argc, char **argv) {
 					return ERROR_MISSINGPARAM;
 				}
 				outputfile = argv[i];
+				break;
+			case OPTION_PROCESSOPS:
+				option_only_process_ops = true;
 				break;
 			default:
 				if (i == argc - 1) {
@@ -132,5 +146,72 @@ int main(int argc, char **argv) {
 		return ERROR_MISSINGFILE;
 	}
 	
-	printf("%s",inputdata);
+	int retval;
+	estring *in_data = estring_create();
+	
+	if (!in_data) {
+		printf("Error: could not create estring\n");
+		return ERROR_OUTOFMEM;
+	}
+	
+	if (!estring_write(in_data,inputdata)) {
+		printf("Error: could not write estring\n");
+		return ERROR_OUTOFMEM;
+	}
+	estring_write(in_data,"\n"); // Append newline to ensure it processes correctly.
+	
+	free(inputdata);
+	
+	estring *encoded_ops = estring_create();
+	if (!encoded_ops) {
+		printf("Error: could not create estring\n");
+		return ERROR_OUTOFMEM;
+	}
+	
+	if (retval = encode_ops(in_data,encoded_ops))
+		return retval;
+	
+	estring_delete(in_data);
+	
+	if (option_only_process_ops) {
+		FILE *outfile = fopen(outputfile,"w");
+		if (!outfile->valid) {
+			printf("Error: cannot open output file.\n");
+			return ERROR_MISSINGFILE;
+		}
+		
+		if (fwrite(outfile, estring_getstr(encoded_ops), 0, estring_len(encoded_ops))) {
+			printf("Error: failed to write output file.\n");
+			return ERROR_MISSINGFILE;
+		}
+		
+		printf("Done.\n");
+		return ERROR_SUCCESS;
+	}
+	
+	size_t len;
+	char *encoded = encode_macros(encoded_ops,&len);
+	
+	if (!encoded) {
+		printf("Error when processing macros.\n");
+		return ERROR_PROCESSING;
+	}
+	
+	estring_delete(encoded_ops);
+	
+	void *elf = encode_elf(encoded, len, &len);
+	
+	FILE *outfile = fopen(outputfile,"w");
+	if (!outfile->valid) {
+		printf("Error: cannot open output file.\n");
+		return ERROR_MISSINGFILE;
+	}
+	
+	if (fwrite(outfile, elf, 0, len)) {
+		printf("Error: failed to write output file.\n");
+		return ERROR_MISSINGFILE;
+	}
+	
+	printf("Done.\n");
+	return ERROR_SUCCESS;
 }

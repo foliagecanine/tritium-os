@@ -58,8 +58,12 @@ void save(char *filename) {
 	if ((uint32_t)filename<2)
 		return;
 	char *ptr = &lines[0][0];
-	for (uint16_t i = 0; i < 2048; i++) {
+	uint16_t lastline = 0;
+	for (uint16_t i = 0; i < 2048; i++)
 		if (lines[i][0])
+			lastline = i;
+	for (uint16_t i = 0; i < 2048; i++) {
+		if (i<lastline)
 			lines[i][strlen(lines[i])]='\n';
 		memcpy(ptr,lines[i],strlen(lines[i]));
 		if (i<2047)
@@ -169,7 +173,7 @@ uint8_t key_right_arrow () {
 			req_redraw = 2;
 		}
 	} else {
-		if (skip_lines+text_cursor_y+1<numlines) {
+		if (skip_lines+text_cursor_y+1<=numlines) {
 			if (text_cursor_y==23) {
 					skip_lines++;
 			} else {
@@ -206,7 +210,7 @@ uint8_t key_up_arrow () {
 
 uint8_t key_down_arrow () {
 	uint8_t req_redraw = false;
-	if (skip_lines+text_cursor_y+1<numlines) {
+	if (skip_lines+text_cursor_y+1<=numlines) {
 		if (text_cursor_y==23) {
 				skip_lines++;
 				req_redraw = 2;
@@ -330,7 +334,7 @@ void gui() {
 				char c = getchar();
 				if (c=='f') {
 					redraw(true);
-					drawrect(0,1,10,4,0x70);
+					drawrect(0,1,10,5,0x70);
 					terminal_goto(0,1);
 					terminal_setcolor(0x78);
 					terminal_putchar('N');
@@ -345,8 +349,14 @@ void gui() {
 					terminal_setcolor(0x78);
 					terminal_putchar('S');
 					terminal_setcolor(0x70);
-					printf("ave as");
+					printf("ave");
 					terminal_goto(0,4);
+					terminal_writestring("Sav");
+					terminal_setcolor(0x78);
+					terminal_putchar('e');
+					terminal_setcolor(0x70);
+					printf(" as");
+					terminal_goto(0,5);
 					terminal_setcolor(0x70);
 					terminal_putchar('E');
 					terminal_setcolor(0x78);
@@ -374,6 +384,14 @@ void gui() {
 					exit(0);
 				}
 				if (c=='s') {
+					if (!fname[0]) {
+						save(fileselector(fname,true));						
+					} else {
+						save(fname);
+					}
+					break;
+				}
+				if (c=='e') {
 					save(fileselector(fname,true));
 					break;
 				}
@@ -416,15 +434,8 @@ void main(uint32_t argc, char **argv) {
 	memset(fname,0,4096);
 	terminal_enablecursor(0,15);
 	terminal_setcursor(0,1);
-	char *env_cd = getenv("CD");
 	if (argc>1) {
-		memset(fname,0,4096);
-		if (argv[1][1]==':')
-			strcpy(fname,argv[1]);
-		else {
-			memcpy(fname,env_cd,strlen(env_cd));
-			memcpy(fname+strlen(env_cd),argv[1],strlen(argv[1]));
-		}
+		strcpy(fname,argv[1]);
 		load(fname);
 	}
 	while(1) {

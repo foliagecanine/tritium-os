@@ -7,7 +7,7 @@
 // 3 = Invalid Filename
 // 4 = Unknown Error
 // 5 = Invalid Filesystem
-// 8+ = Drive error = (error_code - 8) (see ahci.c)
+// 8+ = Drive error = (error_code - 8) (see ahci.c, ide.c)
 
 FSMOUNT *mounts;
 uint32_t numActiveMounts = 0;

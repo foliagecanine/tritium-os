@@ -6,10 +6,21 @@ OUTFLDR=prgms
 .PHONY: all clean upload
 .SUFFIXES: .o .c
 
+OBJS=\
+main.o \
+encode.o \
+estring.o \
+x86ops.o \
+macros.o \
+elf.o \
+
 all: $(OUTPRG)
 
-$(OUTPRG): main.c
-	$(GCC) $(CFLAGS) main.c -o $(OUTPRG)
+$(OUTPRG): $(OBJS)
+	$(GCC) $(CFLAGS) $(OBJS) -o $(OUTPRG)
+
+.c.o: %.c
+	$(GCC) $(CFLAGS) -c $< -o $@
 
 dump: $(OUTPRG)
 	i686-tritium-objdump -D $(OUTPRG)
@@ -22,8 +33,7 @@ upload: $(OUTPRG)
 	sudo rmdir /mnt/F1
 	
 clean:
-	rm *.o
-	rm *.d
+	rm $(OBJS)
 	rm $(OUTPRG)
 
 install: $(OUTPRG)

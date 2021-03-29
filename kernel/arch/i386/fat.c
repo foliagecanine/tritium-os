@@ -52,12 +52,9 @@ void LongToShortFilename(char * longfn, char * shortfn) {
 			shortfn[7]=intToChar(locOfDot-6);
 		}
 	} else {
-		if (locOfDot!=-1) { //If there is no dot then just copy the whole thing (up to 8).
+		if (locOfDot!=-1) {
 			memcpy(shortfn,longfn,locOfDot);
-			for (uint8_t i = strlen(longfn)-4; i < 9; i++) {
-				shortfn[i]=' ';
-			}
-		} else if (strlen(longfn)<9) {
+		} else if (strlen(longfn)<9) { //If there is no dot then just copy the whole thing (up to 8).
 			memcpy(shortfn,longfn,strlen(longfn));
 		} else {
 			memcpy(shortfn,longfn,6);
