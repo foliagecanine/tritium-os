@@ -34,13 +34,13 @@ void main(uint32_t argc, char **argv) {
 		printf("Requires args.\n");
 		exit(1);
 	}
-	f = fopen(fname,"r");
+	f = openfile(fname,"r");
 	if (!f.valid) {
 		printf("Could not read file (ERR 1).\n");
 		exit(1);
 	}
 	memset(buf,0,513);
-	if (fread(&f,buf,0,512)) {
+	if (readfile(&f,buf,0,512)) {
 		printf("Could not read file (ERR 2).\n");
 		exit(2);
 	}

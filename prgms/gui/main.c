@@ -173,7 +173,7 @@ bool programselector() {
 			
 			for (uint8_t i = 0; i < 8; i++) {
 				testdisk[0] = 65+i;
-				FILE *fp = fopen(testdisk,"r");
+				FILE *fp = openfile(testdisk,"r");
 				if (fp->valid) {
 					disks[numdisks] = i;
 					numdisks++;
@@ -194,7 +194,7 @@ bool programselector() {
 			char *a = strchr(program,' ');
 			if (a)
 				*a = 0;
-			FILE *fp = fopen(program,"r");
+			FILE *fp = openfile(program,"r");
 			terminal_goto(32,11);
 			terminal_setcolor(0xF0);
 			if (fp->valid) 
@@ -231,7 +231,7 @@ bool programselector() {
 			while(g!=0x1C&&g!=1)
 				g = getkey();
 			if (g==0x1C) {
-				fdelete(program);
+				deletefile(program);
 			}
 			resetselection = true;
 			return true;
@@ -275,12 +275,12 @@ void main(uint32_t argc, char **argv) {
 		else
 			resetselection = true;
 		min = 0;
-		currdir = fopen(cd,"r");
+		currdir = openfile(cd,"r");
 		memset(name,0,sizeof(char)*16*31);
 		FILE *r = currdir;
 		for (uint8_t i = 0; i < 16; i++) {
 			memset(buf,0,31);
-			r = readdir(currdir,buf,i);
+			r = finddir(currdir,buf,i);
 			if (r->valid&&buf[0]) {
 				memset(name[count],' ',30);
 				memcpy(name[count],buf,strlen(buf));

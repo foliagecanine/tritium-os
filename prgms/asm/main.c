@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 	if (outputfile == NULL)
 		outputfile = default_output(inputfile);
 	
-	FILE *infile = fopen(inputfile,"r");
+	FILE *infile = openfile(inputfile,"r");
 	if (!infile->valid) {
 		printf("Error: cannot open input file.\n");
 		return ERROR_MISSINGFILE;
@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
 	
 	inputdata[infile->size] = 0;
 	
-	if (fread(infile, inputdata, 0, infile->size)) {
+	if (readfile(infile, inputdata, 0, infile->size)) {
 		printf("Error: failed to read input file.\n");
 		return ERROR_MISSINGFILE;
 	}
@@ -174,13 +174,13 @@ int main(int argc, char **argv) {
 	estring_delete(in_data);
 	
 	if (option_only_process_ops) {
-		FILE *outfile = fopen(outputfile,"w");
+		FILE *outfile = openfile(outputfile,"w");
 		if (!outfile->valid) {
 			printf("Error: cannot open output file.\n");
 			return ERROR_MISSINGFILE;
 		}
 		
-		if (fwrite(outfile, estring_getstr(encoded_ops), 0, estring_len(encoded_ops))) {
+		if (writefile(outfile, estring_getstr(encoded_ops), 0, estring_len(encoded_ops))) {
 			printf("Error: failed to write output file.\n");
 			return ERROR_MISSINGFILE;
 		}
@@ -201,13 +201,13 @@ int main(int argc, char **argv) {
 	
 	void *elf = encode_elf(encoded, len, &len);
 	
-	FILE *outfile = fopen(outputfile,"w");
+	FILE *outfile = openfile(outputfile,"w");
 	if (!outfile->valid) {
 		printf("Error: cannot open output file.\n");
 		return ERROR_MISSINGFILE;
 	}
 	
-	if (fwrite(outfile, elf, 0, len)) {
+	if (writefile(outfile, elf, 0, len)) {
 		printf("Error: failed to write output file.\n");
 		return ERROR_MISSINGFILE;
 	}

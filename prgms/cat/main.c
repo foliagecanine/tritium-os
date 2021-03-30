@@ -7,12 +7,12 @@ int main(int argc, char *argv[]) {
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY,VGA_COLOR_BLACK));
 	if (argc<2)
 		exit(1);
-	FILE *fp = fopen(argv[1],"r");
+	FILE *fp = openfile(argv[1],"r");
 	if (fp->valid) {
 		if (!fp->directory) {
 			printf("%u bytes\n",(uint32_t)fp->size);
 			for (uint32_t i = 0; i < fp->size; i+=512) {
-				if (fread(fp,buf,i,512))
+				if (readfile(fp,buf,i,512))
 					return 1;
 				printf("%s",buf);
 			}
@@ -22,5 +22,5 @@ int main(int argc, char *argv[]) {
 	} else {
 		printf("Error: file %s not found.\n",argv[1]);
 	}
-	fclose(fp);
+	closefile(fp);
 }

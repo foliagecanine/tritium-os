@@ -13,16 +13,16 @@ int main(uint32_t argc, char *argv[]) {
 			printf("Error: no current directory.\n");
 			return 1;
 		}
-		fp = fopen(cd,"r");
+		fp = openfile(cd,"r");
 	} else {
-		fp = fopen(argv[1],"r");		
+		fp = openfile(argv[1],"r");		
 	}
 	
 	if (fp->valid) {
 		if (fp->directory) {
 			FILE *r = fp;
 			for (uint8_t i = 0; i<16; i++) {
-				r = readdir(fp,buf,i);
+				r = finddir(fp,buf,i);
 				if (r->valid&&buf[0])
 					printf("%s\n",buf);
 				memset(buf,0,512);
