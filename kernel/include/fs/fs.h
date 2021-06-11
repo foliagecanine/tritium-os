@@ -16,9 +16,11 @@ typedef struct {
 	uint8_t mountNumber;
 	uint32_t clusterNumber; //For FAT based systems
 	uint64_t dir_entry;
-	_Bool writelock;
+	uint8_t flags;
+	int32_t desc;
 	_Bool valid;
 	_Bool directory;
+	_Bool writelock;
 } FILE, *PFILE;
 
 typedef struct {
