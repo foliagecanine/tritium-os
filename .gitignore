@@ -13,3 +13,4 @@ rpi-iso.sh
 rpi-qemu.sh
 *.PRG
 *.SYS
+core

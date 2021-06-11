@@ -320,10 +320,10 @@ uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint8_t
 	while (curLen>0) {
 		if ((curLoc-curDiskLoc)<512) {
 			ahci_read_sector(drive_num,getLocationFromCluster(rCluster,fm)/512,(uint8_t *)read);
-			uint32_t amt = (curLen>512?512:curLen)-(curLoc%512);
-			memcpy(buf+(curLoc-start),&read[curLoc%512],amt);
-			curLen-=amt;
-			curLoc+=amt;
+			uint32_t amt = curLen > 512 ? 512 : curLen;
+			memcpy(buf+(curLoc-start),read+(curLoc%512),amt);
+			curLen -= amt;
+			curLoc = (curLoc + 512) - (curLoc % 512);
 		}
 		curDiskLoc+=512;
 		rCluster = getClusterValue(FAT,rCluster);
