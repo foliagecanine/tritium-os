@@ -1,0 +1,204 @@
+Serial initialized.
+[INIT] Mapped memory
+[INIT] GDT Enabled
+[INIT] IDT Enabled
+[INIT] Paging initialized
+0: (nil)+0x9F000 Available
+1: 0x9F000+0x1000 Reserved
+2: 0xE8000+0x18000 Reserved
+3: 0x100000+0x1FEF0000 Available
+4: 0x1FFF0000+0x10000 ACPI Reclaimable
+5: 0xFFFC0000+0x40000 Reserved
+[INIT] Kernel heap initialized
+[AHCI] Searching for SATA drives. Details below.
+[INIT] Initialized AHCI driver
+[INIT] Initialized Syscalls.
+[INIT] Tasking initialized.
+[UHCI] IOBase: C020
+[UHCI] Allocated 2 pages at vaddr:C0032000 paddr:832000
+[UHCI] Enabled USB stack for controller
+[UHCI] Port 0 determined valid.
+[UHCI] Port 0 reset but nothing attached.
+[UHCI] Reset port 0
+[UHCI] Port 1 determined valid.
+[UHCI] Port 1 reset but nothing attached.
+[UHCI] Reset port 1
+[UHCI] Reset 2 ports.
+[UHCI] Finished initializing UHCI controller.
+[xHCI] Base Address: C0000000
+[xHCI] Ops Address: C0000020
+[xHCI] Controller version: 100
+0 1 1 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+[xHCI] Clear RunStop
+[xHCI] Cleared RunStop
+[xHCI] Resetting xHCI.
+[xHCI] Reset xHCI Controller Globally
+[xHCI] BIOS Ownership released
+[xHCI] Reset xHCI Globally
+[xHCI] Detected 4 ports
+[xHCI] Found 2 USB 2 ports and 2 USB 3 ports.
+[xHCI] Port 0: USB 3 Paired, Phys 0, PortPair 2
+[xHCI] Port 1: USB 3 Paired, Phys 1, PortPair 3
+[xHCI] Port 2: USB 2 Paired, Phys 0, PortPair 0
+[xHCI] Port 3: USB 2 Paired, Phys 1, PortPair 1
+[xHCI] No port reset change on 0
+[xHCI] Reset port 0 (USB3) FAILED
+[xHCI] Reset port 2 (USB2) SUCCESS
+[xHCI] Attempting to initialize device
+[xHCI] Max Packet Size: 8
+Routing: 0
+08100000 00030000 00000000 00000000 00000000 00000000 00000000 00000000 
+00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 Param: 88A000
+Status: 0
+Command: 1002C00
+[xHCI] Got Device Address 2
+12 01 10 01 09 00 00 40 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Retrieving full descriptor...
+12 01 10 01 09 00 00 40 09 04 5A 00 00 01 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Got Descriptor
+[xHCI]   Length: 18
+[xHCI]     Type: 1
+[xHCI]  Version: 110
+[xHCI]    Class: 9
+[xHCI] Subclass: 0
+[xHCI] Protocol: 0
+[xHCI] MaxPktSz: 64
+[xHCI] VendorID: 409
+[xHCI] PrductID: 5A
+[xHCI] ReleaseV: 100
+[xHCI] ManufIdx: 1
+[xHCI] PrdctIdx: 2
+[xHCI] SrialIdx: 3
+[xHCI]  NumCfgs: 1
+[xHCI] No port reset change on 1
+[xHCI] Reset port 1 (USB3) FAILED
+[xHCI] Reset port 3 (USB2) SUCCESS
+[xHCI] Attempting to initialize device
+[xHCI] Max Packet Size: 64
+Routing: 0
+08200000 00040000 00000000 00000000 00000000 00000000 00000000 00000000 
+00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 Param: 890000
+Status: 0
+Command: 2002C00
+[xHCI] Got Device Address 3
+12 01 10 01 00 00 00 08 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Retrieving full descriptor...
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+[xHCI] Got Descriptor
+[xHCI]   Length: 18
+[xHCI]     Type: 1
+[xHCI]  Version: 110
+[xHCI]    Class: 0
+[xHCI] Subclass: 0
+[xHCI] Protocol: 0
+[xHCI] MaxPktSz: 8
+[xHCI] VendorID: 4B4
+[xHCI] PrductID: 101
+[xHCI] ReleaseV: 1
+[xHCI] ManufIdx: 1
+[xHCI] PrdctIdx: 2
+[xHCI] SrialIdx: 3
+[xHCI]  NumCfgs: 1
+[USB ] Assigning drivers to devices...
+12 01 10 01 09 00 00 40 09 04 5A 00 00 01 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+09 02 
+09 02 19 00 01 01 00 E0 32 
+[xHCI] Successfully got USB config descriptor
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Attempting to register hub
+0C100000 00030000 00000000 10000002 00000000 00000000 00000000 00000000 
+00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 09 29 07 0A 00 01 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+00 01 00 00 
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+[xHCI] Successfully got USB interface descriptor
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+[xHCI] Successfully sent generic setup packet.
+[xHCI] Successfully sent generic setup packet.
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+[xHCI] Successfully got USB interface descriptor
+09 02 
+09 02 3B 00 02 01 04 A0 32 
+[xHCI] Successfully got USB config descriptor
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A 
+09 02 3B 00 02 01 04 A0 32 09 04 00 00 01 03 01 
+01 05 09 21 00 01 00 01 22 41 00 07 05 81 03 08 
+00 0A 09 04 01 00 01 03 01 02 06 09 21 00 01 00 
+01 22 32 00 07 05 82 03 08 00 0A [xHCI] Endpoint: C00A901B
+[xHCI] Successfully got USB endpoint descriptor
+[xHCI] Attempting to enable endpoint 1 as type 7
+[xHCI] Endpoint index is 2
+[xHCI] Input Context Enable: 9
+[xHCI] Successfully sent generic setup packet.
+[INIT] Initialized USB driver
+[KMSG] Kernel initialized successfully
+Valid device found at 3.0.2
+12 01 10 01 09 00 00 40 09 04 5A 00 00 01 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+04 03 
+04 03 09 04 
+1C 03 
+1C 03 42 00 4F 00 43 00 48 00 53 00 20 00 55 00 
+53 00 42 00 20 00 48 00 55 00 42 00 
+[xHCI] Successfully got USB string descriptor.
+Valid device found at 3.0.3
+12 01 10 01 00 00 00 08 B4 04 01 01 01 00 01 02 
+03 01 
+[xHCI] Successfully got USB device descriptor.
+04 03 
+04 03 09 04 
+1E 03 
+1E 03 55 00 53 00 42 00 2F 00 50 00 53 00 32 00 
+20 00 4B 00 65 00 79 00 70 00 61 00 64 00 
+[xHCI] Successfully got USB string descriptor.

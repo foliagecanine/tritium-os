@@ -5,7 +5,7 @@ buildable: YES :heavy_check_mark:
 Original Author: foliagecanine
 
 ## Introduction
-TritiumOS is an open-source operating system, successor to an 
+TritiumOS is an open-source operating system, successor to an
 unpublished, expiremental test OS named Rogue2OS
 
 Demo:  
@@ -21,11 +21,11 @@ If you don't neccesarily want to build this, you can see the "What if I just wan
 First you will need to build a compiler.  
 See [https://wiki.osdev.org/Building_GCC] for info on how to do that.  
 You will need an i686-elf C (GCC) compiler to build this project.  
-  
+
 Additionally, to compile ELF programs for TritiumOS you will need an i686-tritium compiler to build this project.  
 You can build one using the [tritium-compiler](https://github.com/foliagecanine/tritium-compiler) repository.  
 You can build the C library using the [libc-tritium](https://github.com/foliagecanine/libc-tritium) repository.  
-  
+
 Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu, etc.) by running this command:
 `sudo apt-get install qemu`
 or for other distributions
@@ -36,40 +36,29 @@ You will also need grub-mkrescue, which is a part of the grub2 package. You can 
 or for other distributions
 `sudo [Package Manager Install Command] grub2`
 
-You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz](https://bit.ly/2ZNmsQa)* 
+You can alternatively build it from source, which you can find at [ftp://ftp.gnu.org/gnu/grub/grub-2.02.tar.xz](https://bit.ly/2ZNmsQa)*
 (This statement is REQUIRED by the GPL, under which grub is licensed)
 
-\*If you hover on the link, it is a bit.ly link. This is because github does not properly hyperlink ftp:// links. If you are paranoid about bit.ly links or something, you can just copy the address into your url bar.
+\*If you hover on the link, it is a bit.ly link. This is because GitHub does not properly hyperlink ftp:// links. If you are paranoid about bit.ly links or something, you can just copy the address into your URL bar.
 
-### Building/testing the iso
-Then type `./iso.sh` to create the iso file 
+### Building/testing the ISO
+Type `make` to create the ISO file
 OR  
-Type `./qemu.sh` to build then immediately test it.
-You can also type `./qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the qemu line (you can add more if you put them in quotes).
+Type `make run` to build then immediately test it.
+You can also type `./scripts/qemu.sh PARAM1 PARAM2` to add up to 2 parameters to the QEMU line (you can add more if you put them in quotes).
 You can use this to add virtual hard disks to the OS.
 
-A FAT16 formatted "floppy" is included (named floppy.flp) and can be used as a hard disk as below  
-`./ahci-qemu.sh floppy.flp` 
+A FAT16 formatted disk image containing programs is included (named exampledisk.img) and can be used as a hard disk as below  
+`./scripts/ahci-qemu.sh exampledisk.img`
 
 You can also have two drives by using the ahci-qemu2.sh script as below:  
-`./ahci-qemu.sh floppy.flp old/floppy2.flp`  
+`./scripts/ahci-qemu.sh exampledisk.img old/floppy2.flp`  
 
 There are three images included that can be used for testing.  
- - floppy.flp : A FAT16 formatted image that contains programs to run (>512 bytes)
+ - exampledisk.img  : A FAT16 formatted image that contains programs to run (>512 bytes)
  - old/floppy2.flp	: A FAT12 formatted image for testing files less than 512 bytes
  - old/floppy.flp 	: A FAT12 formatted image for testing files greater than 512 bytes
  - old/testrand.img	: An image created by `dd if=/dev/urandom of=testrand.img bs=1K count=1440`, to be used for testing images with no valid filesystem.
-
-### How about that add-o-file.sh script?
-That is an easy way of editing the make.config file.  
-You can use it to add a .o file to the list of files to be included in the build.
-
-To use it type:  
-`./add-o-file.sh [filename]`  
-The filename is the name of the c/asm/S file to include without the extension. For example, type:  
-`./add-o-file.sh mynewfile`  
-To add mynewfile.c (or mynewfile.S or mynewfile.asm) to the make.config  
-Note there is no extension in the filename.
 
 ## How do I make programs for TritiumOS?
 For information on writing programs for TritiumOS, see [prgms/docs/COMPILING.md](prgms/docs/COMPILING.md)
@@ -77,7 +66,7 @@ For information on writing programs for TritiumOS, see [prgms/docs/COMPILING.md]
 ## What if I just want to use the ISO? How can I do that?
 
 You can use the .iso file in the root of this repository and run it in a virtual machine.
-If you want to run it on real hardware (not recommended), burn it to a disk, thumb drive, (even a hard drive if you're brave enough). Then have the computer boot from it.
+If you want to run it on real hardware (not recommended), write it to a CD/DVD, thumb drive, (even a hard drive if you're brave enough). Then have the computer boot from it.
 
 SEE BOTTOM FOR DISCLAIMERS
 
@@ -109,6 +98,7 @@ Here's the checklist:
 - [x] Generic USB Driver (mostly)
 - [x] Basic USB HID Driver
 - [x] xHCI USB support
+- [ ] Basic graphics framebuffer
 - [ ] OHCI USB support  
 If you want more, I will generally stick to this list: [https://wiki.osdev.org/Creating_an_Operating_System]
 
@@ -116,6 +106,8 @@ Programs:
 - [x] Directory listing program
 - [x] Program to display and edit text files
 - [x] Text adventure game
+- [ ] Graphics Manager
+- [ ] Window Manager
 
 ## Bugs
 This software is VERY buggy. There are bugs almost everywhere, but most are minor  
