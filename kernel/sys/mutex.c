@@ -13,10 +13,6 @@ bool MUTEX_TRYLOCK(mutex *m) {
 	return true;
 }
 
-void MUTEX_UNLOCK(mutex *m) {
-	*m = 0;
-}
+void MUTEX_UNLOCK(mutex *m) { *m = 0; }
 
-bool MUTEX_CHECK(mutex *m) {
-	return (bool)*m;
-}
+bool MUTEX_CHECK(mutex *m) { return (bool)*m; }

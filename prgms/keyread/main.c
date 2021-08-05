@@ -7,9 +7,9 @@ int main(int argc, char **argv) {
 	printf("0x00\n");
 	uint8_t g = 0;
 	getkey();
-	while (g!=0x81) {
+	while (g != 0x81) {
 		g = getkey();
 		if (g)
-			printf("0x%#\n",(uint64_t)g);
+			printf("0x%#\n", (uint64_t)g);
 	}
 }

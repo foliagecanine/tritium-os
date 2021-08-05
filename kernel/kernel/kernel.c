@@ -1,25 +1,25 @@
-#include <stdio.h>
-#include <kernel/ksetup.h>
-#include <kernel/tty.h>
-#include <kernel/multiboot.h>
-#include <kernel/pci.h>
-#include <kernel/mem.h>
 #include <fs/disk.h>
-#include <fs/file.h>
 #include <fs/fat12.h>
 #include <fs/fat16.h>
+#include <fs/file.h>
+#include <kernel/ksetup.h>
+#include <kernel/mem.h>
+#include <kernel/multiboot.h>
+#include <kernel/pci.h>
 #include <kernel/syscalls.h>
+#include <kernel/tty.h>
+#include <stdio.h>
 
 multiboot_memory_map_t *mmap;
-multiboot_info_t *mbi;
+multiboot_info_t *      mbi;
 
 void kernel_main(uint32_t magic, uint32_t ebx) {
 	serial_init();
 	terminal_initialize();
 	disable_cursor();
-	if (magic!=0x2BADB002) {
+	if (magic != 0x2BADB002) {
 		kerror("ERROR: Multiboot info failed! Bad magic value:");
-		printf("%lx\n",(uint64_t)magic);
+		printf("%lx\n", (uint64_t)magic);
 		abort();
 	}
 	printf("Hello, kernel World!\n");
@@ -39,18 +39,18 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_usb();
 	kprint("[KMSG] Kernel initialized successfully");
 
-	//Support up to 8 drives (for now)
+	// Support up to 8 drives (for now)
 	for (uint8_t i = 0; i < 8; i++) {
 		if (!mount_drive(i)) {
-			printf("Mounted drive %u\n",i);
-		} else if (i==0) {
+			printf("Mounted drive %u\n", i);
+		} else if (i == 0) {
 			printf("No valid drive found.\n");
 			printf("Press shift key to enter Kernel Debug Console.\n");
 			for (;;) {
 				sleep(1);
 				int k = getkey();
 
-				if (k==42||k==54||k==170||k==182) {
+				if (k == 42 || k == 54 || k == 170 || k == 182) {
 					printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
 					debug_console();
 				}
@@ -58,28 +58,28 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 		}
 	}
 
-	if (strcmp(get_disk_mount(0).type,"FAT12"))
-		FAT12_print_folder(((FAT12_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset*512+1,32,0);
+	if (strcmp(get_disk_mount(0).type, "FAT12"))
+		FAT12_print_folder(((FAT12_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset * 512 + 1, 32, 0);
 
-	if (strcmp(get_disk_mount(0).type,"FAT16"))
-		FAT16_print_folder(((FAT16_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset*512+1,32,0);
+	if (strcmp(get_disk_mount(0).type, "FAT16"))
+		FAT16_print_folder(((FAT16_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset * 512 + 1, 32, 0);
 
 	printf("Press shift key to enter Kernel Debug Console.\n");
 	for (uint16_t i = 0; i < 1000; i++) {
 		sleep(1);
 		int k = getkey();
 
-		if (k==42||k==54||k==170||k==182) {
+		if (k == 42 || k == 54 || k == 170 || k == 182) {
 			printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
 			debug_console();
 		}
 	}
 
-	FILE prgm = fopen("A:/BIN/GUI.SYS","r");
+	FILE prgm = fopen("A:/BIN/GUI.SYS", "r");
 	if (prgm.valid) {
-		void *buf = alloc_page((prgm.size/4096)+1);
-		fread(&prgm,buf,0,prgm.size);
-		create_process(buf,prgm.size);
+		void *buf = alloc_page((prgm.size / 4096) + 1);
+		fread(&prgm, buf, 0, prgm.size);
+		create_process(buf, prgm.size);
 	}
 
 	kerror("[KERR] Kernel has reached end of code.");
@@ -88,5 +88,6 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 void kernel_exit() {
 	sleep(1000);
 	power_shutdown();
-	for(;;);
+	for (;;)
+		;
 }

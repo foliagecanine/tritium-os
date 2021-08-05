@@ -1,11 +1,11 @@
 #ifndef _FS_FAT12_H
 #define _FS_FAT12_H
 
-#include <kernel/stdio.h>
 #include <fs/disk.h>
-#include <fs/fs.h>
-#include <fs/file.h>
 #include <fs/fat.h>
+#include <fs/file.h>
+#include <fs/fs.h>
+#include <kernel/stdio.h>
 
 typedef struct {
 	uint32_t MntSig;
@@ -20,11 +20,11 @@ typedef struct {
 	uint32_t SystemAreaSize;
 } FAT12_MOUNT;
 
-_Bool detect_fat12(uint32_t drive_num);
+_Bool   detect_fat12(uint32_t drive_num);
 FSMOUNT MountFAT12(uint32_t drive_num);
-FILE FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint32_t drive_num, FAT12_MOUNT fm, uint8_t mode);
-void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_num);
+FILE    FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint32_t drive_num, FAT12_MOUNT fm, uint8_t mode);
+void    FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_num);
 uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint32_t drive_num);
-void print_fat12_values(uint32_t drive_num);
-FILE FAT12_readdir(FILE *file, char *buf, uint32_t n, uint32_t drive_num);
+void    print_fat12_values(uint32_t drive_num);
+FILE    FAT12_readdir(FILE *file, char *buf, uint32_t n, uint32_t drive_num);
 #endif

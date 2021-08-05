@@ -20,16 +20,16 @@ char *estring_getstr(estring *es) {
 size_t estring_len(estring *es) {
 	if (!es)
 		return 0;
-	return es->len-1;
+	return es->len - 1;
 }
 
 estring *estring_write(estring *es, const char *str) {
 	if (!es)
 		return NULL;
-	es->str = realloc(es->str, es->len+strlen(str));
-	memcpy(es->str+(es->len-1), str, strlen(str));
+	es->str = realloc(es->str, es->len + strlen(str));
+	memcpy(es->str + (es->len - 1), str, strlen(str));
 	es->len += strlen(str);
-	*(es->str+(es->len-1)) = 0;
+	*(es->str + (es->len - 1)) = 0;
 	return es;
 }
 
@@ -38,10 +38,10 @@ estring *estring_append(estring *dest, estring *src) {
 		return NULL;
 	if (!src)
 		return NULL;
-	dest->str = realloc(dest->str, dest->len+src->len-1);
-	memcpy(dest->str+(dest->len-1), src->str, src->len-1);
-	dest->len += src->len-1;
-	*(dest->str+(dest->len-1)) = 0;
+	dest->str = realloc(dest->str, dest->len + src->len - 1);
+	memcpy(dest->str + (dest->len - 1), src->str, src->len - 1);
+	dest->len += src->len - 1;
+	*(dest->str + (dest->len - 1)) = 0;
 	return dest;
 }
 

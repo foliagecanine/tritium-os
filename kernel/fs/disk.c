@@ -13,7 +13,7 @@ typedef struct {
 // Save space for 255 drivers to register. Please don't write more than 255 drivers for accessing storage media...
 disk_handler handlers[255] = {0};
 
-uint8_t register_disk_handler(uint8_t (*read_function)(uint16_t, uint64_t, uint32_t, void*), uint8_t (*write_function)(uint16_t, uint64_t, uint32_t, void*)) {
+uint8_t register_disk_handler(uint8_t (*read_function)(uint16_t, uint64_t, uint32_t, void *), uint8_t (*write_function)(uint16_t, uint64_t, uint32_t, void *)) {
 	for (uint16_t i = 0; i < 255; i++) {
 		if (!handlers[i].used) {
 			handlers[i].used = true;
@@ -34,7 +34,7 @@ void unregister_disk_handler(uint8_t handler_id) {
 }
 
 uint8_t disk_read_sectors(uint32_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
-	uint8_t	handler = (uint8_t)(drive_num >> 16);
+	uint8_t handler = (uint8_t)(drive_num >> 16);
 	if (handler == 255)
 		return 5;
 	if (!handlers[handler].used)
@@ -43,7 +43,7 @@ uint8_t disk_read_sectors(uint32_t drive_num, uint64_t start_sector, uint32_t co
 }
 
 uint8_t disk_write_sectors(uint32_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
-	uint8_t	handler = (uint8_t)(drive_num >> 16);
+	uint8_t handler = (uint8_t)(drive_num >> 16);
 	if (handler == 255)
 		return 5;
 	if (!handlers[handler].used)
