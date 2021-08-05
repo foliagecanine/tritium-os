@@ -19,33 +19,33 @@ bool breakcode = false;
 bool check_command(char* command) {
 	bool cmdAck = false;
 	bool usingNewline = true;
-	
+
 	if (strcmp(command, "help")||strcmp(command, "?")) {
 		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsmnt - list all mounts\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "ver")||strcmp(command, "version")) {
 		printf("TritiumOS Kernel v0.2\n");
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "cls")||strcmp(command,"clear")) {
 		terminal_clear();
 		usingNewline = false;
 		cmdAck=true;
 	}
-	
+
 	/*if (strcmp(command, "gtest")) {
 		graphicstest();
 		for(;;);
 	}*/
-	
+
 	if (strcmp(command, "fsinfo")) {
 		print_fat16_values(0);
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "usb")) {
 		for (uint8_t i = USB_CTRLR_UHCI; i < USB_CTRLR_XHCI+1; i++) {
 			for (uint8_t j = 0; j < USB_MAX_CTRLRS; j++) {
@@ -60,7 +60,7 @@ bool check_command(char* command) {
 							memset(name,0,256);
 							if (devdesc.product_index) {
 								if (!usb_get_str_desc(usbdev,name,devdesc.product_index,0x0409))
-									strcpy(name,"Unknown USB Device");							
+									strcpy(name,"Unknown USB Device");
 							} else
 								strcpy(name,"Unknown USB Device");
 							printf("%s\n",name);
@@ -71,17 +71,17 @@ bool check_command(char* command) {
 		}
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "fdelete")) {
 		printf("Return: %u\n",fdelete("A:/TESTFILE.TXT"));
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "fcreate")) {
 		printf("Return: %u\n",fcreate("A:/TESTFILE.TXT").valid);
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "fwrite")) {
 		printf("Deleting. Return value: %u\n",fdelete("A:/TESTFILE.TXT"));
 		FILE f = fcreate("A:/TESTFILE.TXT");
@@ -96,10 +96,10 @@ bool check_command(char* command) {
 		printf("Return value: %hhu\n",r);
 		cmdAck = true;
 	}
-	
+
 	if (strcmp(command,"lsmnt")) {
 		for (uint8_t i = 0; i < 8; i++) {
-				if (getDiskMount(i).mountEnabled) printf("mnt%$ (%c): %s%$, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", getDiskMount(i).drive, getDiskMount(i).type);
+				if (get_disk_mount(i).mountEnabled) printf("mnt%$ (%c): %s%$, %s\n", i, (const char []){'A','B','C','D','E','F','G','H'}[i], "SATA", get_disk_mount(i).drive, get_disk_mount(i).type);
 		}
 		usingNewline = false;
 		cmdAck=true;
@@ -111,16 +111,16 @@ bool check_command(char* command) {
 		usingNewline = false;
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "pci")) {
 		for (uint16_t i = 0; i < 256; i++) {
 			for (uint8_t j = 0; j < 32; j++) {
-				pci_t pcidevice = getPCIData((uint8_t)i,j,0);
+				pci_t pcidevice = get_pci_data((uint8_t)i,j,0);
 				if (pcidevice.vendorID!=0xFFFF) {
 					printf("PCI %u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
-					if (getPCIData((uint8_t)i,j,1).vendorID!=0xFFFF) {
+					if (get_pci_data((uint8_t)i,j,1).vendorID!=0xFFFF) {
 						for (uint8_t k = 1; k < 8; k++) {
-							pcidevice = getPCIData((uint8_t)i,j,k);
+							pcidevice = get_pci_data((uint8_t)i,j,k);
 							if (pcidevice.vendorID!=0xFFFF)
 								printf("    PCI %u.%u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,k,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
 						}
@@ -130,9 +130,9 @@ bool check_command(char* command) {
 		}
 		cmdAck=true;
 	}
-	
+
 	if (!memcmp(command,"pci-dump ", strlen("pci-dump "))) {
-		pci_t pcidevice = getPCIData(command[9]-'0',command[10]-'0',command[11]-'0');
+		pci_t pcidevice = get_pci_data(command[9]-'0',command[10]-'0',command[11]-'0');
 		uint32_t *dump = (uint32_t *)&pcidevice;
 		for (uint8_t i = 0; i < sizeof(pci_t)/4; i++) {
 			if (i&&!(i%4))
@@ -142,7 +142,7 @@ bool check_command(char* command) {
 		pci_write_config_dword(command[9]-'0',command[10]-'0',command[11]-'0',4,pci_read_config_dword(command[9]-'0',command[10]-'0',command[11]-'0',4)|7); // Enable Bus Mastering, IO space, and Mem IO
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "acpi")) {
 		uint32_t rsdptr = acpi_find_rsdp();
 		printf("ACPI RSD PTR is at %p\n",rsdptr);
@@ -151,17 +151,17 @@ bool check_command(char* command) {
 		acpi_list_tables();
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "shutdown")) {
 		power_shutdown();
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command, "reboot")) {
 		power_reboot();
 		cmdAck=true;
 	}
-	
+
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,5);
 	if (strcmp(commandPart,"mount")) {
@@ -172,7 +172,7 @@ bool check_command(char* command) {
 			for (uint8_t i = 0; i < 9; i++) {
 				if (strcmp(commandPart,possibleValues[i])) {
 					char *statuses[] = {"SUCCESS","INCORRECT_FS_TYPE","DRIVE_IN_USE","UNKNOWN_ERROR"};
-					printf("Mount finished with status: %s\n",statuses[mountDrive(i)]);
+					printf("Mount finished with status: %s\n",statuses[mount_drive(i)]);
 					break;
 				} else if (i==8) {
 					printf("Unknown drive number: %s\n",commandPart);
@@ -183,7 +183,7 @@ bool check_command(char* command) {
 		}
 		cmdAck=true;
 	}
-	
+
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,7);
 	if (strcmp(commandPart,"unmount")||strcmp(commandPart,"umount ")) {
@@ -194,7 +194,7 @@ bool check_command(char* command) {
 			for (uint8_t i = 0; i < 9; i++) {
 				if (strcmp(commandPart,possibleValues[i])) {
 					char *statuses[] = {"SUCCESS","INCORRECT_FS_TYPE","DRIVE_IN_USE","UNKNOWN_ERROR"};
-					printf("Unmount finished with status: %s\n",statuses[unmountDrive(i)]);
+					printf("Unmount finished with status: %s\n",statuses[unmount_drive(i)]);
 					break;
 				} else if (i==8) {
 					printf("Unknown drive number: %s\n",commandPart);
@@ -205,26 +205,26 @@ bool check_command(char* command) {
 		}
 		cmdAck=true;
 	}
-	
+
 	if (strcmp(command,"ls")||strcmp(command,"dir")) {
 		FILE cd =  fopen(currentDirectory, "r");
 		if (!cd.valid) {
-			if (!getDiskMount(cd.mountNumber).mountEnabled)
+			if (!get_disk_mount(cd.mountNumber).mountEnabled)
 				printf("Error: disk 0 not mounted.");
 			else
 				printf("Could not open folder %s for reading.",currentDirectory);
 		} else {
-			FAT12_print_folder((uint32_t)cd.location,(uint32_t)cd.size,getDiskMount(tolower(currentDirectory[0])-'a').drive);
+			FAT12_print_folder((uint32_t)cd.location,(uint32_t)cd.size,get_disk_mount(tolower(currentDirectory[0])-'a').drive);
 		}
 		cmdAck = true;
 	}
-	
+
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,2);
 	if (strcmp(commandPart,"cd")) {
 		memset(commandPart,0,strlen(command)+1);
 		strcut(command,commandPart,3,strlen(command));
-		
+
 		char filename[256];
 		memset(filename,0,256);
 		if (commandPart[1]==':') {
@@ -233,7 +233,7 @@ bool check_command(char* command) {
 			strcpy(filename,currentDirectory);
 			strcpy(filename+strlen(currentDirectory),commandPart);
 		}
-		
+
 		if (filename[strlen(commandPart)-1]!='/') {
 			memset(currentDirectory,0,4096);
 			strcpy(currentDirectory,filename);
@@ -244,7 +244,7 @@ bool check_command(char* command) {
 		}
 		cmdAck = true;
 	}
-	
+
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,4);
 	if (strcmp(commandPart,"cat ")) {
@@ -275,7 +275,7 @@ bool check_command(char* command) {
 		cmdAck = true;
 		usingNewline = false;
 	}
-	
+
 	memset(commandPart,0,strlen(command)+1);
 	strcut(command,commandPart,0,3);
 	if (strcmp(commandPart,"run")) {
@@ -302,7 +302,7 @@ bool check_command(char* command) {
 		usingNewline = false;
 		cmdAck = true;
 	}
-	
+
 	if (strcmp(command, "exit")) {
 		breakcode = true;
 		cmdAck=true;
@@ -324,16 +324,16 @@ void debug_console() {
 	currentDirectory = (char *)alloc_page(1);
 	memset(currentDirectory,0,4096);
 	strcpy(currentDirectory,"A:/");
-	
+
 	char lastCommand[256];
 	uint8_t lastNumChars = 0;
 	memset(lastCommand,0,256);
-	
+
 	char thisCommand[256];
 	uint8_t thisNumChars = 0;
 	memset(thisCommand,0,256);
 
-	
+
 	while (!breakcode) {
 		printf("%s>",currentDirectory);
 		char command[256];
@@ -353,7 +353,7 @@ void debug_console() {
 				numChars = lastNumChars;
 				printf(command);
 			}
-				
+
 			if (k==80) {
 				for (uint8_t i = 0; i < numChars; i++) {
 					terminal_backup();
@@ -364,7 +364,7 @@ void debug_console() {
 				numChars = thisNumChars;
 				printf(command);
 			}
-			
+
 			if (k<128&&numChars<255&&scancode_to_char(k)&&k!=72&&k!=80) {
 				printf("%c",scancode_to_char(k));
 				command[numChars]=scancode_to_char(k);
@@ -379,10 +379,10 @@ void debug_console() {
 			}
 			k = getkey();
 		}
-		
+
 		memcpy(lastCommand,command,256);
 		lastNumChars = numChars;
-		
+
 		printf("\n");
 		check_command(command);
 	}
@@ -457,7 +457,7 @@ void VGA_default_values() {
 	VGAReg.MapMask 					= 0x03C40002;
 	VGAReg.CharacterSelect			= 0x03C40003;
 	VGAReg.SeqMemoryMode			= 0x03C40004;
-	
+
 	//Graphics Controller
 	VGAReg.SetReset 				= 0x03CE0000;
 	VGAReg.EnableSetReset 			= 0x03CE0001;
@@ -466,7 +466,7 @@ void VGA_default_values() {
 	VGAReg.GraphicsMode 			= 0x03CE0005;
 	VGAReg.Misc						= 0x03CE0006;
 	VGAReg.Bitmask 					= 0x03CE0008;
-	
+
 	//CRT Registers
 	VGAReg.HorizontalTotal			= 0x03D40000;
 	VGAReg.EndHorizontalDisplay		= 0x03D40001;
@@ -474,7 +474,7 @@ void VGA_default_values() {
 	VGAReg.EndHorizontalBlanking	= 0x03D40003;
 	VGAReg.StartHorizontalRetrace	= 0x03D40004;
 	VGAReg.EndHorizontalRetrace		= 0x03D40005;
-	
+
 	VGAReg.VerticalTotal			= 0x03D40006;
 	VGAReg.Overflow					= 0x03D40007;
 	VGAReg.PresetRowScan			= 0x03D40008;
@@ -490,7 +490,7 @@ void VGA_default_values() {
 }
 
 uint32_t vga256colors[] = {
-	
+
 };
 
 void color_palette_set(uint8_t id, uint8_t r, uint8_t g, uint8_t b) {
@@ -507,12 +507,12 @@ void switch_plane(uint8_t plane) {
 
 void _300x240x256() {
 	VGA_default_values();
-	
+
 	//Get access to 0xA0000-0xBFFFF (VGA memory)
 	for (uint32_t i = 0xA0000; i < 0xBFFFF; i+=4096) {
 		identity_map((void *)i);
 	}
-	
+
 	//Unlock CRTC registers (disable bit 8)
 	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)&0x7F);
 	//Stop sequencer
@@ -530,7 +530,7 @@ void _300x240x256() {
 	VGA_write_register(VGAReg.MapMask,0x0F);
 	VGA_write_register(VGAReg.CharacterSelect,0x00);
 	VGA_write_register(VGAReg.SeqMemoryMode,0x0E);
-	
+
 	//CRTC Horizontal
 	VGA_write_register(VGAReg.HorizontalTotal,0x5F);
 	VGA_write_register(VGAReg.EndHorizontalDisplay,0x4F);
@@ -539,7 +539,7 @@ void _300x240x256() {
 	VGA_write_register(VGAReg.StartHorizontalRetrace,0x54);
 	VGA_write_register(VGAReg.EndHorizontalRetrace,0x80);
 	VGA_write_register(VGAReg.LogicalWidth,0x28);
-	
+
 	//CRTC Vertical
 	VGA_write_register(VGAReg.VerticalTotal,0xBF);
 	VGA_write_register(VGAReg.Overflow,0x1F);
@@ -552,11 +552,11 @@ void _300x240x256() {
 	VGA_write_register(VGAReg.EndVerticalBlanking,0xB9);
 	VGA_write_register(VGAReg.UnderlineLocation,0x40);
 	VGA_write_register(VGAReg.ModeControl,0xA3);
-	
+
 	//Grapics Controller
 	VGA_write_register(VGAReg.GraphicsMode,0x40);
 	VGA_write_register(VGAReg.Misc,0x05);
-	
+
 	//Attributes Controller
 	//Mode control
 	inb(0x3DA);
@@ -578,11 +578,11 @@ void _300x240x256() {
 	inb(0x3DA);
 	outb(0x3C0,0x14);
 	outb(0x3C0,0x00);
-	
+
 	for (uint16_t i = 0; i < 256; i++) {
 		color_palette_set(i,i+23,i+83,i);
 	}
-	
+
 	//Lock CRTC registers (enable bit 8)
 	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)|0x80);
 	//Enable display
@@ -606,12 +606,12 @@ void _300x240x256() {
 
 /*void _640x480x16() {
 	VGA_default_values();
-	
+
 	//Get access to 0xA0000-0xBFFFF (VGA memory)
 	for (uint32_t i = 0xA0000; i < 0xBFFFF; i+=4096) {
 		identity_map((void *)i);
 	}
-	
+
 	//Unlock CRTC registers (disable bit 8)
 	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)&0x7F);
 	//Stop sequencer
@@ -629,7 +629,7 @@ void _300x240x256() {
 	//VGA_write_register(VGAReg.MapMask,0x0F);
 	VGA_write_register(VGAReg.CharacterSelect,0x00);
 	VGA_write_register(VGAReg.SeqMemoryMode,0x02);
-	
+
 	//CRTC Horizontal
 	VGA_write_register(VGAReg.HorizontalTotal,0x5F);
 	VGA_write_register(VGAReg.EndHorizontalDisplay,0x4F);
@@ -638,7 +638,7 @@ void _300x240x256() {
 	VGA_write_register(VGAReg.StartHorizontalRetrace,0x54);
 	VGA_write_register(VGAReg.EndHorizontalRetrace,0x80);
 	VGA_write_register(VGAReg.LogicalWidth,0x28);
-	
+
 	//CRTC Vertical
 	VGA_write_register(VGAReg.VerticalTotal,0x0B);
 	VGA_write_register(VGAReg.Overflow,0x3E);
@@ -651,11 +651,11 @@ void _300x240x256() {
 	VGA_write_register(VGAReg.EndVerticalBlanking,0x04);
 	VGA_write_register(VGAReg.UnderlineLocation,0x00);
 	VGA_write_register(VGAReg.ModeControl,0xE3);
-	
+
 	//Grapics Controller
 	VGA_write_register(VGAReg.GraphicsMode,0x00);
 	VGA_write_register(VGAReg.Misc,0x05);
-	
+
 	//Attributes Controller
 	//Mode control
 	inb(0x3DA);
@@ -677,11 +677,11 @@ void _300x240x256() {
 	inb(0x3DA);
 	outb(0x3C0,0x14);
 	outb(0x3C0,0x00);
-	
+
 	for (uint16_t i = 0; i < 16; i++) {
 		//color_palette_set(i,i,i,i);
 	}
-	
+
 	//Lock CRTC registers (enable bit 8)
 	VGA_write_register(VGAReg.EndVerticalRetrace,VGA_read_register(VGAReg.EndVerticalRetrace)|0x80);
 	//Enable display
@@ -738,7 +738,7 @@ uint8_t doublebuffer[640*480/2];*/
 	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer+((640*480/32)*2),640*480/8);
 	switch_plane(3);
 	fastmemcpy32((uint32_t *)0xA0000,(uint32_t *)doublebuffer+((640*480/32)*3),640*480/8);
-	
+
 	//memcpy(0xA0000,doublebuffer+(640*480/8),640*480/8);
 	//memcpy(0xA0000,doublebuffer+((640*480/8)*2),640*480/8);
 	//memcpy(0xA0000,doublebuffer+((640*480/8)*3),640*480/8);

@@ -20,7 +20,7 @@ void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 			printf("Detected USB %s Controller on port %X:%X\n", name, i,j);
 		else
 			printf("Detected USB %s Controller on port %X:%X.%u\n", name, i,j,k);
-		
+
 		if (strcmp(name,"UHCI")) {
 			uint8_t rval = init_uhci_ctrlr(pci.BAR4&~3,pci.irq);
 			if (rval) {
@@ -53,14 +53,14 @@ void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass
 void init_usb() {
 	pci_t c_pci;
 	for (uint16_t i = 0; i < 256; i++) {
-		c_pci = getPCIData(i,0,0);
+		c_pci = get_pci_data(i,0,0);
 		if (c_pci.vendorID!=0xFFFF) {
 			for (uint8_t j = 0; j < 32; j++) {
-				c_pci = getPCIData(i,j,0);
+				c_pci = get_pci_data(i,j,0);
 				if (c_pci.vendorID!=0xFFFF) {
 					check_pci(c_pci,i,j,0);
 					for (uint8_t k = 1; k < 8; k++) {
-						pci_t pci = getPCIData(i,j,k);
+						pci_t pci = get_pci_data(i,j,k);
 						if (pci.vendorID!=0xFFFF) {
 							check_pci(pci,i,j,k);
 						}
@@ -105,7 +105,7 @@ void init_usb() {
 //		#   = Controller ID
 //
 //
-//	0x007F	   :  Device ID 
+//	0x007F	   :  Device ID
 //		0-127 = Device ID
 
 
@@ -228,7 +228,7 @@ bool usb_enable_endpoint(uint16_t dev_addr, uint8_t endpoint, uint8_t flags, uin
 	return false;
 }
 
-bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {	
+bool usb_get_desc(uint16_t dev_addr, void *out, usb_setup_pkt setup_pkt_template, uint16_t size) {
 	usb_device *device = usb_device_from_addr(dev_addr);
 	if (device->valid) {
 		switch (device->ctrlr_type) {

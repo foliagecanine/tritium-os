@@ -18,7 +18,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	terminal_initialize();
 	disable_cursor();
 	if (magic!=0x2BADB002) {
-		kerror("ERROR: Multiboot info failed! Bad magic value:"); 
+		kerror("ERROR: Multiboot info failed! Bad magic value:");
 		printf("%lx\n",(uint64_t)magic);
 		abort();
 	}
@@ -38,10 +38,10 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_tasking(1);
 	init_usb();
 	kprint("[KMSG] Kernel initialized successfully");
-	
+
 	//Support up to 8 drives (for now)
 	for (uint8_t i = 0; i < 8; i++) {
-		if (!mountDrive(i)) {
+		if (!mount_drive(i)) {
 			printf("Mounted drive %u\n",i);
 		} else if (i==0) {
 			printf("No valid drive found.\n");
@@ -49,7 +49,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 			for (;;) {
 				sleep(1);
 				int k = getkey();
-				
+
 				if (k==42||k==54||k==170||k==182) {
 					printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
 					debug_console();
@@ -57,24 +57,24 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 			}
 		}
 	}
-	
-	if (strcmp(getDiskMount(0).type,"FAT12"))
-		FAT12_print_folder(((FAT12_MOUNT *)getDiskMount(0).mount)->RootDirectoryOffset*512+1,32,0);
-	
-	if (strcmp(getDiskMount(0).type,"FAT16"))
-		FAT16_print_folder(((FAT16_MOUNT *)getDiskMount(0).mount)->RootDirectoryOffset*512+1,32,0);
-	
+
+	if (strcmp(get_disk_mount(0).type,"FAT12"))
+		FAT12_print_folder(((FAT12_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset*512+1,32,0);
+
+	if (strcmp(get_disk_mount(0).type,"FAT16"))
+		FAT16_print_folder(((FAT16_MOUNT *)get_disk_mount(0).mount)->RootDirectoryOffset*512+1,32,0);
+
 	printf("Press shift key to enter Kernel Debug Console.\n");
 	for (uint16_t i = 0; i < 1000; i++) {
 		sleep(1);
 		int k = getkey();
-		
+
 		if (k==42||k==54||k==170||k==182) {
 			printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
 			debug_console();
 		}
 	}
-		
+
 	FILE prgm = fopen("A:/BIN/GUI.SYS","r");
 	if (prgm.valid) {
 		void *buf = alloc_page((prgm.size/4096)+1);

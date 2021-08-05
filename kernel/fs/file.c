@@ -10,40 +10,40 @@
 // 8+ = Drive error = (error_code - 8) (see ahci.c, ide.c)
 
 FSMOUNT *mounts;
-uint32_t numActiveMounts = 0;
+uint32_t num_active_mounts = 0;
 
 void init_file() {
 	mounts = alloc_page(1);
 	memset(mounts,0,4096);
 }
 
-uint8_t unmountDrive(uint8_t drive) {
-	if (mounts[drive].mountEnabled) {
-		numActiveMounts--;
-		free_page(mounts[drive].mount,1);
+uint8_t unmount_drive(uint32_t mount) {
+	if (mounts[mount].mountEnabled) {
+		num_active_mounts--;
+		free_page(mounts[mount].mount,1);
 	}
 	FSMOUNT newMount;
 	memset(&newMount,0,sizeof(FSMOUNT));
 	newMount.mountEnabled = false;
-	mounts[numActiveMounts] = newMount;
+	mounts[num_active_mounts] = newMount;
 	return SUCCESS;
 }
 
-uint8_t mountDrive(uint8_t drive) {
-	if (detect_fat12(drive)) {
-		FSMOUNT newMount = MountFAT12(drive);
-		if (strcmp(newMount.type,"FAT12")) {
-			mounts[numActiveMounts] = newMount;
-			numActiveMounts++;
+uint8_t mount_drive(uint32_t drive_num) {
+	if (detect_fat12(drive_num)) {
+		FSMOUNT new_mount = MountFAT12(drive_num);
+		if (strcmp(new_mount.type,"FAT12")) {
+			mounts[num_active_mounts] = new_mount;
+			num_active_mounts++;
 			return SUCCESS;
 		} else {
 			return UNKNOWN_ERROR;
 		}
-	} else if (detect_fat16(drive)) {
-		FSMOUNT newMount = MountFAT16(drive);
-		if (strcmp(newMount.type,"FAT16")) {
-			mounts[numActiveMounts] = newMount;
-			numActiveMounts++;
+	} else if (detect_fat16(drive_num)) {
+		FSMOUNT new_mount = MountFAT16(drive_num);
+		if (strcmp(new_mount.type,"FAT16")) {
+			mounts[num_active_mounts] = new_mount;
+			num_active_mounts++;
 			return SUCCESS;
 		} else {
 			return UNKNOWN_ERROR;
@@ -66,14 +66,14 @@ FILE fopen(const char *filename, const char *mode) {
 			char* flongname = (char*) filename+2;
 			if (flongname&&device<9) {
 				if (mounts[device].mountEnabled) {
-					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
+					if (strcmp(mounts[device].type,"FAT12") && detect_fat12(mounts[device].drive)) {
 						FAT12_MOUNT *mnt = (FAT12_MOUNT *)mounts[device].mount;
 						uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
 						uint32_t NRDE = mnt->NumRootDirectoryEntries;
 						FILE retFile = FAT12_fopen(RDO, NRDE, flongname,mounts[device].drive,*mnt,0);
 						retFile.mountNumber = device;
 						return retFile;
-					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
+					} else if (strcmp(mounts[device].type,"FAT16") && detect_fat16(mounts[device].drive)) {
 						FAT16_MOUNT *mnt = (FAT16_MOUNT *)mounts[device].mount;
 						uint32_t RDO = ((mnt->RootDirectoryOffset)*512+1);
 						uint32_t NRDE = mnt->NumRootDirectoryEntries;
@@ -145,7 +145,7 @@ FILE fcreate(char *filename) {
 					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
 						//Notimplemented
 					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
-						retfile = FAT16_fcreate(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);						
+						retfile = FAT16_fcreate(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);
 					}
 				}
 			}
@@ -175,7 +175,7 @@ uint8_t fdelete(char *filename) {
 					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
 						//Notimplemented
 					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
-						return FAT16_fdelete(filename,mounts[device].drive);						
+						return FAT16_fdelete(filename,mounts[device].drive);
 					}
 				}
 			}
@@ -204,7 +204,7 @@ uint8_t ferase(char *filename) {
 					if (strcmp(mounts[device].type,"FAT12")&&detect_fat12(mounts[device].drive)) {
 						//Notimplemented
 					} else if (strcmp(mounts[device].type,"FAT16")&&detect_fat16(mounts[device].drive)) {
-						return FAT16_ferase(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);						
+						return FAT16_ferase(filename,*((FAT16_MOUNT *)mounts[device].mount),mounts[device].drive);
 					}
 				}
 			}
@@ -213,6 +213,6 @@ uint8_t ferase(char *filename) {
 	return UNKNOWN_ERROR;
 }
 
-FSMOUNT getDiskMount(uint8_t drive) {
+FSMOUNT get_disk_mount(uint32_t drive) {
 	return mounts[drive];
 }

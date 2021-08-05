@@ -1,5 +1,15 @@
 #include <fs/disk.h>
 
+/* Error codes:
+ *
+ * 1 : No available slot
+ * 2 : Port hung
+ * 3 : Disk error
+ * 4 : Drive not found
+ */
+
+uint8_t driver_id;
+
 typedef struct {
 	HBAData * abar;
 	HBAPort * port;
@@ -16,24 +26,24 @@ void initialize_port(ahci_port *aport) {
 	HBAPort *port = aport->port;
 	port->cmd &= ~HBA_CMD_ST;
 	port->cmd &= ~HBA_CMD_FRE;
-	
+
 	while((port->cmd & HBA_CMD_FR) || (port->cmd & HBA_CMD_CR))
 		;
-	
+
 	void *mapped_clb = alloc_page(1);
 	memset(mapped_clb,0,4096);
 	port->clb = (uint32_t)get_phys_addr(mapped_clb);
 	port->clbu = 0;
 	aport->clb = mapped_clb;
-	
+
 	void *mapped_fb = alloc_page(1);
 	memset(mapped_fb,0,4096);
 	port->fb = (uint32_t)get_phys_addr(mapped_fb);
 	port->fbu = 0;
 	aport->fb = mapped_fb;
-	
+
 	HBACommandHeader *cmdheader = (HBACommandHeader *)mapped_clb;
-	
+
 	for (uint8_t i=0; i<32; i++) {
 		cmdheader[i].prdtl = 1;
 		void *ctba_buf = calloc_page(1);
@@ -41,7 +51,7 @@ void initialize_port(ahci_port *aport) {
 		cmdheader[i].ctba = (uint32_t)get_phys_addr(ctba_buf);
 		cmdheader[i].ctbau = 0;
 	}
-	
+
 	while (port->cmd & HBA_CMD_CR)
 		;
 	port->cmd |= HBA_CMD_FRE;
@@ -84,70 +94,62 @@ uint32_t find_cmdslot(ahci_port aport) {
 	return 0xFFFFFFFF;
 }
 
-/* Error codes:
- *
- * 1 : No available slot
- * 2 : Port hung
- * 3 : Disk error
- * 4 : Drive not found
- */
-
 uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t starth, uint32_t count, uint8_t *buf) {
 	HBAPort *port = aport.port;
 	port->is = 0xFFFFFFFF;
 	uint32_t slot = find_cmdslot(aport);
 	if (slot==0xFFFFFFFF)
 		return 1;
-	
+
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
 	cmdheader->w = 0;
-	
+
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
-	
+
 	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
 	cmdtable->prdt_entry[0].dbau = 0;
 	cmdtable->prdt_entry[0].dbc = (count * 512) - 1;
 	cmdtable->prdt_entry[0].i = 1;
-	
+
 	FIS_HostToDevice *cmdfis = (FIS_HostToDevice *)(&cmdtable->cfis);
-	
+
 	cmdfis->FIS_Type=0x27; //Host to device
 	cmdfis->c = 1;
 	cmdfis->command = SATA_READ_DMA_EX;
-	
+
 	cmdfis->lba0 = (uint8_t)startl;
 	cmdfis->lba1 = (uint8_t)(startl>>8);
 	cmdfis->lba2 = (uint8_t)(startl>>16);
 	cmdfis->dev = 1<<6;
-	
+
 	cmdfis->lba3 = (uint8_t)(startl>>24);
 	cmdfis->lba4 = (uint8_t)(starth);
 	cmdfis->lba5 = (uint8_t)(starth>>8);
-	
+
 	cmdfis->countl = (count & 0xFF);
 	cmdfis->counth = (count>>8);
-	
+
 	for (uint32_t spin = 0; spin < 1000000; spin++) {
 		if (!(port->tfd & (SATA_BUSY | SATA_DRQ)))
 			break;
 	}
 	if ((port->tfd & (SATA_BUSY | SATA_DRQ)))
 		return 2;
-	
+
 	port->ci = (1<<slot);
-	
+
 	while(1) {
 		if (!(port->ci & (1<<slot)))
 			break;
 		if (port->is & (1<<30))
 			return 3;
 	}
-	
+
 	if (port->is & (1<<30))
 		return 3;
-	
+
 	return 0;
 }
 
@@ -157,60 +159,60 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 	uint32_t slot = find_cmdslot(aport);
 	if (slot==0xFFFFFFFF)
 		return 1;
-	
+
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader+=slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice)/sizeof(uint32_t);
 	cmdheader->w = 1; //We are writing this time
-	
+
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
-	
+
 	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
 	cmdtable->prdt_entry[0].dbau = 0;
 	cmdtable->prdt_entry[0].dbc = (count * 512) - 1;
 	cmdtable->prdt_entry[0].i = 1;
-	
+
 	FIS_HostToDevice *cmdfis = (FIS_HostToDevice *)(&cmdtable->cfis);
-	
+
 	cmdfis->FIS_Type=0x27; //Host to device
 	cmdfis->c = 1;
 	cmdfis->command = SATA_WRITE_DMA_EX;
-	
+
 	cmdfis->lba0 = (uint8_t)startl;
 	cmdfis->lba1 = (uint8_t)(startl>>8);
 	cmdfis->lba2 = (uint8_t)(startl>>16);
 	cmdfis->dev = 1<<6;
-	
+
 	cmdfis->lba3 = (uint8_t)(startl>>24);
 	cmdfis->lba4 = (uint8_t)(starth);
 	cmdfis->lba5 = (uint8_t)(starth>>8);
-	
+
 	cmdfis->countl = (count & 0xFF);
 	cmdfis->counth = (count>>8);
-	
+
 	for (uint32_t spin = 0; spin < 1000000; spin++) {
 		if (!(port->tfd & (SATA_BUSY | SATA_DRQ)))
 			break;
 	}
 	if ((port->tfd & (SATA_BUSY | SATA_DRQ)))
 		return 2;
-	
+
 	port->ci = (1<<slot);
-	
+
 	while(1) {
 		if (!(port->ci & (1<<slot)))
 			break;
 		if (port->is & (1<<30))
 			return 3;
 	}
-	
+
 	if (port->is & (1<<30))
 		return 3;
-	
+
 	return 0;
 }
 
-void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
+void print_pci_data(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 	if (pci.vendorID!=0xFFFF&&pci.classCode==1&&pci.subclass==6) {
 		if (k==0) {
 			printf("Detected SATA Host on port %X:%X\n", i,j);
@@ -227,58 +229,47 @@ void printPCIData(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
 void init_ahci() {
 	ports = alloc_page(16); //256*256 = 65536 bytes, or 16 pages. 256 ports is probably enough
 	kprint("[AHCI] Searching for SATA drives. Details below.");
-	
+
+	driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors);
+
 	pci_t c_pci;
 	for (uint16_t i = 0; i < 256; i++) {
-		c_pci = getPCIData(i,0,0);
+		c_pci = get_pci_data(i,0,0);
 		if (c_pci.vendorID!=0xFFFF) {
 			for (uint8_t j = 0; j < 32; j++) {
-				c_pci = getPCIData(i,j,0);
+				c_pci = get_pci_data(i,j,0);
 				if (c_pci.vendorID!=0xFFFF) {
-					printPCIData(c_pci,i,j,0);
+					print_pci_data(c_pci,i,j,0);
 					for (uint8_t k = 1; k < 8; k++) {
-						pci_t pci = getPCIData(i,j,k);
+						pci_t pci = get_pci_data(i,j,k);
 						if (pci.vendorID!=0xFFFF) {
-							printPCIData(pci,i,j,k);
+							print_pci_data(pci,i,j,k);
 						}
 					}
 				}
 			}
 		}
 	}
+
 	kprint("[INIT] Initialized AHCI driver");
 }
 
-uint8_t ahci_read_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {
+uint8_t ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
 	if (ports[drive_num].abar!=0)
-		return ahci_read_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,1,buf);
+		return ahci_read_sectors_internal(ports[drive_num], start_sector & 0xFFFFFFFF, (start_sector >> 32) & 0xFFFFFFFF, count, buf);
 	else
 		return 4;
 }
 
-uint8_t ahci_read_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf) {
+uint8_t ahci_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
 	if (ports[drive_num].abar!=0)
-		return ahci_read_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,count,buf);
+		return ahci_write_sectors_internal(ports[drive_num], start_sector & 0xFFFFFFFF,(start_sector >> 32) & 0xFFFFFFFF, count, buf);
 	else
 		return 4;
 }
 
-uint8_t ahci_write_sector(uint8_t drive_num,uint64_t startSector,uint8_t *buf) {
-	if (ports[drive_num].abar!=0)
-		return ahci_write_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,1,buf);
-	else
-		return 4;
-}
-
-uint8_t ahci_write_sectors(uint8_t drive_num,uint64_t startSector,uint32_t count,uint8_t *buf) {
-	if (ports[drive_num].abar!=0)
-		return ahci_write_sectors_internal(ports[drive_num],startSector&0xFFFFFFFF,(startSector>>32)&0xFFFFFFFF,count,buf);
-	else
-		return 4;
-}
-
-bool drive_exists(uint8_t drive_num) {
-	return (ports[drive_num].abar!=0);
+bool drive_exists(uint16_t drive_num) {
+	return drive_num < 256 && (ports[drive_num].abar!=0);
 }
 
 void print_sector(uint8_t *read) {

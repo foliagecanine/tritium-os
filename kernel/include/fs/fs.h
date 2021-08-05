@@ -13,7 +13,7 @@
 typedef struct {
 	uint64_t location;
 	uint64_t size;
-	uint8_t mountNumber;
+	uint32_t mountNumber;
 	uint32_t clusterNumber; //For FAT based systems
 	uint64_t dir_entry;
 	uint8_t flags;
@@ -25,7 +25,7 @@ typedef struct {
 
 typedef struct {
 	char type[6];
-	uint8_t drive;
+	uint64_t drive;
 	void *mount;
 	_Bool mountEnabled;
 } FSMOUNT;

@@ -41,6 +41,6 @@ typedef struct {
 	uint8_t maxLatency;
 } __attribute__((packed)) pci_t;
 
-pci_t getPCIData(uint8_t bus, uint8_t num, uint8_t function);
+pci_t get_pci_data(uint8_t bus, uint8_t num, uint8_t function);
 
 #endif
