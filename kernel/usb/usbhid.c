@@ -103,7 +103,7 @@ void usb_keyboard_repeat() {
 uint8_t keyboard_buffer[8];
 
 bool init_hid_kbd(uint16_t dev_addr, usb_config_desc config, usb_interface_desc interface) {
-	printf("Configuring HID Keyboard\n");
+	// printf("Configuring HID Keyboard\n");
 
 	(void)config; // Remove the "unused variable" warning. The function definitions should match this format whether they use the variables or not.
 
@@ -141,7 +141,7 @@ bool init_hid_kbd(uint16_t dev_addr, usb_config_desc config, usb_interface_desc 
 	device->driver2 = dev_kbd;
 	dev_kbd = device;
 
-	printf("Installed HID Keyboard\n");
+	printf("[HID] Installed HID Keyboard\n");
 	return true;
 }
 
@@ -158,7 +158,7 @@ void hid_mouse_irq(uint16_t dev_addr) {
 uint8_t mouse_buffer[4];
 
 bool init_hid_mouse(uint16_t dev_addr, usb_config_desc config, usb_interface_desc interface) {
-	printf("Configuring HID Mouse\n");
+	// printf("Configuring HID Mouse\n");
 
 	(void)config; // Remove the "unused variable" warning. The function definitions should match this format whether they use the variables or not.
 
@@ -194,12 +194,12 @@ bool init_hid_mouse(uint16_t dev_addr, usb_config_desc config, usb_interface_des
 	device->driver1 = mouse_buffer;
 	device->driver0 = usb_create_interval_in(dev_addr, device->driver1, calc_interval(endpoint.interval), endpoint_addr, endpoint.max_pkt_size, 4);
 
-	printf("Installed HID Mouse\n");
+	printf("[HID ] Installed HID Mouse\n");
 	return true;
 }
 
 bool init_hid(uint16_t dev_addr, usb_config_desc config) {
-	printf("Configuring HID device...\n");
+	// printf("Configuring HID device...\n");
 	usb_setup_pkt sp;
 	sp.type = 0;
 	sp.request = 0x09;
@@ -217,7 +217,7 @@ bool init_hid(uint16_t dev_addr, usb_config_desc config) {
 	if (!interface.length)
 		return false;
 
-	printf("Found endpoint!\n");
+	// printf("Found endpoint!\n");
 	if (interface.iprotocol == 1)
 		return init_hid_kbd(dev_addr, config, interface);
 	else if (interface.iprotocol == 2)

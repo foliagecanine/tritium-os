@@ -13,6 +13,11 @@
 multiboot_memory_map_t *mmap;
 multiboot_info_t *      mbi;
 
+void (*init_functions[])(void) = {
+	init_ahci,
+	init_usb
+};
+
 void kernel_main(uint32_t magic, uint32_t ebx) {
 	serial_init();
 	terminal_initialize();
@@ -31,12 +36,14 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	mbi = (multiboot_info_t *)ebx;
 	init_paging(mbi);
 	set_current_heap(heap_create(32));
-	init_ahci();
+	for (size_t i = 0; i < sizeof(init_functions)/sizeof(init_functions[0]); i++) {
+		init_functions[i]();
+	}
+	pci_scan();
 	init_file();
 	init_syscalls();
 	install_tss();
 	init_tasking(1);
-	init_usb();
 	kprint("[KMSG] Kernel initialized successfully");
 
 	// Support up to 8 drives (for now)

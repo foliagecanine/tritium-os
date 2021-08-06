@@ -4,39 +4,6 @@ char name[5];
 
 uint8_t ctrlrcounts[4] = {0, 0, 0, 0};
 
-void check_pci(pci_t pci, uint16_t i, uint8_t j, uint8_t k) {
-	if (pci.vendorID != 0xFFFF && pci.classCode == 0xC && pci.subclass == 3) {
-		if (pci.progIF == 0x00)
-			strcpy(name, "UHCI");
-		else if (pci.progIF == 0x10)
-			strcpy(name, "OHCI");
-		else if (pci.progIF == 0x20)
-			strcpy(name, "EHCI");
-		else if (pci.progIF == 0x30)
-			strcpy(name, "xHCI");
-		else
-			strcpy(name, "ERR!");
-		if (k == 0)
-			printf("Detected USB %s Controller on port %X:%X\n", name, i, j);
-		else
-			printf("Detected USB %s Controller on port %X:%X.%u\n", name, i, j, k);
-
-		if (strcmp(name, "UHCI")) {
-			uint8_t rval = init_uhci_ctrlr(pci.BAR4 & ~3, pci.irq);
-			if (rval) {
-				printf("Initialized UHCI controller ID %u with %u ports IRQ %u.\n", (uint8_t)rval - 1, get_uhci_controller(rval - 1)->num_ports, pci.irq);
-				ctrlrcounts[0]++;
-			}
-		} else if (strcmp(name, "xHCI")) {
-			uint8_t rval = init_xhci_ctrlr((void *)(pci.BAR0 & ~15), pci.irq);
-			if (rval) {
-				printf("Initialized xHCI controller ID %u with %u ports IRQ %u.\n", (uint8_t)rval - 1, get_xhci_controller(rval - 1)->num_ports, pci.irq);
-				ctrlrcounts[3]++;
-			}
-		}
-	}
-}
-
 void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass, uint8_t protocol) {
 	(void)subclass; // These two will be used later when we get more drivers
 	(void)protocol;
@@ -50,46 +17,70 @@ void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass
 		printf("No driver for class %u subclass %u protocol %u\n");
 }
 
+void check_pci(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
+	(void)i;
+	(void)j;
+	(void)k;
+	if (pci.vendorID != 0xFFFF && pci.class == 0xC && pci.subclass == 3) {
+		if (pci.progIF == 0x00)
+			strcpy(name, "UHCI");
+		else if (pci.progIF == 0x10)
+			strcpy(name, "OHCI");
+		else if (pci.progIF == 0x20)
+			strcpy(name, "EHCI");
+		else if (pci.progIF == 0x30)
+			strcpy(name, "xHCI");
+		else
+			strcpy(name, "ERR!");
+
+		/*if (k == 0)
+		  printf("Detected USB %s Controller on port %X:%X\n", name, i, j);
+		else
+		  printf("Detected USB %s Controller on port %X:%X.%u\n", name, i, j, k);*/
+
+		uint8_t rval = 0;
+		uint8_t ctype;
+
+		if (strcmp(name, "UHCI")) {
+			ctype = USB_CTRLR_UHCI;
+			rval = init_uhci_ctrlr(pci.BAR4 & ~3, pci.irq);
+			if (rval) {
+				printf("[USB ] Initialized UHCI controller ID %u with %u ports IRQ %u.\n", (uint8_t)rval - 1, get_uhci_controller(rval - 1)->num_ports, pci.irq);
+				ctrlrcounts[USB_CTRLR_UHCI]++;
+			}
+		} else if (strcmp(name, "xHCI")) {
+			ctype = USB_CTRLR_XHCI;
+			rval = init_xhci_ctrlr((void *)(pci.BAR0 & ~15), pci.irq);
+			if (rval) {
+				printf("[USB ] Initialized xHCI controller ID %u with %u ports IRQ %u.\n", (uint8_t)rval - 1, get_xhci_controller(rval - 1)->num_ports, pci.irq);
+				ctrlrcounts[USB_CTRLR_XHCI]++;
+			}
+		}
+
+		if (!rval)
+			return;
+
+		for (uint8_t dev_num = 1; dev_num < 128; dev_num++) {
+			uint16_t devaddr = usb_dev_addr(ctype, ctrlrcounts[ctype] - 1, dev_num);
+			if (!usb_device_from_addr(devaddr)->valid)
+				continue;
+			usb_dev_desc devdesc = usb_get_dev_desc(devaddr);
+			if (!devdesc.length)
+				continue;
+			if (devdesc.dev_class) {
+				usb_get_driver_for_class(devaddr, devdesc.dev_class, devdesc.dev_subclass, devdesc.dev_protocol);
+			} else {
+				usb_interface_desc interface = usb_get_interface_desc(devaddr, 0, 0);
+				if (!interface.length)
+					continue;
+				usb_get_driver_for_class(devaddr, interface.iclass, interface.isubclass, interface.iprotocol);
+			}
+		}
+	}
+}
+
 void init_usb() {
-	pci_t c_pci;
-	for (uint16_t i = 0; i < 256; i++) {
-		c_pci = get_pci_data(i, 0, 0);
-		if (c_pci.vendorID != 0xFFFF) {
-			for (uint8_t j = 0; j < 32; j++) {
-				c_pci = get_pci_data(i, j, 0);
-				if (c_pci.vendorID != 0xFFFF) {
-					check_pci(c_pci, i, j, 0);
-					for (uint8_t k = 1; k < 8; k++) {
-						pci_t pci = get_pci_data(i, j, k);
-						if (pci.vendorID != 0xFFFF) {
-							check_pci(pci, i, j, k);
-						}
-					}
-				}
-			}
-		}
-	}
-	kprint("[USB ] Assigning drivers to devices...");
-	for (uint8_t ctype = 0; ctype < USB_CTRLR_XHCI + 1; ctype++) {
-		for (uint8_t cid = 0; cid <= ctrlrcounts[ctype]; cid++) {
-			for (uint8_t dev_num = 1; dev_num < 128; dev_num++) {
-				uint16_t devaddr = usb_dev_addr(ctype, cid, dev_num);
-				if (!usb_device_from_addr(devaddr)->valid)
-					continue;
-				usb_dev_desc devdesc = usb_get_dev_desc(devaddr);
-				if (!devdesc.length)
-					continue;
-				if (devdesc.dev_class) {
-					usb_get_driver_for_class(devaddr, devdesc.dev_class, devdesc.dev_subclass, devdesc.dev_protocol);
-				} else {
-					usb_interface_desc interface = usb_get_interface_desc(devaddr, 0, 0);
-					if (!interface.length)
-						continue;
-					usb_get_driver_for_class(devaddr, interface.iclass, interface.isubclass, interface.iprotocol);
-				}
-			}
-		}
-	}
+	register_pci_driver(check_pci, 0xC, 3);
 	kprint("[INIT] Initialized USB driver");
 }
 

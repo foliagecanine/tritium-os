@@ -1,20 +1,21 @@
 #ifndef FS_AHCI_H
 #define FS_AHCI_H
 
-#include <kernel/stdio.h>
-#include <kernel/pci.h>
 #include <kernel/idt.h>
 #include <kernel/mem.h>
+#include <kernel/pci.h>
+#include <kernel/stdio.h>
 
 #define HBA_DET_PRESENT 	3
 #define HBA_IPM_ACTIVE 		1
 #define SATA_READ_DMA_EX 	0x25
-#define SATA_WRITE_DMA_EX   0x35
-#define HBA_CMD_CR    		(1<<15)
-#define HBA_CMD_FR    		(1<<14)
-#define HBA_CMD_FRE   		(1<<4)
-#define HBA_CMD_SUD   		(1<<1)
-#define HBA_CMD_ST    		(1)
+#define SATA_WRITE_DMA_EX 	0x35
+#define SATA_IDENTIFY_DEVICE 0xEC
+#define HBA_CMD_CR 			(1 << 15)
+#define HBA_CMD_FR 			(1 << 14)
+#define HBA_CMD_FRE 		(1 << 4)
+#define HBA_CMD_SUD 		(1 << 1)
+#define HBA_CMD_ST 			(1)
 #define SATA_BUSY 			0x80
 #define SATA_DRQ 			0x08
 
@@ -63,9 +64,9 @@ typedef volatile struct {
 typedef struct {
 	uint8_t FIS_Type;
 
-	uint8_t pmport:4;
-	uint8_t reserved0:3;
-	uint8_t c:1;
+	uint8_t pmport : 4;
+	uint8_t reserved0 : 3;
+	uint8_t c : 1;
 
 	uint8_t command;
 	uint8_t feature_low;
@@ -91,10 +92,10 @@ typedef struct {
 typedef struct {
 	uint8_t fis_type;
 
-	uint8_t portmul:4;
-	uint8_t reserved0:2;
-	uint8_t interrupt_bit:1;
-	uint8_t reserved1:1;
+	uint8_t portmul : 4;
+	uint8_t reserved0 : 2;
+	uint8_t interrupt_bit : 1;
+	uint8_t reserved1 : 1;
 
 	uint8_t status_reg;
 	uint8_t error_reg;
@@ -109,8 +110,8 @@ typedef struct {
 	uint8_t lba5;
 	uint8_t reserved2;
 
-	uint8_t count_low;
-	uint8_t count_high;
+	uint8_t  count_low;
+	uint8_t  count_high;
 	uint16_t reserved3;
 
 	uint32_t reserved4;
@@ -119,8 +120,8 @@ typedef struct {
 typedef struct {
 	uint8_t fis_type;
 
-	uint8_t portmul:4;
-	uint8_t reserved0:4;
+	uint8_t  portmul : 4;
+	uint8_t  reserved0 : 4;
 	uint16_t reserved1;
 
 	uint32_t data[1];
@@ -129,11 +130,11 @@ typedef struct {
 typedef struct {
 	uint8_t fis_type;
 
-	uint8_t portmul:4;
-	uint8_t reserved0:1;
-	uint8_t data_direction:1;
-	uint8_t interrupt_bit:1;
-	uint8_t reserved1:1;
+	uint8_t portmul : 4;
+	uint8_t reserved0 : 1;
+	uint8_t data_direction : 1;
+	uint8_t interrupt_bit : 1;
+	uint8_t reserved1 : 1;
 
 	uint8_t status_reg;
 	uint8_t error_reg;
@@ -158,15 +159,15 @@ typedef struct {
 } FIS_PIO_Setup;
 
 typedef struct {
-	uint8_t  fis_type;
+	uint8_t fis_type;
 
-	uint8_t  portmul:4;
-	uint8_t  reserved0:1;
-	uint8_t  d:1;
-	uint8_t  i:1;
-	uint8_t  a:1;
+	uint8_t portmul : 4;
+	uint8_t reserved0 : 1;
+	uint8_t d : 1;
+	uint8_t i : 1;
+	uint8_t a : 1;
 
-	uint8_t  reserved1;
+	uint8_t reserved1;
 
 	uint64_t DMA_buffer_id;
 
@@ -181,14 +182,14 @@ typedef struct {
 } FIS_DMA_Setup;
 
 typedef volatile struct {
-	FIS_DMA_Setup	DMASetup;
-	uint8_t pad0[4];
+	FIS_DMA_Setup DMASetup;
+	uint8_t       pad0[4];
 
-	FIS_PIO_Setup	PIOSetup;
-	uint8_t pad1[12];
+	FIS_PIO_Setup PIOSetup;
+	uint8_t       pad1[12];
 
-	FIS_DeviceToHost	RegDeviceToHost;
-	uint8_t pad2[4];
+	FIS_DeviceToHost RegDeviceToHost;
+	uint8_t          pad2[4];
 
 	uint16_t dev_bits;
 
@@ -198,15 +199,15 @@ typedef volatile struct {
 } HBA_FIS;
 
 typedef struct {
-	uint8_t cfl:5;
-	uint8_t a:1;
-	uint8_t w:1;
-	uint8_t p:1;
-	uint8_t r:1;
-	uint8_t b:1;
-	uint8_t c:1;
-	uint8_t reserved0:1;
-	uint8_t pmp:4;
+	uint8_t cfl : 5;
+	uint8_t a : 1;
+	uint8_t w : 1;
+	uint8_t p : 1;
+	uint8_t r : 1;
+	uint8_t b : 1;
+	uint8_t c : 1;
+	uint8_t reserved0 : 1;
+	uint8_t pmp : 4;
 
 	uint16_t prdtl;
 
@@ -223,25 +224,66 @@ typedef struct {
 	uint32_t dbau;
 	uint32_t reserved0;
 
-	uint32_t dbc:22;
-	uint32_t reserved1:9;
-	uint32_t i:1;
+	uint32_t dbc : 22;
+	uint32_t reserved1 : 9;
+	uint32_t i : 1;
 } HBAPhysRegionDT;
 
 typedef struct {
-	uint8_t  cfis[64];
+	uint8_t cfis[64];
 
-	uint8_t  acmd[16];
+	uint8_t acmd[16];
 
-	uint8_t  res0[48];
+	uint8_t res0[48];
 
 	HBAPhysRegionDT prdt_entry[1];
 } HBACommandTable;
 
-void init_ahci();
+typedef struct {
+	uint16_t gen_cfg;
+	uint16_t unused0[9];
+	char serial_number[20];
+	uint16_t unused1[3];
+	char firmware_rev[8];
+	char model_number[40];
+	uint16_t sectors_per_int;
+	uint16_t reserved0;
+	uint16_t capabilities[2];
+	uint16_t unused2[2];
+	uint16_t valid_values;
+	uint16_t unused3[5];
+	uint16_t multi_sector;
+	uint32_t user_addressable_sectors;
+	uint16_t unused4[13];
+	uint16_t max_queue_depth;
+	uint64_t reserved1;
+	uint16_t major_version;
+	uint16_t minor_version;
+	uint32_t command_sets_supported;
+	uint16_t command_extension_supported;
+	uint32_t command_sets_enabled;
+	uint16_t command_set_default;
+	uint16_t ultra_dma;
+	uint16_t security_erase_time;
+	uint16_t e_security_erase_time;
+	uint16_t power_mgmt_val;
+	uint16_t master_password_rev;
+	uint16_t hw_reset_result;
+	uint16_t acoustic_mgmt;
+	uint16_t streaming[5];
+	uint64_t total_sectors;
+	uint32_t unused5;
+	uint16_t logical_sector_size;
+	uint16_t unused6[10];
+	uint32_t words_per_logical_sector;
+	uint16_t unused7[136];
+	uint16_t checksum;
+} __attribute__((packed)) sata_identify_packet;
+
+void    init_ahci();
 uint8_t ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
 uint8_t ahci_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
-_Bool drive_exists(uint16_t drive_num);
-void print_sector(uint8_t *read);
+_Bool   drive_exists(uint16_t drive_num);
+void    print_sector(uint8_t *read);
 
 #endif

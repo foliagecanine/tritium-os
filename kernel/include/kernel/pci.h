@@ -3,11 +3,6 @@
 
 #include <kernel/stdio.h>
 
-uint32_t pci_read_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
-uint16_t pci_read_config_word(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
-void pci_write_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint32_t value);
-void pci_write_config_byte(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint8_t value);
-
 typedef struct {
 	uint16_t vendorID;
 	uint16_t deviceID;
@@ -16,7 +11,7 @@ typedef struct {
 	uint8_t revisionID;
 	uint8_t progIF;
 	uint8_t subclass;
-	uint8_t classCode;
+	uint8_t class;
 	uint8_t cacheLineSize;
 	uint8_t latencyTimer;
 	uint8_t headerType;
@@ -41,6 +36,12 @@ typedef struct {
 	uint8_t maxLatency;
 } __attribute__((packed)) pci_t;
 
+bool register_pci_driver(void (*pci_function)(pci_t, uint8_t, uint8_t, uint8_t), uint8_t class, uint8_t subclass);
+uint32_t pci_read_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
+uint16_t pci_read_config_word(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset);
+void pci_write_config_dword(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint32_t value);
+void pci_write_config_byte(uint8_t bus,uint8_t num, uint8_t function, uint8_t offset, uint8_t value);
 pci_t get_pci_data(uint8_t bus, uint8_t num, uint8_t function);
+void pci_scan();
 
 #endif

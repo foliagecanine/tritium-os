@@ -117,12 +117,12 @@ bool check_command(char* command) {
 			for (uint8_t j = 0; j < 32; j++) {
 				pci_t pcidevice = get_pci_data((uint8_t)i,j,0);
 				if (pcidevice.vendorID!=0xFFFF) {
-					printf("PCI %u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
+					printf("PCI %u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,pcidevice.vendorID,pcidevice.deviceID,pcidevice.class,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
 					if (get_pci_data((uint8_t)i,j,1).vendorID!=0xFFFF) {
 						for (uint8_t k = 1; k < 8; k++) {
 							pcidevice = get_pci_data((uint8_t)i,j,k);
 							if (pcidevice.vendorID!=0xFFFF)
-								printf("    PCI %u.%u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,k,pcidevice.vendorID,pcidevice.deviceID,pcidevice.classCode,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
+								printf("    PCI %u.%u.%u: V%X D%X Class %X Subclass %X PIF %X IRQ %u\n",i,j,k,pcidevice.vendorID,pcidevice.deviceID,pcidevice.class,pcidevice.subclass,pcidevice.progIF,pcidevice.irq);
 						}
 					}
 				}
