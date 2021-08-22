@@ -5,6 +5,7 @@
 #include <kernel/idt.h>
 #include <kernel/sysfunc.h>
 #include <kernel/graphics.h>
+#include <kernel/ipc.h>
 
 void init_syscalls();
 

@@ -259,8 +259,7 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
 	}
 
 	char shortfn[12];
-	LongToShortFilename(searchname,
-	                    shortfn); // Get the 8.3 name of the file/folder we are looking for
+	LongToShortFilename(searchname, shortfn); // Get the 8.3 name of the file/folder we are looking for
 
 	// If we added a /, don't bother looking for NULL. Instead, return our current
 	// location.

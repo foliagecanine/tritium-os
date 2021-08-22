@@ -3,4 +3,6 @@
 
 #include <kernel/stdio.h>
 
+void init_ide(void);
+
 #endif

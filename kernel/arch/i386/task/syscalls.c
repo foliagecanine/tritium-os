@@ -1,8 +1,7 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	28
+#define NUM_SYSCALLS	38
 
-extern void start_program(char *name);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
@@ -14,6 +13,10 @@ void debug_break();
 void *map_mem(void *address);
 uint32_t graphics_function(uint8_t function, uint32_t param1, uint32_t param2, uint32_t param3);
 void null_function();
+bool safe_dereg_ipc_port(uint16_t port);
+size_t safe_receive_ipc_size(uint16_t port);
+uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size);
+uint8_t safe_receive_ipc(uint16_t port, void *data);
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -43,7 +46,17 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&get_ticks,				// 24
 	&fork_process,			// 25
 	&map_mem,				// 26
-	&graphics_function		// 27
+	&graphics_function,		// 27
+	&register_ipc_port,		// 28
+	&safe_dereg_ipc_port, 	// 29
+	&safe_receive_ipc_size,	// 30
+	&safe_transfer_ipc,		// 31
+	&safe_receive_ipc,		// 32
+	&waitipc,				// 33
+	&null_function,			// 34 (reserved for future IPC-related functions)
+	&null_function,			// 35 (reserved for future IPC-related functions)
+	&null_function,			// 36 (reserved for future IPC-related functions)
+	&null_function			// 37 (reserved for future IPC-related functions)
 };
 
 extern bool ts_enabled;
@@ -66,17 +79,17 @@ void run_syscall() {
 	asm("movl %%edi,%0" : "=m"(edi));
 	asm("movl %%ebp,%0" : "=m"(ebp));
 	asm("movl %%esp,%0" : "=m"(esp));
-	
+
 	if (syscall_num>=NUM_SYSCALLS) {
 		ts_enabled = true;
 		return; //We don't want to accidentally give them kernel mode access, do we?
 	}
-	
+
 	if (syscall_num==23)
 		asm("nop");
-	
+
 	void *function = syscalls[syscall_num];
-	
+
 	int retval;
 	ts_enabled = true;
 	//Call the function
@@ -207,7 +220,27 @@ uint32_t graphics_function(uint8_t function, uint32_t param1, uint32_t param2, u
 		default:
 			return 0;
 	}
-	
+
+}
+
+bool safe_dereg_ipc_port(uint16_t port) {
+	return deregister_ipc_port(port, false);
+}
+
+size_t safe_receive_ipc_size(uint16_t port) {
+	return receive_ipc_size(port, false);
+}
+
+uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size) {
+	if (!check_range(data, size))
+		return 4; // BAD_INPUT
+	return transfer_ipc(port, data, size);
+}
+
+uint8_t safe_receive_ipc(uint16_t port, void *data) {
+	if (!check_range(data, receive_ipc_size(port, true)))
+		return 4; // BAD_INPUT
+	return receive_ipc(port, data);
 }
 
 void null_function() {

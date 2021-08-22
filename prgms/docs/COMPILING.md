@@ -7,20 +7,20 @@ Welcome to COMPILING.MD. Here you will find how to compile programs for TritiumO
 For assembly programs
  - NASM, GAS, or other assembler for x86  
  - i686-tritium-ld (or equivelant, untested)
- 
+
 For C programs
  - i686-tritium-gcc compiler (May work with other compilers such as clang, but untested)
  - i686-tritium-ld (or equivelant, untested)
  - GNU Make (recommended)
- 
+
 ### Compiling Assembly
 For assembly programs, simply write the code as you would.
-Compile it with (NASM): 
+Compile it with (NASM):
 ```bash
 nasm -felf32 input.asm
 i686-tritium-ld input.o -o OUTPUT.PRG
 ```
-  
+
 ### Compiling C
 It is recommended to use a program like GNU Make for automation of the compilation.  
 
@@ -188,7 +188,7 @@ edx = char *mode	  : Mode; currently is only "r" or "w"
 Return:
 FILE f will be the resulting file. See kernel/include/fs/fs.h for information on the file structure.
 
-Open a file. 
+Open a file.
 ```
 
 ```C
@@ -202,7 +202,7 @@ edi = uint32_t lenl	  : Length of read. Can only read a buffer up to 4 GiB at a 
 Return:
 al = return value. See kernel/arch/i386/file.c for details on return values.
 
-Read bytes from a file. 
+Read bytes from a file.
 ```
 
 ```C
@@ -216,7 +216,7 @@ edi = uint32_t lenl	  : Length of write. Can only write a buffer up to 4 GiB at 
 Return:
 al = return value. See kernel/arch/i386/file.c for details on return values.
 
-Write bytes from a file. 
+Write bytes from a file.
 ```
 
 ```C
@@ -261,7 +261,7 @@ Return:
 buf will contain the name of the file.
 FILE o will be the resulting file. See kernel/include/fs/fs.h for information on the file structure.
 
-Read a file from a directory entry. 
+Read a file from a directory entry.
 ```
 
 ```C
@@ -276,6 +276,7 @@ Return:
 eax = return value of ticks (low 32 bits).
 edx = return value of ticks (high 32 bits)?
 
+Get the number of 1ms ticks since startup
 ```
 
 ```C
@@ -283,4 +284,15 @@ int 0x80, eax=25: fork
 Return:
 eax = pid of new process, or 0 for child
 
+Fork the current process into a new process with its own PID
+```
+
+```C
+int 0x80, eax=26: map_mem
+Arguments:
+ebx = void * address	: Address to add a page (4KiB) of memory at
+Return:
+eax = address of memory, 0 if error
+
+Map a page of memory for the process to use
 ```

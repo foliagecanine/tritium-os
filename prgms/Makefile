@@ -12,6 +12,8 @@ KEYREAD.PRG \
 FORK.PRG \
 ASM.PRG \
 GM.SYS \
+WM.PRG \
+IPCTEST.PRG \
 
 all: $(PRGMS)
 
