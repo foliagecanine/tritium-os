@@ -3,7 +3,7 @@
 myos.iso: 
 	./scripts/iso.sh
 
-run: myos.iso
+run: 
 	./scripts/ahci-qemu.sh exampledisk.img
 
 all: myos.iso

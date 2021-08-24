@@ -2,6 +2,7 @@
 
 #define NUM_SYSCALLS	38
 
+uint32_t get_input_data(uint8_t input);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
@@ -24,7 +25,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&exit_program,			// 2
 	&terminal_putentryat,	// 3
 	&getchar,				// 4
-	&get_kbddata,			// 5
+	&get_input_data,		// 5
 	&yield,					// 6
 	&getpid,				// 7
 	&free_pages,			// 8
@@ -132,6 +133,23 @@ bool check_range(void *addr, uint32_t size) {
 		}
 	}
 	return true;
+}
+
+uint32_t get_input_data(uint8_t input) {
+	switch(input) {
+		case 0:
+			return get_kbddata();
+		case 1:
+			return get_mousedataX();
+		case 2:
+			return get_mousedataY();
+		case 3:
+			return get_mousedataZ();
+		case 4:
+			return get_mousedataB();
+		default:
+			return 0;
+	}
 }
 
 void fopen_usermode(FILE *f, const char* filename, const char* mode) {

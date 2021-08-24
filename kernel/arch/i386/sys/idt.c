@@ -79,10 +79,10 @@ void init_idt() {
     uint32_t irq13_addr;
     uint32_t irq14_addr;
     uint32_t irq15_addr;
-	
+
 	uint32_t idt_addr;
 	uint32_t idt_ptr[2];
-	
+
 	//Remap the PIC
 	outb(0x20, 0x11);
 	outb(0xA0, 0x11);
@@ -94,69 +94,69 @@ void init_idt() {
 	outb(0xA1, 0x01);
 	outb(0x21, 0x0);
 	outb(0xA1, 0x0);
-	
+
 	//Initialize all interrupts with default handler
 	uint32_t default_handler_addr = (uint32_t)default_handler;
 	for (uint16_t i = 0; i < 16; i++) {
 		set_idt_values(i,default_handler_addr);
 	}
-	
+
 	irq0_addr = (uint32_t) irq0;
 	set_idt_values(32,irq0_addr);
-	
+
 	irq1_addr = (uint32_t) irq1;
 	set_idt_values(33,irq1_addr);
-	
+
 	irq2_addr = (uint32_t) irq2;
 	set_idt_values(34,irq2_addr);
-	
+
 	irq3_addr = (uint32_t) irq3;
 	set_idt_values(35,irq3_addr);
-	
+
 	irq4_addr = (uint32_t) irq4;
 	set_idt_values(36,irq4_addr);
-	
+
 	irq5_addr = (uint32_t) irq5;
 	set_idt_values(37,irq5_addr);
-	
+
 	irq6_addr = (uint32_t) irq6;
 	set_idt_values(38,irq6_addr);
-	
+
 	irq7_addr = (uint32_t) irq7;
 	set_idt_values(39,irq7_addr);
-	
+
 	irq8_addr = (uint32_t) irq8;
 	set_idt_values(40,irq8_addr);
-	
+
 	irq9_addr = (uint32_t) irq9;
 	set_idt_values(41,irq9_addr);
-	
+
 	irq10_addr = (uint32_t) irq10;
 	set_idt_values(42,irq10_addr);
-	
+
 	irq11_addr = (uint32_t) irq11;
 	set_idt_values(43,irq11_addr);
-	
+
 	irq12_addr = (uint32_t) irq12;
 	set_idt_values(44,irq12_addr);
-	
+
 	irq13_addr = (uint32_t) irq13;
 	set_idt_values(45,irq13_addr);
-	
+
 	irq14_addr = (uint32_t) irq14;
 	set_idt_values(46,irq14_addr);
-	
+
 	irq15_addr = (uint32_t) irq15;
 	set_idt_values(47,irq15_addr);
-	
+
 	init_exceptions();
-	
+
 	idt_addr = (uint32_t)IDT;
 	idt_ptr[0] = (sizeof (struct IDT_entry_t) * 256) + ((idt_addr & 0xffff) << 16);
 	idt_ptr[1] = idt_addr >> 16;
-	
+
 	load_idt(idt_ptr);
-	
+
 	kprint("[INIT] IDT Enabled");
 }
 
@@ -202,100 +202,100 @@ _Bool ts_enabled = false;
 tss_entry_t temp_tss;
 
 void irq0_handler(void) {
-	outb(0x20, 0x20); //EOI
 	if (ts_enabled)
 		asm("nop"); //Debug breakpoint
 	pit_tick();
 	usb_keyboard_repeat();
+	execute_irq(0);
+	outb(0x20, 0x20); //EOI early since task switching returns on its own
 	if (ts_enabled&&!(get_ticks()%10))
 		task_switch(temp_tss);
-	execute_irq(0);
 }
- 
+
 void irq1_handler(void) {
-	outb(0x20, 0x20); //EOI
 	kbd_handler();
 	execute_irq(1);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq2_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(2);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq3_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(3);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq4_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(4);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq5_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(5);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq6_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(6);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq7_handler(void) {
-	outb(0x20, 0x20); //EOI
 	execute_irq(7);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq8_handler(void) {
-	outb(0xA0, 0x20);
-	outb(0x20, 0x20); //EOI          
 	execute_irq(8);
+	outb(0xA0, 0x20);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq9_handler(void) {
-	outb(0xA0, 0x20);
-	outb(0x20, 0x20); //EOI
 	execute_irq(9);
+	outb(0xA0, 0x20);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq10_handler(void) {
-	outb(0xA0, 0x20);
-	outb(0x20, 0x20); //EOI
 	execute_irq(10);
-}
- 
-void irq11_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+}
+
+void irq11_handler(void) {
 	execute_irq(11);
+	outb(0xA0, 0x20);
+	outb(0x20, 0x20); //EOI
 }
 
 void irq12_handler(void) {
-	outb(0xA0, 0x20);
-	outb(0x20, 0x20); //EOI
 	mouse_handler();
 	execute_irq(12);
-}
- 
-void irq13_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+}
+
+void irq13_handler(void) {
 	kerror("[Exception.Interrupt] FPU Error Interrupt!");
 	execute_irq(13);
+	outb(0xA0, 0x20);
+	outb(0x20, 0x20); //EOI
 }
- 
+
 void irq14_handler(void) {
-	outb(0xA0, 0x20);
-	outb(0x20, 0x20); //EOI
 	execute_irq(14);
-}
- 
-void irq15_handler(void) {
 	outb(0xA0, 0x20);
 	outb(0x20, 0x20); //EOI
+}
+
+void irq15_handler(void) {
 	execute_irq(15);
+	outb(0xA0, 0x20);
+	outb(0x20, 0x20); //EOI
 }
 
 void enable_tasking() {

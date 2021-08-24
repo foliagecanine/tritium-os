@@ -2,48 +2,10 @@
 
 uint8_t mouse_cycle = 0;
 int8_t pkt[3];
-uint32_t max_width = 1024;
-uint32_t max_height = 768;
-uint32_t x = ((uint32_t)-1)/4;
-uint32_t y = ((uint32_t)-1)/4;
-uint8_t buttons = 0;
 
-void mouse_set_resolution(uint32_t width, uint32_t height) {
-	max_width = width;
-	x=0;
-	max_height = height;
-	y=0;
-}
-
-uint32_t mouse_getx() {
-	return x;
-}
-
-uint32_t mouse_gety() {
-	return y;
-}
-
-uint8_t mouse_getbuttons() {
-	return buttons;
-}
-
-void mouse_set_override(uint32_t _x, uint32_t _y) {
-	x = _x;
-	if (x>max_width-1)
-		x = max_width-1;
-	if (_x>((uint32_t)-1)/2)
-		x = 0;
-	y = _y;
-	if (y>max_height-1)
-		y = max_height-1;
-	if (_y>((uint32_t)-1)/2)
-		y = 0;
-}
-
-void mouse_buttons_override(uint8_t _buttons) {
-	buttons = _buttons;
-	dprintf("Mouse X: %$, Mouse Y: %$, Buttons: %#\n",x,y,(uint64_t)buttons);
-}
+int mouse_delta_x;
+int mouse_delta_y;
+uint8_t buttons;
 
 //Mouse functions
 void mouse_handler()
@@ -52,6 +14,8 @@ void mouse_handler()
 	{
 		case 0:
 			pkt[0] = inb(0x60);
+			if ((pkt[0] & 0b00001000) == 0) // Occasionally the packets get out of order. Make sure packet 0 is valid.
+				break;
 			mouse_cycle++;
 			break;
 		case 1:
@@ -60,27 +24,20 @@ void mouse_handler()
 			break;
 		case 2:
 			pkt[2] = inb(0x60);
-			if (-pkt[0]>(int64_t)x)
-				x = 0;
-			else if (pkt[0]+x>max_width-1)
-				x = max_width-1;
-			else
-				x += pkt[0];
-			pkt[1] = -pkt[1];
-			if (-pkt[1]>(int64_t)y)
-				y = 0;
-			else if (pkt[1]+y>max_height-1)
-				y = max_height-1;
-			else
-				y += pkt[1];
-			buttons = pkt[2];
 			mouse_cycle=0;
-			//printf("X: %$ Y: %$ B: %$\n",(uint32_t)x,(uint32_t)y,(uint32_t)buttons);
+
+			if (!(pkt[0] & 0xC0)) {
+				mouse_delta_x += pkt[1];
+				mouse_delta_y -= pkt[2];
+			}
+
+			buttons = pkt[0] & 0b00000111; // Just left, right, and middle click
+
 			break;
 	}
 }
 
-inline void mouse_wait(uint8_t bit) {
+void mouse_wait(uint8_t bit) {
 	uint16_t t=10000;
 	if(bit==0) {
 		while(t--) //Data
@@ -91,6 +48,18 @@ inline void mouse_wait(uint8_t bit) {
 			if(!(inb(0x64)&2))
 				return;
 	}
+}
+
+void mouse_send_command(uint8_t cmd) {
+	mouse_wait(1);
+	outb(0x64,0xD4);
+	mouse_wait(1);
+	outb(0x60,cmd);
+}
+
+uint8_t mouse_get_ack() {
+	mouse_wait(0);
+	return inb(0x60);
 }
 
 void init_mouse() {
@@ -104,16 +73,37 @@ void init_mouse() {
 	outb(0x64, 0x60);
 	mouse_wait(1);
 	outb(0x60, tmp);
-	mouse_wait(1);
-	outb(0x64,0xD4);
-	mouse_wait(1);
-	outb(0x60,0xF6);
-	mouse_wait(0);
-	inb(0x60);
-	mouse_wait(1);
-	outb(0x64,0xD4);
-	mouse_wait(1);
-	outb(0x60,0xF4);
-	mouse_wait(0);
-	inb(0x60);
+	mouse_send_command(0xF6);
+	mouse_get_ack();
+	mouse_send_command(0xF4);
+	mouse_get_ack();
+}
+
+void mouse_add_delta(int x, int y) {
+	mouse_delta_x += x;
+	mouse_delta_y += y;
+}
+
+void mouse_buttons_override(uint8_t new_buttons) {
+	buttons = new_buttons;
+}
+
+int get_mousedataX() {
+	int retval = mouse_delta_x;
+	mouse_delta_x = 0;
+	return retval;
+}
+
+int get_mousedataY() {
+	int retval = mouse_delta_y;
+	mouse_delta_y = 0;
+	return retval;
+}
+
+int get_mousedataZ() { // Scroll
+	return 0; // We haven't enabled scrolling
+}
+
+uint32_t get_mousedataB() { // Buttons
+	return buttons;
 }

@@ -149,7 +149,7 @@ void hid_mouse_irq(uint16_t dev_addr) {
 	usb_device *device = usb_device_from_addr(dev_addr);
 	if (usb_refresh_interval(dev_addr, device->driver0)) {
 		int8_t *mouse_input = device->driver1;
-		mouse_set_override(mouse_getx() + mouse_input[1], mouse_gety() + mouse_input[2]);
+		mouse_add_delta(mouse_input[1], mouse_input[2]);
 		mouse_buttons_override(*(uint8_t *)device->driver1);
 		// printf("%#\n",(uint64_t)mouse_input[3]);
 	}
