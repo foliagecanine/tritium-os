@@ -45,7 +45,7 @@ void kernel_main(uint32_t magic, uint32_t ebx) {
 	init_file();
 	init_syscalls();
 	install_tss();
-	init_tasking(1);
+	init_tasking(16);
 	if (!init_ipc()) {
 		kerror("[KERR] Could not initialize IPC: Not enough memory");
 	}

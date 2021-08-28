@@ -208,7 +208,7 @@ void irq0_handler(void) {
 	usb_keyboard_repeat();
 	execute_irq(0);
 	outb(0x20, 0x20); //EOI early since task switching returns on its own
-	if (ts_enabled&&!(get_ticks()%10))
+	if (ts_enabled&&!(get_ticks_k()%10))
 		task_switch(temp_tss);
 }
 

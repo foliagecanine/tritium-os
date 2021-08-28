@@ -5,7 +5,8 @@
 
 void init_pit();
 void pit_tick();
-uint64_t get_ticks();
+uint32_t get_ticks(bool high);
+uint64_t get_ticks_k();
 void sleep(uint32_t ms);
 
 #endif

@@ -11,7 +11,7 @@ uint32_t free_pages();
 uint32_t terminal_option(uint8_t command, uint8_t x, uint8_t y);
 void waitpid(uint32_t pid);
 uint32_t get_retval();
-uint64_t get_ticks();
+uint32_t get_ticks(bool high);
 //uint32_t get_process_state(uint32_t pid);
 
 #endif

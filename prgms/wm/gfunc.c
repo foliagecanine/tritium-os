@@ -78,12 +78,53 @@ void setpixel(uint32_t x, uint32_t y, color_t c) {
 	}
 }
 
+int over_operator(int alpha, int colora, int colorb) {
+	return ((colora * alpha) + (colorb * (255 - alpha))) >> 8;
+}
+
 void setpixel_a(uint32_t x, uint32_t y, color_t c) {
+	if (c.a == 0)
+		return;
+	if (c.a == 255) {
+		setpixel(x, y, c);
+		return;
+	}
+
+	color_t under_pixel = getpixel(x, y);
+	color_t new_color;
+	new_color.r = over_operator(c.a, c.r, under_pixel.r);
+	new_color.g = over_operator(c.a, c.g, under_pixel.g);
+	new_color.b = over_operator(c.a, c.b, under_pixel.b);
+	new_color.a = 0;
+
 	if (framebuffer_bpp == 24) {
-		if (c.a)
-			setpixel24(x, y, (color24){c.r, c.g, c.b});
+		setpixel24(x, y, (color24){new_color.r, new_color.g, new_color.b});
 	} else {
-		if (c.a)
-			setpixel32(x, y, c);
+		setpixel32(x, y, new_color);
+	}
+}
+
+void rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, color_t c) {
+	if (framebuffer_bpp == 24) {
+		color24 c24 = (color24){c.r, c.g, c.b};
+		for (uint32_t _y = y; _y < y + h; _y++) {
+			for (uint32_t _x = x; _x < x + w; _x++) {
+				((color24 *)framebuffer)[(framebuffer_width * _y) + _x] = c24;
+			}
+		}
+	} else {
+		for (uint32_t _y = y; _y < y + h; _y++) {
+			for (uint32_t _x = x; _x < x + w; _x++) {
+				((color32 *)framebuffer)[(framebuffer_width * _y) + _x] = (color32)c;
+			}
+		}
+	}
+}
+
+void rect_a(uint32_t x, uint32_t y, uint32_t w, uint32_t h, color_t c) {
+	for (uint32_t _y = y; _y < y + h; _y++) {
+		for (uint32_t _x = x; _x < x + w; _x++) {
+			setpixel_a(_x, _y, c);
+		}
 	}
 }

@@ -42,6 +42,8 @@ int drawframe(void);
 color_t getpixel(uint32_t x, uint32_t y);
 void setpixel(uint32_t x, uint32_t y, color_t c);
 void setpixel_a(uint32_t x, uint32_t y, color_t c);
+void rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, color_t c);
+void rect_a(uint32_t x, uint32_t y, uint32_t w, uint32_t h, color_t c);
 graphics_mode_t get_graphics_mode(void);
 
 #endif

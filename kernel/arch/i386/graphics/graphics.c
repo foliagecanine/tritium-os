@@ -64,21 +64,10 @@ uint32_t set_resolution(uint32_t width, uint32_t height, uint8_t bits) {
 	return retval;
 }
 
-uint32_t _size;
-uint32_t _dst;
-uint32_t _src;
-
-void fastmemcpy32(uint32_t *dst, uint32_t *src, size_t size) {
-	_size=size/4;
-	_dst=(uint32_t)dst;
-	_src=(uint32_t)src;
-	asm("\
-	mov _dst,%%edi;\
-	mov _src,%%esi;\
-	mov _size,%%ecx;\
-	cld;\
-	rep movsd;\
-	":::"edi","esi","ecx","memory");
+void fastmemcpy32(char *dst, char *src, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		dst[i] = src[i];
+	}
 }
 
 uint32_t copy_framebuffer(void *addr) {

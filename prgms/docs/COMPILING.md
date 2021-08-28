@@ -271,10 +271,11 @@ Does nothing. Gives an accessible place to debug programs when using GDB + QEMU.
 ```
 
 ```C
-int 0x80, eax=24: get_ticks (untested)
+int 0x80, eax=24: get_ticks
+Arguments:
+ebx = Requesting high dword : If ebx is 0 it returns the low 32 bits of ticks, else returns upper 32 bits.
 Return:
-eax = return value of ticks (low 32 bits).
-edx = return value of ticks (high 32 bits)?
+eax = return value of ticks.
 
 Get the number of 1ms ticks since startup
 ```

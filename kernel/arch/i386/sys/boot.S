@@ -100,14 +100,24 @@ _start:
 	orl $0x80010000, %ecx
 	movl %ecx, %cr0
 
-	# Jump to higher half with an absolute jump. 
+	# Jump to higher half with an absolute jump.
 	lea 4f, %ecx
 	jmp *%ecx
 
 4:
 	# At this point, paging is fully set up and enabled.
 
-	# Unmap the identity mapping as it is now unnecessary. 
+	# Sneak a little floating point / SSE initialization in here
+	fninit
+	movl %cr0, %ecx
+	and $0xFFFFFFFB, %cl
+	or $0x22, %cl
+	movl %ecx, %cr0
+	movl %cr4, %ecx
+	orw $0x600, %cx
+	movl %ecx, %cr4
+
+	# Unmap the identity mapping as it is now unnecessary.
 	movl $0, boot_page_directory + 0
 
 	# Reload crc3 to force a TLB flush so the changes to take effect.
@@ -120,7 +130,7 @@ _start:
 	# Get multiboot variables back
 	pushl %ebx
 	pushl %eax
-	
+
 	# Enter the high-level kernel.
 	call kernel_main
 

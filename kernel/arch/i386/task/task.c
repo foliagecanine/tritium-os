@@ -19,6 +19,7 @@ struct thread_t {
 	uint32_t waitval;
 	uint32_t cr3;
 	void *tables;
+	char savedfloats[512] __attribute__((aligned(16)));
 };
 
 thread_t *current_task;
@@ -152,11 +153,13 @@ inline uint32_t get_cr3() {
 
 volatile uint32_t ready_esp;
 volatile tss_entry_t new_temp_tss;
+volatile char fxsave_region[512];
 extern void switch_task();
 extern void exit_usermode();
 
 void task_switch(tss_entry_t tss) {
 	disable_tasking();
+	memcpy(current_task->savedfloats, (char *)fxsave_region, 512);
 	current_task->tss = tss; //Save the program's state
 	uint32_t new_pid = next_task();
 	if (!new_pid) {
@@ -169,6 +172,7 @@ void task_switch(tss_entry_t tss) {
 	switch_tables(threads[new_pid-1].tables);
 	set_cr3((current_task->cr3));
 	new_temp_tss = current_task->tss;
+	memcpy((char *)fxsave_region, current_task->savedfloats, 512);
 	enable_tasking();
 	switch_task();
 }

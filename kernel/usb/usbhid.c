@@ -35,7 +35,7 @@ void insert_repeatable(uint8_t scancode) {
 	dprintf("Make : %#\n", (uint64_t)scancode);
 	insert_scancode(usb_scancode_to_ps2[scancode]);
 	keyboard_repeat_key = scancode;
-	repeat_key_press_time = get_ticks();
+	repeat_key_press_time = get_ticks_k();
 }
 
 void remove_repeatable(uint8_t scancode) {
@@ -93,7 +93,7 @@ void usb_keyboard_repeat() {
 		tmp_kbd = tmp_kbd->driver2;
 	}
 
-	uint64_t ticks = get_ticks();
+	uint64_t ticks = get_ticks_k();
 	if (!(ticks % usb_keyboard_repeat_repeat_delay)) {
 		if (keyboard_repeat_key && (ticks - repeat_key_press_time) > usb_keyboard_repeat_initial_delay)
 			insert_scancode(usb_scancode_to_ps2[keyboard_repeat_key]);

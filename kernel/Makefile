@@ -4,7 +4,7 @@ HOSTARCH!=../scripts/target-triplet-to-arch.sh $(HOST)
 
 NASM=nasm
 
-CFLAGS?=-O0 -s -Wall -Wextra -pedantic
+CFLAGS?=-O3 -s -Wall -Wextra -pedantic
 CPPFLAGS?=
 LDFLAGS?=
 LIBS?=
@@ -15,7 +15,7 @@ EXEC_PREFIX?=$(PREFIX)
 BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
 
-CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
+CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra -msse -msse2 -ftree-vectorize
 CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
 LDFLAGS:=$(LDFLAGS)
 LIBS:=$(LIBS) -nostdlib -lk -lgcc

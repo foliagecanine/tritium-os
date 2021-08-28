@@ -60,6 +60,7 @@ extern temp_tss
 
 extern new_temp_tss
 extern ready_esp
+extern fxsave_region
 
 extern syscall_temp_tss
 extern run_syscall
@@ -94,6 +95,8 @@ page_fault:
 switch_task:
   mov esp,dword [ready_esp]
 
+  fxsave [fxsave_region]
+
   add esp,0xC
   pop eax
   mov eax,dword [new_temp_tss+56] ;esp
@@ -116,10 +119,13 @@ switch_task:
   mov esi,dword [new_temp_tss+64]
   mov ebp,dword [new_temp_tss+60]
 
+  fxrstor [fxsave_region]
+
   iret
 
 run_syscall_asm:
   mov dword [ready_esp],esp
+  fxsave [fxsave_region]
   mov dword [syscall_temp_tss+40],eax
   mov dword [syscall_temp_tss+52],ebx
   mov dword [syscall_temp_tss+44],ecx
@@ -164,6 +170,8 @@ run_syscall_asm:
   mov edi,dword [syscall_temp_tss+68]
   mov esi,dword [syscall_temp_tss+64]
   mov ebp,dword [syscall_temp_tss+60]
+
+  fxrstor [fxsave_region]
 
   iret
 

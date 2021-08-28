@@ -72,33 +72,33 @@ void init_paging(multiboot_info_t *mbi) {
 	new_base_page_table[1023].present = 1;
 	new_base_page_table[1023].readwrite = 1;
 	new_base_page_table[1023].address = 0x000B8;
-	
+
 	uint32_t new_addr = (uint32_t)&kernel_page_dir[0];
 	new_addr-=0xC0000000;
 	asm volatile("mov %0, %%cr3":: "r"(new_addr));
-	
+
 	//Stage 2:
 	//Next, we allocate 4MiB of space for our new FULL page table.
-	
+
 	kernel_page_dir[pagedir_addr+1].present = 1;
 	kernel_page_dir[pagedir_addr+1].readwrite =1;
 	kernel_page_dir[pagedir_addr+1].address = (((uint32_t)&full_kernel_table_storage)-0xC0000000)>>12;
-	
+
 	for (uint16_t i = 0; i < 1024; i++) {
 		full_kernel_table_storage[i].present = 1;
 		full_kernel_table_storage[i].readwrite = 1;
 		full_kernel_table_storage[i].address = (0x400000>>12)+i;
 	}
-	
+
 	//Reset the CR3 so it flushes the TLB
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
-	
-	//Stage 3: 
+
+	//Stage 3:
 	//Create a new full page table so we can allocate things whenever we want
-	
+
 	//First let's do a memset so we dont have any random data
 	memset((void*)0xC0400000,0,0x400000);
-	
+
 	for (uint16_t i = 0; i < 1023; i++) {
 		if ((i*4096)>=0x100000) {
 			kernel_tables[(768*1024)+i].present = 1;
@@ -106,17 +106,17 @@ void init_paging(multiboot_info_t *mbi) {
 			kernel_tables[(768*1024)+i].address = i;
 		}
 	}
-	
+
 	kernel_tables[(768*1024)+1023].present = 1;
 	kernel_tables[(768*1024)+1023].readwrite = 1;
 	kernel_tables[(768*1024)+1023].address = 0x000B8;
-	
+
 	for (uint16_t i = 0; i < 1024; i++) {
 		kernel_tables[(769*1024)+i].present = 1;
 		kernel_tables[(769*1024)+i].readwrite = 1;
 		kernel_tables[(769*1024)+i].address = (0x400000>>12)+i;
 	}
-	
+
 	//Now we link the tables to the page directory, whose location won't change
 	for (uint16_t i = 0; i < 1024; i++) {
 		kernel_page_dir[i].address = 0x400+(i);
@@ -124,21 +124,21 @@ void init_paging(multiboot_info_t *mbi) {
 		kernel_page_dir[i].present = 1;
 		kernel_page_dir[i].user = 1; //All page directory entries to user because we can set it to supervisor only inside of the page table entry
 	}
-	
+
 	//Reset the CR3 so it flushes the TLB
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
-	
+
 	//Awesome! Now the default page tables are at vaddr:0xC0400000 and paddr:0x400000
 	//This won't get in the way of programs (which are loaded at vaddr:0x100000) but is still within a low capacity of memory (we only need 8MiB of memory right now)
 	kprint("[INIT] Paging initialized");
-	
+
 	//Allow us to read the MBI to find the memory map.
 	identity_map(mbi);
 	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
-	
+
 	//Clear out the current map so all entries are "claimed"
 	memset((void *)&pmem_used[0],255,131072);
-	
+
 	//Scan the memory map for areas that we can use for general purposes
 	for (uint8_t i = 0; i < 15; i++) {
 		uint32_t type = mmap[i].type;
@@ -154,10 +154,10 @@ void init_paging(multiboot_info_t *mbi) {
 		printf("%u: %p+%p %s\n",i,(uintptr_t)mmap[i].addr,(uintptr_t)mmap[i].len,mem_types[type]);
 		dprintf("%u: %p+%p %s\n",i,(uintptr_t)mmap[i].addr,(uintptr_t)mmap[i].len,mem_types[type]);
 	}
-	
+
 	//Reclaim all the way up to 8MiB (for the kernel and the page tables)
 	memset((void *)&pmem_used[0],255,256);
-	
+
 	kprint("[INIT] Kernel heap initialized");
 }
 
@@ -275,6 +275,8 @@ void unmap_secret_page(void *vaddr, size_t pages) {
 }
 
 void *map_paddr(void *paddr, size_t pages) {
+	if (!pages)
+		return 0;
 	uint32_t paddr_page = (uint32_t)paddr;
 	paddr_page/=4096;
 	for(uint32_t i = 786432; i < 1048576; i++) {
@@ -302,6 +304,8 @@ void *map_paddr(void *paddr, size_t pages) {
 }
 
 void* alloc_page(size_t pages) {
+	if (!pages)
+		return 0;
 	//First find consecutive virtual pages in kernel memory.
 	for(uint32_t i = 786432; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
@@ -346,6 +350,8 @@ void *calloc_page(size_t pages) {
 
 // Similar to alloc_page, but requires physical pages to be sequential
 void *alloc_sequential(size_t pages) {
+	if (!pages)
+		return 0;
 	for(uint32_t i = 786432; i < 1048576; i++) {
 		if (!kernel_tables[i].present) {
 			size_t successful_pages = 1;
@@ -377,7 +383,7 @@ void *alloc_sequential(size_t pages) {
 							for (uint32_t k = 0; k < pages; k++) {
 								map_addr((void *)(uintptr_t)((i+k)*4096),(void *)(uintptr_t)((j+k)*4096));
 							}
-							return (void *)(i*4096);							
+							return (void *)(i*4096);
 						}
 					}
 				}
@@ -415,11 +421,11 @@ void *clone_tables() {
 		pde->readwrite = 1;
 		pde->address = ((uint32_t)get_phys_addr(new+4096)/0x1000)+i;
 	}
-	
+
 	uint32_t new_addr = (uint32_t)get_phys_addr(new);
 	switch_tables(new+4096);
 	asm volatile("mov %0, %%cr3":: "r"(new_addr));
-	
+
 	return (void *)new_addr;
 }
 
@@ -489,21 +495,21 @@ bool clone_user_pages() {
 				PANIC("OUT OF MEMORY");
 				return false;
 			}
-			
+
 			// Copy the data from the original page
 			memcpy(clone_data, (void *)(i*4096), 4096);
-			
+
 			// Swap the virtual address' physical page for the new physical page
 			kernel_tables[i].address = (uint32_t)paddr>>12;
 			claim_phys_page(paddr);
-			
+
 			// Set page to writeable when we are copying it
 			uint8_t rw = kernel_tables[i].readwrite;
 			kernel_tables[i].readwrite = true;
-			
+
 			// Flush TLB to update the map
 			asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
-			
+
 			// Copy the data into the new page
 			memcpy((void *)(i*4096), clone_data, 4096);
 
@@ -526,7 +532,7 @@ bool check_user(void *vaddr) {
 uint8_t get_page_permissions(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
 	vaddr_page/=4096;
-	return kernel_tables[vaddr_page].present | 
+	return kernel_tables[vaddr_page].present |
 			(kernel_tables[vaddr_page].readwrite<<1) |
 			(kernel_tables[vaddr_page].user<<2);
 }

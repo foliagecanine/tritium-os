@@ -1,4 +1,4 @@
-.PHONY: all clean run myos.iso
+.PHONY: all clean pclean run myos.iso
 
 myos.iso: 
 	./scripts/iso.sh
@@ -10,3 +10,6 @@ all: myos.iso
 
 clean:
 	./scripts/clean.sh
+
+pclean:
+	./scripts/pclean.sh
