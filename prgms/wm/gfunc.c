@@ -29,8 +29,8 @@ int set_resolution(uint16_t width, uint16_t height, uint8_t bpp) {
 	if (!framebuffer_alloc)
 		return 0xEE;
 
-	// Align to sizeof(void *) for best performance
-	framebuffer = (framebuffer_alloc + sizeof(void *)) - ((size_t)framebuffer_alloc % sizeof(void *));
+	// Align to 16b for best performance
+	framebuffer = (framebuffer_alloc + 16) - ((size_t)framebuffer_alloc % 16);
 	return 0;
 }
 

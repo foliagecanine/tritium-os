@@ -69,14 +69,17 @@ void drawcursor() {
 	buffer_valid = true;
 }
 
+#define RES_X 640
+#define RES_Y 480
+
 int main(int argv, char *argc[]) {
 	if (error = claim_graphics()) {
 		printf("ERROR: Could not claim graphics. Resource locked.\n");
 		return 1;
 	}
 
-	if (error = set_resolution(1920, 1080, 32)) {
-		printf("ERROR: Could not set resolution %u x %u x %u bpp\n", 640, 480, 32);
+	if (error = set_resolution(RES_X, RES_Y, 32)) {
+		printf("ERROR: Could not set resolution %u x %u x %u bpp\n", RES_X, RES_Y, 32);
 		if (error == 0xEE)
 			printf("ERROR: Could not allocate memory for framebuffer.\n");
 		return 2;
