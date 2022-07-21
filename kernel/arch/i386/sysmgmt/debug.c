@@ -21,7 +21,20 @@ bool check_command(char* command) {
 	bool usingNewline = true;
 
 	if (strcmp(command, "help")||strcmp(command, "?")) {
-		printf("HELP:\nhelp, ? - Show this menu\nver, version - Show the OS version\ncls, clear - Clear the terminal\ntime - display the current time and date\ntzone [tz] - set current time zone (ex. -7,+0,+7)\nlsmnt - list all mounts\nmount [disk] mount physical disk (0-3)\ndir,ls - list files in current directory\ncat [file] - display the text contents of a file\nreboot - reboot the computer\nexit - exit terminal and reboot");
+		printf(""
+		"HELP:\nhelp, ? - Show this menu\n"
+		"ver, version - Show the OS version\n"
+		"cls, clear - Clear the terminal\n"
+		"lsmnt - list all mounts\n"
+		"mount [disk] mount physical disk (0-3)\n"
+		"usb - list all USB devices that the kernel detects\n"
+		"pci - liar all PCI devices that the kernel detects\n"
+		"acpi - list known acpi tables\n"
+		//"dir,ls - list files in current directory (WARNING: BROKEN)\n"
+		//"cat [file] - display the text contents of a file (WARNING: BROKEN)\n"
+		"shutdown - shutdown the computer (if possible)\n"
+		"reboot - reboot the computer\n"
+		"exit - exit terminal and reboot");
 		cmdAck=true;
 	}
 
@@ -70,31 +83,6 @@ bool check_command(char* command) {
 			}
 		}
 		cmdAck=true;
-	}
-
-	if (strcmp(command, "fdelete")) {
-		printf("Return: %u\n",fdelete("A:/TESTFILE.TXT"));
-		cmdAck=true;
-	}
-
-	if (strcmp(command, "fcreate")) {
-		printf("Return: %u\n",fcreate("A:/TESTFILE.TXT").valid);
-		cmdAck=true;
-	}
-
-	if (strcmp(command, "fwrite")) {
-		printf("Deleting. Return value: %u\n",fdelete("A:/TESTFILE.TXT"));
-		FILE f = fcreate("A:/TESTFILE.TXT");
-		//FILE f = fopen("A:/TESTFILE.TXT","w");
-		if (!f.valid) {
-			printf("Create failed.\n");
-		}
-		char text[] = "Hello world.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n";
-		uint32_t len = strlen(text)+1;
-		printf("Writing %u bytes...\n",len);
-		uint8_t r = fwrite(&f,text,0,(uint64_t)len);
-		printf("Return value: %hhu\n",r);
-		cmdAck = true;
 	}
 
 	if (strcmp(command,"lsmnt")) {

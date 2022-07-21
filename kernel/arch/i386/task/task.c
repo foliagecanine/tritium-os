@@ -1,4 +1,5 @@
 #include <kernel/task.h>
+#include <kernel/ipc.h>
 #include <kernel/sysfunc.h>
 
 //#define TASK_DEBUG
@@ -19,6 +20,9 @@ struct thread_t {
 	uint32_t waitval;
 	uint32_t cr3;
 	void *tables;
+	uint16_t ipc_response_produced;
+	uint16_t ipc_response_consumed;
+	ipc_response *ipc_responses;
 	char savedfloats[512] __attribute__((aligned(16)));
 };
 
@@ -81,6 +85,16 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 		mark_user((void *)(uintptr_t)(0xBFFFA000+(i*4096)), true);
 	}
 	threads[pid-1].tss.esp = 0xBFFFFFFB;
+
+	// Create IPC response buffer
+	threads[pid-1].ipc_responses = alloc_page(1);
+	if (!threads[pid-1].ipc_responses)
+		return 0;
+	memset(threads[pid-1].ipc_responses, 0, 4096);
+	threads[pid-1].ipc_response_produced = 0;
+	threads[pid-1].ipc_response_consumed = 0;
+
+	// Set instruction pointer to ELF entrypoint
 	last_entrypoint = elf_enter;
 
 	threads[pid-1].tss.eax = 0;
@@ -177,9 +191,10 @@ void task_switch(tss_entry_t tss) {
 	switch_task();
 }
 
-void kill_program(uint32_t pid, uint32_t retval) {
+void kill_process(uint32_t pid, uint32_t retval) {
 	disable_tasking();
 	deregister_ipc_ports_pid(pid);
+	reclaim_ipc_response_buffer(pid, threads[pid-1].ipc_responses);
 	uint32_t old_pid = current_task->pid;
 	thread_t *parent = threads[pid-1].parent;
 	if (parent!=0) {
@@ -216,7 +231,7 @@ void kill_program(uint32_t pid, uint32_t retval) {
 }
 
 void exit_program(int retval) {
-	kill_program(current_task->pid,retval);
+	kill_process(current_task->pid,retval);
 }
 
 tss_entry_t syscall_temp_tss;
@@ -393,6 +408,37 @@ void waitipc(uint32_t port) {
 
 uint32_t get_retval() {
 	return current_task->waitval;
+}
+
+ipc_response *get_ipc_responses(uint32_t pid) {
+	if (pid > max_threads)
+		return NULL;
+	if (threads[pid - 1].pid == 0)
+		return NULL;
+	return threads[pid - 1].ipc_responses;
+}
+
+int get_ipc_response_status(uint32_t pid, bool consumed) {
+	if (pid > max_threads)
+		return -1;
+	if (threads[pid - 1].pid == 0)
+		return -1;
+	if (consumed)
+		return threads[pid - 1].ipc_response_consumed;
+	return threads[pid - 1].ipc_response_produced;
+}
+
+bool set_ipc_response_status(uint32_t pid, bool consumed, uint16_t value) {
+	if (pid > max_threads)
+		return false;
+	if (threads[pid - 1].pid == 0)
+		return false;
+	if (consumed) {
+		threads[pid - 1].ipc_response_consumed = value;
+	} else {
+		threads[pid - 1].ipc_response_produced = value;
+	}
+	return true;
 }
 
 /*uint32_t get_process_state(uint32_t pid) {

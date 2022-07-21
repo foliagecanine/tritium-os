@@ -22,10 +22,10 @@ uint64_t get_ticks_k() {
 
 void init_pit(uint32_t freq) {
 	frequency = freq;
-	uint32_t pitfreq = 3579545/ (freq*3);
+	uint32_t pitfreq = 1193181 / freq;
 	outb(0x43, 0x34);
-	outb(0x40, (uint8_t)(pitfreq&0xFF));
-	outb(0x40, (uint8_t)((pitfreq>>8)&0xFF));
+	outb(0x40, (uint8_t)(pitfreq));
+	outb(0x40, (uint8_t)(pitfreq >> 8));
 }
 
 void sleep(uint32_t ms) {

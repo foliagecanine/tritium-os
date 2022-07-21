@@ -1,5 +1,5 @@
-#ifndef KERNEL_MEM_H
-#define KERNEL_MEM_H
+#ifndef _KERNEL_MEM_H
+#define _KERNEL_MEM_H
 
 #include <kernel/stdio.h>
 

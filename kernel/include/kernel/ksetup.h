@@ -24,6 +24,7 @@ void *get_phys_addr(void *vaddr);
 void *map_page_to(void *vaddr);
 void mark_user(void *vaddr,_Bool user);
 void mark_write(void *vaddr,_Bool write);
+void release_phys_page(void *addr);
 void *clone_tables();
 void use_kernel_map();
 void switch_tables(void *new);

@@ -49,7 +49,7 @@ uint32_t acpi_find_fadt() {
 	identity_map(rsdp); //Map it so we can use it
 	ACPI_SDTHeader *rsdt;
 	uint8_t ptr_size = 4;
-	
+
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
@@ -64,10 +64,10 @@ uint32_t acpi_find_fadt() {
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
-	
+
 	uint32_t *entries = (uint32_t *)((void *)rsdt+sizeof(ACPI_SDTHeader));
 	uint32_t num_entries = (rsdt->length - sizeof(ACPI_SDTHeader))/ptr_size;
-	
+
 	for (uint32_t i = 0; i < num_entries; i++) {
 		uint32_t ptr = entries[i*(ptr_size/4)];
 		identity_map((void *)ptr);
@@ -75,7 +75,7 @@ uint32_t acpi_find_fadt() {
 		if (!memcmp(is_facp,"FACP",4))
 			return (uint32_t)is_facp;
 	}
-	
+
 	return 0;
 }
 
@@ -86,7 +86,7 @@ uint32_t acpi_find_ssdt() {
 	identity_map(rsdp); //Map it so we can use it
 	ACPI_SDTHeader *rsdt;
 	uint8_t ptr_size = 4;
-	
+
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
@@ -101,10 +101,10 @@ uint32_t acpi_find_ssdt() {
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
-	
+
 	uint32_t *entries = (uint32_t *)((void *)rsdt+sizeof(ACPI_SDTHeader));
 	uint32_t num_entries = (rsdt->length - sizeof(ACPI_SDTHeader))/ptr_size;
-	
+
 	for (uint32_t i = 0; i < num_entries; i++) {
 		uint32_t ptr = entries[i*(ptr_size/4)];
 		identity_map((void *)ptr);
@@ -113,7 +113,7 @@ uint32_t acpi_find_ssdt() {
 			return (uint32_t)is_ssdt;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -124,7 +124,7 @@ void acpi_list_tables() {
 	identity_map(rsdp); //Map it so we can use it
 	ACPI_SDTHeader *rsdt;
 	uint8_t ptr_size = 4;
-	
+
 	//Precalculate 32 bit or 64 bit (RSDP or XSDP)
 	if (!rsdp->rev_num) {
 		printf("Version 1.0\n");
@@ -139,10 +139,10 @@ void acpi_list_tables() {
 		rsdt = (ACPI_SDTHeader *)xsdp->xsdt_low_addr;
 		identity_map(rsdt);
 	}
-	
+
 	uint32_t *entries = (uint32_t *)((void *)rsdt+sizeof(ACPI_SDTHeader));
 	uint32_t num_entries = (rsdt->length - sizeof(ACPI_SDTHeader))/ptr_size;
-	
+
 	for (uint32_t i = 0; i < num_entries; i++) {
 		uint32_t ptr = entries[i*(ptr_size/4)];
 		identity_map((void *)ptr);
@@ -209,7 +209,7 @@ bool acpi_shutdown() {
 		identity_map((void *)i);
 	}
 	ACPI_SDTHeader *ssdt = (ACPI_SDTHeader *)acpi_find_ssdt();
-	
+
 	if (!ssdt) {
 		if(!acpi_dt_attempt_s5(dsdt,fadt)) {
 			acpi_enable(fadt);
@@ -217,7 +217,7 @@ bool acpi_shutdown() {
 		}
 		return true;
 	}
-	
+
 	identity_map(ssdt);
 	for (uint32_t i = (uint32_t)ssdt; i < (uint32_t)ssdt+ssdt->length; i+=4096) {
 		identity_map((void *)i);

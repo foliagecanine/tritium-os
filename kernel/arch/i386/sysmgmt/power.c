@@ -9,7 +9,7 @@ void power_reboot() {
 }
 
 void power_shutdown() {
-	kprint("It is safe to turn off your computer.");
+	kprint("[KMSG] It is safe to turn off your computer.");
 	kprint("[KMSG] Attempting shutdown using ACPI.");
 	acpi_shutdown();
 	sleep(1000);
