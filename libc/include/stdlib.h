@@ -3,15 +3,7 @@
 
 #include <sys/cdefs.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-__attribute__((__noreturn__))
-void abort(void);
-
-#ifdef __cplusplus
-}
-#endif
+__attribute__((__noreturn__)) void abort(void);
+long                               strtol(const char *str, char **endptr, int base);
 
 #endif
