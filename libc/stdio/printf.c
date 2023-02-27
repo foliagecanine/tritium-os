@@ -6,14 +6,15 @@
 #include <string.h>
 #include <ctype.h>
 
-typedef int __printf_flags;
-
-static const __printf_flags PRINTF_FLAG_NONE      = (0);
-static const __printf_flags PRINTF_FLAG_LJUSTIFY  = (1 << 0);
-static const __printf_flags PRINTF_FLAG_FORCESIGN = (1 << 1);
-static const __printf_flags PRINTF_FLAG_SPACE     = (1 << 2);
-static const __printf_flags PRINTF_FLAG_PRECEDE   = (1 << 3);
-static const __printf_flags PRINTF_FLAG_LEFTPAD   = (1 << 4);
+typedef enum __printf_flags
+{
+    PRINTF_FLAG_NONE      = (0),
+    PRINTF_FLAG_LJUSTIFY  = (1 << 0),
+    PRINTF_FLAG_FORCESIGN = (1 << 1),
+    PRINTF_FLAG_SPACE     = (1 << 2),
+    PRINTF_FLAG_PRECEDE   = (1 << 3),
+    PRINTF_FLAG_LEFTPAD   = (1 << 4)
+} __printf_flags;
 
 /**
  * Gets the printf flags
@@ -58,9 +59,10 @@ static __printf_flags PrintfGetFlags(const char **format)
     return flags;
 }
 
-typedef int __printf_width;
-
-static const __printf_width PRINTF_WIDTH_NONE = -(1 << 0);
+typedef enum __printf_width
+{
+    PRINTF_WIDTH_NONE = -(1 << 0)
+} __printf_width;
 
 /**
  * Gets the printf width
@@ -82,9 +84,10 @@ static __printf_width PrintfGetWidth(const char **format)
     return (__printf_width)(num);
 }
 
-typedef int __printf_precision;
-
-static const __printf_precision PRINTF_PRECISION_NONE = -(1 << 0);
+typedef enum __printf_precision
+{
+    PRINTF_PRECISION_NONE = -(1 << 0)
+} __printf_precision;
 
 /**
  * Gets the printf precision
@@ -113,17 +116,18 @@ static __printf_precision PrintfGetPrecision(const char **format)
     return (__printf_precision)(0);
 }
 
-typedef int __printf_length;
-
-static const __printf_length PRINTF_LENGTH_NONE      = (0);
-static const __printf_length PRINTF_LENGTH_CHAR      = (1 << 0);
-static const __printf_length PRINTF_LENGTH_SHORT     = (1 << 1);
-static const __printf_length PRINTF_LENGTH_LONG      = (1 << 2);
-static const __printf_length PRINTF_LENGTH_LONGLONG  = (1 << 3);
-static const __printf_length PRINTF_LENGTH_INTMAX_T  = (1 << 4);
-static const __printf_length PRINTF_LENGTH_SIZE_T    = (1 << 5);
-static const __printf_length PRINTF_LENGTH_PTRDIFF_T = (1 << 6);
-static const __printf_length PRINTF_LENGTH_LONGDBL   = (1 << 7);
+typedef enum __printf_length
+{
+    PRINTF_LENGTH_NONE      = (0),
+    PRINTF_LENGTH_CHAR      = (1 << 0),
+    PRINTF_LENGTH_SHORT     = (1 << 1),
+    PRINTF_LENGTH_LONG      = (1 << 2),
+    PRINTF_LENGTH_LONGLONG  = (1 << 3),
+    PRINTF_LENGTH_INTMAX_T  = (1 << 4),
+    PRINTF_LENGTH_SIZE_T    = (1 << 5),
+    PRINTF_LENGTH_PTRDIFF_T = (1 << 6),
+    PRINTF_LENGTH_LONGDBL   = (1 << 7)
+} __printf_length;
 
 /**
  * Gets the printf length modifier
@@ -183,31 +187,32 @@ __printf_length PrintfGetLength(const char **format)
     return PRINTF_LENGTH_NONE;
 }
 
-typedef char __printf_format;
-
 static const char __printfFormatAllowed[] = {'d', 'i', 'u', 'o', 'x', 'X', 'f', 'F', 'e', 'E',
                                              'g', 'G', 'a', 'A', 'c', 's', 'p', 'n', '%', '\0'};
 
-static const __printf_format PRINTF_FORMAT_DECIMAL    = 'd';
-static const __printf_format PRINTF_FORMAT_SIGNED     = 'i';
-static const __printf_format PRINTF_FORMAT_UNSIGNED   = 'u';
-static const __printf_format PRINTF_FORMAT_OCTAL      = 'o';
-static const __printf_format PRINTF_FORMAT_UHEX       = 'x';
-static const __printf_format PRINTF_FORMAT_UHEXUP     = 'X';
-static const __printf_format PRINTF_FORMAT_FLOAT      = 'f';
-static const __printf_format PRINTF_FORMAT_FLOATUP    = 'F';
-static const __printf_format PRINTF_FORMAT_SCI        = 'e';
-static const __printf_format PRINTF_FORMAT_SCIUP      = 'E';
-static const __printf_format PRINTF_FORMAT_SHORT      = 'g';
-static const __printf_format PRINTF_FORMAT_SHORTUP    = 'G';
-static const __printf_format PRINTF_FORMAT_HEXFLOAT   = 'a';
-static const __printf_format PRINTF_FORMAT_HEXFLOATUP = 'A';
-static const __printf_format PRINTF_FORMAT_CHAR       = 'c';
-static const __printf_format PRINTF_FORMAT_STRING     = 's';
-static const __printf_format PRINTF_FORMAT_POINTER    = 'p';
-static const __printf_format PRINTF_FORMAT_STORE      = 'n';
-static const __printf_format PRINTF_FORMAT_PERCENT    = '%';
-static const __printf_format PRINTF_FORMAT_ERROR      = '\0';
+typedef enum __printf_format
+{
+    PRINTF_FORMAT_DECIMAL    = 'd',
+    PRINTF_FORMAT_SIGNED     = 'i',
+    PRINTF_FORMAT_UNSIGNED   = 'u',
+    PRINTF_FORMAT_OCTAL      = 'o',
+    PRINTF_FORMAT_UHEX       = 'x',
+    PRINTF_FORMAT_UHEXUP     = 'X',
+    PRINTF_FORMAT_FLOAT      = 'f',
+    PRINTF_FORMAT_FLOATUP    = 'F',
+    PRINTF_FORMAT_SCI        = 'e',
+    PRINTF_FORMAT_SCIUP      = 'E',
+    PRINTF_FORMAT_SHORT      = 'g',
+    PRINTF_FORMAT_SHORTUP    = 'G',
+    PRINTF_FORMAT_HEXFLOAT   = 'a',
+    PRINTF_FORMAT_HEXFLOATUP = 'A',
+    PRINTF_FORMAT_CHAR       = 'c',
+    PRINTF_FORMAT_STRING     = 's',
+    PRINTF_FORMAT_POINTER    = 'p',
+    PRINTF_FORMAT_STORE      = 'n',
+    PRINTF_FORMAT_PERCENT    = '%',
+    PRINTF_FORMAT_ERROR      = '\0'
+} __printf_format;
 
 /**
  * Gets the printf format mode
@@ -276,12 +281,12 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             if (printLength & PRINTF_LENGTH_LONG)
             {
                 wchar_t *printReadInChar = va_arg(parameters, void *);
-                written += printfn(printReadInChar, 1);
+                written += printfn((char *)printReadInChar, 1);
             }
             else
             {
                 unsigned char printReadinChar = va_arg(parameters, int);
-                written += printfn(&printReadinChar, 1);
+                written += printfn((char *)&printReadinChar, 1);
             }
         }
         else if (printFormat == PRINTF_FORMAT_STRING)
@@ -297,7 +302,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
                 int haveWritten = 0;
                 while (*read)
                 {
-                    if (haveWritten == precision)
+                    if ((size_t)haveWritten == precision)
                     {
                         break;
                     }
@@ -471,7 +476,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             {
                 base = 16;
                 numDigits += 2;
-                if (value == 0 && width == PRINTF_WIDTH_NONE)
+                if (value == 0 && width == (size_t)PRINTF_WIDTH_NONE)
                 {
                     if (printFlags & PRINTF_FLAG_LEFTPAD)
                     {
