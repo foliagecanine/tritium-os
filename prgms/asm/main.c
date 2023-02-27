@@ -230,6 +230,8 @@ int main(int argc, char **argv)
         return ERROR_MISSINGFILE;
     }
 
+    free(elf);
+
     printf("Done.\n");
     return ERROR_SUCCESS;
 }
