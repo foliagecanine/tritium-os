@@ -13,6 +13,7 @@ FORK.PRG \
 ASM.PRG \
 WM.SYS \
 IPCTEST.PRG \
+HQ9COMP.PRG \
 
 all: $(PRGMS)
 
