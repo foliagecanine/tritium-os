@@ -8,15 +8,19 @@
 // estring: extensible string
 // Automatically growing string
 
-typedef struct {
-	char *str;
-	size_t len;
+typedef struct
+{
+    char * str;
+    size_t len;
 } estring;
 
 // Initialize an estring with a length of len.
 // On success returns an estring pointer
 // On failure returns NULL
 estring *estring_create();
+
+// Append a single character to an estring
+estring *estring_putchar(estring *es, const char c);
 
 // Append characters to an estring
 // On success returns the estring passed in es

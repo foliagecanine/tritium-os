@@ -86,8 +86,6 @@ void print_fat16_values(uint32_t drive_num)
 // https://forum.osdev.org/viewtopic.php?f=1&t=26639
 bool detect_fat16(uint32_t drive_num)
 {
-    print_fat16_values(drive_num);
-
     uint8_t read[512] = {0};
     disk_read_sectors(drive_num, 0, 1, read);
     PBOOTSECT bootsect = (PBOOTSECT)read;
