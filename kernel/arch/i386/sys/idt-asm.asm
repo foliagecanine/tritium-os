@@ -349,10 +349,10 @@ enter_usermode:
 exit_usermode:
 	cli
 	mov ax,0x10
-	mov ax, ds
-	mov ax, es
-	mov ax, fs
-	mov ax, gs
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
 	push 0x10
 	mov eax,[last_stack]
 	push eax
