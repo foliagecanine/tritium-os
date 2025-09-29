@@ -98,12 +98,20 @@ typedef enum __printf_precision
  */
 static __printf_precision PrintfGetPrecision(const char **format)
 {
+    char *start = (char *)*format;
+
     if (**format != '.')
     {
         return PRINTF_PRECISION_NONE;
     }
 
     (*format)++;
+
+    if (!isdigit(**format))
+    {
+        *format = start;
+        return PRINTF_PRECISION_NONE;
+    }
 
     char *   endptr;
     long int num = strtol(*format, &endptr, 10);
@@ -235,6 +243,9 @@ static __printf_format PrintfGetFormat(const char **format)
 
     return PRINTF_FORMAT_ERROR;
 }
+
+const char __print_charset[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+const char __print_charset_upper[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 /**
  * Prints a formatted string using printfn as the function
@@ -454,8 +465,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             }
 
             int   base = 10;
-            char *characterSet =
-                (char[]){'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+            const char *characterSet = __print_charset;
 
             size_t numDigits = 1;
 
@@ -470,7 +480,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             else if (printFormat == PRINTF_FORMAT_UHEXUP)
             {
                 base         = 16;
-                characterSet = (char[]){'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+                characterSet = __print_charset_upper;
             }
             else if (printFormat == PRINTF_FORMAT_POINTER)
             {
