@@ -107,7 +107,7 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
 		kprint("\nIf you are a user seeing this, your computer has crashed.");
 		kprint("Reboot your computer. If the error happens again...");
-		kprint("just don't to the thing that made it happen.\n");
+		kprint("just don't do the thing that made it happen.\n");
 		abort();
 		for(;;);
 	}

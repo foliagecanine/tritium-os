@@ -8,7 +8,7 @@
  * 4 : Drive not found
  */
 
-uint8_t driver_id;
+uint8_t ahci_driver_id;
 
 typedef struct {
 	HBAData *abar;
@@ -290,7 +290,7 @@ void init_ahci() {
 	ports = alloc_page(16); // 256*256 = 65536 bytes, or 16 pages. 256 ports is probably enough
 
 	register_pci_driver(print_pci_data, 1, 6);
-	driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors, 255);
+	ahci_driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors, 255);
 
 	kprint("[INIT] Initialized AHCI driver");
 }

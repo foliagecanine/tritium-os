@@ -11,8 +11,8 @@
 #include <kernel/ipc.h>
 #include <stdio.h>
 
-multiboot_memory_map_t *mmap;
-multiboot_info_t *      mbi;
+multiboot_memory_map_t *k_mmap;
+multiboot_info_t *      k_mbi;
 
 void (*init_functions[])(void) = {init_ahci, init_ide, init_usb};
 
@@ -33,8 +33,8 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     init_idt();
     init_mouse();
     init_pit(1000);
-    mbi = (multiboot_info_t *)ebx;
-    init_paging(mbi);
+    k_mbi = (multiboot_info_t *)ebx;
+    init_paging(k_mbi);
     set_current_heap(heap_create(32));
     for (size_t i = 0; i < sizeof(init_functions) / sizeof(init_functions[0]); i++)
     {

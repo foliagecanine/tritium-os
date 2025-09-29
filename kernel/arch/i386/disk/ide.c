@@ -13,7 +13,7 @@
 #define IDE_BSY_FLAG	(1 << 7)
 #define IDE_DRQ_FLAG	(1 << 3)
 
-uint8_t driver_id;
+uint8_t ide_driver_id;
 
 uint8_t ide_read_sectors_internal(uint8_t drive_num, uint32_t start_sector, uint32_t count, uint8_t *buf) {
 	uint16_t iobase;
@@ -128,5 +128,5 @@ uint8_t ide_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t co
 }
 
 void init_ide() {
-	driver_id = register_disk_handler(ide_read_sectors, ide_write_sectors, 4);
+	ide_driver_id = register_disk_handler(ide_read_sectors, ide_write_sectors, 4);
 }
