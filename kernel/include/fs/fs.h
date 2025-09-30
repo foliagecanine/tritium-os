@@ -2,6 +2,7 @@
 #define _KERNEL_FS_H
 
 #include <kernel/stdio.h>
+#include <stdbool.h>
 
 #define SUCCESS 			0
 #define FILE_NOT_FOUND		1
@@ -18,16 +19,16 @@ typedef struct {
 	uint64_t dir_entry;
 	uint8_t flags;
 	int32_t desc;
-	_Bool valid;
-	_Bool directory;
-	_Bool writelock;
+	bool valid;
+	bool directory;
+	bool writelock;
 } FILE, *PFILE;
 
 typedef struct {
 	char type[6];
 	uint64_t drive;
 	void *mount;
-	_Bool mountEnabled;
+	bool mountEnabled;
 } FSMOUNT;
 
 #endif

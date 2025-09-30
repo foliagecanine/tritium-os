@@ -88,7 +88,7 @@ void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }
 
-void set_scroll(_Bool allow_scroll) {
+void set_scroll(bool allow_scroll) {
 	scroll = allow_scroll;
 }
 

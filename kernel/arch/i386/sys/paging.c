@@ -2,6 +2,7 @@
 #include <kernel/mem.h>
 #include <kernel/syscalls.h>
 #include <kernel/sysfunc.h>
+#include <stdbool.h>
 
 #define PAGE_SIZE 4096
 #define PAGEDIR_ADDR 768
@@ -21,11 +22,11 @@ const char *mem_types[] = {"ERROR", "Available", "Reserved", "ACPI Reclaimable",
 
 multiboot_memory_map_t *mmap;
 
-_Bool check_phys_page(void *addr)
+bool check_phys_page(void *addr)
 {
     uint32_t page = (uint32_t)addr;
     page /= PAGE_SIZE;
-    _Bool r = (_Bool)(pmem_used[page / 8] & (1 << (page % 8)));
+    bool r = (bool)(pmem_used[page / 8] & (1 << (page % 8)));
     return r;
 }
 
@@ -249,13 +250,13 @@ void trade_vaddr(void *vaddr)
     flush_tlb();
 }
 
-void mark_user(void *vaddr, _Bool user)
+void mark_user(void *vaddr, bool user)
 {
     kernel_tables[(uint32_t)vaddr / PAGE_SIZE].user = user ? 1 : 0;
     flush_tlb();
 }
 
-void mark_write(void *vaddr, _Bool write)
+void mark_write(void *vaddr, bool write)
 {
     kernel_tables[(uint32_t)vaddr / PAGE_SIZE].readwrite = write ? 1 : 0;
     flush_tlb();

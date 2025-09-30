@@ -16,6 +16,8 @@ multiboot_info_t *      k_mbi;
 
 void (*init_functions[])(void) = {init_ahci, init_ide, init_usb};
 
+const char *init_program = "A:/BIN/GUI.SYS";
+
 void kernel_main(uint32_t magic, uint32_t ebx)
 {
     serial_init();
@@ -106,7 +108,7 @@ void kernel_main(uint32_t magic, uint32_t ebx)
         }
     }
 
-    FILE prgm = fopen("A:/BIN/GUI.SYS", "r");
+    FILE prgm = fopen(init_program, "r");
     if (prgm.valid)
     {
         void *buf = alloc_page((prgm.size / 4096) + 1);

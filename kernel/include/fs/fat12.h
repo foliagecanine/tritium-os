@@ -6,6 +6,7 @@
 #include <fs/file.h>
 #include <fs/fs.h>
 #include <kernel/stdio.h>
+#include <stdbool.h>
 
 typedef struct {
 	uint32_t MntSig;
@@ -20,7 +21,7 @@ typedef struct {
 	uint32_t SystemAreaSize;
 } FAT12_MOUNT;
 
-_Bool   detect_fat12(uint32_t drive_num);
+bool   detect_fat12(uint32_t drive_num);
 FSMOUNT MountFAT12(uint32_t drive_num);
 FILE    FAT12_fopen(uint32_t prevLocation, uint32_t numEntries, char *filename, uint32_t drive_num, FAT12_MOUNT fm, uint8_t mode);
 void    FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_num);

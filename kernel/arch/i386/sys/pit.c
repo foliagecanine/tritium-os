@@ -29,8 +29,8 @@ void init_pit(uint32_t freq) {
 }
 
 void sleep(uint32_t ms) {
-	uint64_t endTicks = ticks+((ms*frequency)/1000);
-	while (ticks<endTicks) {
+	uint64_t endTicks = ticks + ((ms * frequency) / 1000);
+	while (ticks < endTicks) {
 		asm volatile("nop");
 	}
 }

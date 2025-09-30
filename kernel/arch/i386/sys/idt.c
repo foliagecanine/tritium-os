@@ -1,4 +1,5 @@
 #include <kernel/idt.h>
+#include <stdbool.h>
 
 //(pretty heavily) Based on https://wiki.osdev.org/Interrupts_tutorial
 
@@ -160,9 +161,9 @@ void init_idt() {
 	kprint("[INIT] IDT Enabled");
 }
 
-_Bool irq_finished[16];
+bool irq_finished[16];
 
-_Bool has_irq_finished(uint8_t irq) {
+bool has_irq_finished(uint8_t irq) {
 	if (irq_finished[irq]) {
 		irq_finished[irq] = false;
 		return true;
@@ -194,11 +195,11 @@ void add_irq_function(uint8_t irq, void (*function)()) {
 	}
 }
 
-/*void set_irq_finish_state(uint8_t irq, _Bool state) {
+/*void set_irq_finish_state(uint8_t irq, bool state) {
 	irq_finished[irq] = state;
 }*/
 
-_Bool ts_enabled = false;
+bool ts_enabled = false;
 tss_entry_t temp_tss;
 
 void irq0_handler(void) {

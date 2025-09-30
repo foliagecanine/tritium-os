@@ -1,5 +1,6 @@
 #include <kernel/kbd.h>
 #include <kernel/sysfunc.h>
+#include <stdbool.h>
 
 char kbdus[] = {
 	0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0,
@@ -28,14 +29,14 @@ char kbdus_caps[] = {
 
 uint8_t last_scancode;
 char lastkey_char;
-_Bool key_read;
-_Bool special_read;
-_Bool ctrl = false;
-_Bool shift = false;
-_Bool alt = false;
-_Bool numlck = false;
-_Bool scrlck = false;
-_Bool capslck = false;
+bool key_read;
+bool special_read;
+bool ctrl = false;
+bool shift = false;
+bool alt = false;
+bool numlck = false;
+bool scrlck = false;
+bool capslck = false;
 
 uint32_t get_kbddata() {
 	if (!special_read) {

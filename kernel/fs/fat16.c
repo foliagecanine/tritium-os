@@ -1,4 +1,5 @@
 #include <fs/fat16.h>
+#include <stdbool.h>
 
 typedef struct
 {

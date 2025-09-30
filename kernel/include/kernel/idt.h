@@ -11,7 +11,7 @@
 
 void init_idt();
 void clear_irq_status(uint8_t irq);
-_Bool has_irq_finished(uint8_t irq);
+bool has_irq_finished(uint8_t irq);
 void add_irq_function(uint8_t irq, void (*function)());
 void idt_new_int(uint8_t inum, uint32_t irq_function);
 void idt_new_int_flags(uint8_t inum, uint32_t irq_function, uint16_t type_attrs);
