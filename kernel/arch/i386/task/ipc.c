@@ -122,8 +122,8 @@ size_t receive_ipc_size(uint16_t port, bool override) {
 
 bool verify_ipc_port_ownership(uint32_t port) {
 	if (port == (uint32_t)-1) { // Check to see if this process owns ANY ports
-		for (uint32_t i = 0; i < 65536; i++) {
-			if (getpid() == ipc_ports[port].pid)
+		for (uint32_t i = 0; i < IPC_MAX_PORTS; i++) {
+			if (getpid() == ipc_ports[i].pid)
 				return true;
 		}
 		return false;
@@ -139,8 +139,8 @@ bool verify_ipc_port_ownership(uint32_t port) {
 
 bool transfer_avail(uint32_t pid, uint32_t port) {
 	if (port == (uint32_t)-1) {
-		for (uint32_t i = 0; i < 65536; i++) {
-			if (pid == ipc_ports[port].pid && ipc_ports[port].produced != ipc_ports[port].consumed)
+		for (uint32_t i = 0; i < IPC_MAX_PORTS; i++) {
+			if (pid == ipc_ports[i].pid && ipc_ports[i].produced != ipc_ports[i].consumed)
 				return true;
 		}
 		return false;
