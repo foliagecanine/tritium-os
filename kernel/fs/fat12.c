@@ -288,7 +288,7 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
     drivename[11] = 0;
 
     uint8_t *reading = (uint8_t *)read;
-    _Bool    success = false;
+    bool    success = false;
     for (unsigned int i = 0; i < numEntries; i++)
     {
         if (!(reading[11] & 0x08 || reading[11] & 0x02 || reading[0] == 0))
