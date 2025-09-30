@@ -155,7 +155,7 @@ void init_paging(multiboot_info_t *mbi)
     // Reset the CR3 so it flushes the TLB
     flush_tlb();
 
-    // Awesome! Now the default page tables are at vaddr:PAGETABLE_ADDR and paddr:0x400000
+    // Awesome! Now the default page tables are at vaddr:0xC0400000 and paddr:0x400000
     // This won't get in the way of programs (which are loaded at vaddr:0x100000) but is still within a low capacity of
     // memory (we only need 8MiB of memory right now)
     kprint("[INIT] Paging initialized");
@@ -188,6 +188,9 @@ void init_paging(multiboot_info_t *mbi)
 
     // Reclaim all the way up to 8MiB (for the kernel and the page tables)
     memset((void *)&pmem_used[0], 255, 256);
+
+    uint32_t cr3 = 0;
+    asm volatile("mov %%cr3, %0" : "=r"(cr3));
 
     kprint("[INIT] Kernel heap initialized");
 }
@@ -481,7 +484,7 @@ void switch_tables(void *new)
 void use_kernel_map()
 {
     kernel_tables = (page_table_entry *)PAGETABLE_ADDR;
-    update_cr3((uint32_t)(uintptr_t)(&kernel_page_dir[0]));
+    update_cr3((uint32_t)(uintptr_t)(&kernel_page_dir[0]) - KERNEL_ADDR);
 }
 
 void *clone_tables()
