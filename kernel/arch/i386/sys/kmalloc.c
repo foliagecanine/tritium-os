@@ -74,7 +74,7 @@ kheap_t get_current_heap()
 static bool grow_heap()
 {
     current_heap.heap_end += 4096;
-    if ((uintptr_t)(current_heap.heap_end - current_heap.heap_start) < current_heap.heap_size) return true;
+    if ((uintptr_t)(current_heap.heap_end - current_heap.heap_start) < current_heap.heap_size * 4096) return true;
     return false;
 }
 
@@ -119,7 +119,7 @@ void *malloc(size_t size)
                     return (void *)current_alloc->data;
                 }
             }
-            alloc_t *new_alloc = (void *)current_alloc->data + size;
+            alloc_t *new_alloc = (char *)current_alloc->data + size;
 
             new_alloc->used = false;
             new_alloc->size = current_alloc->size - (sizeof(alloc_t) + size);
@@ -168,4 +168,123 @@ void free(void *ptr)
         prev_alloc->size += current_alloc->size + sizeof(alloc_t);
         if (prev_alloc->next == NULL) current_heap.last_alloc_loc = prev_alloc;
     }
+}
+
+void *realloc(void *ptr, size_t size) {
+    if (!ptr) return malloc(size);
+    
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
+
+    alloc_t *current_alloc = ptr - sizeof(alloc_t);
+
+    if (current_alloc->size == size) return ptr;
+
+    if (current_alloc->size < size) {
+        // Try to merge with next alloc if it's free
+        alloc_t *next_alloc = current_alloc->next;
+        if (next_alloc && !next_alloc->used) {
+            // This is not the last alloc, and is (almost) exactly what we need, so absorb it directly
+            if (next_alloc != current_heap.last_alloc_loc &&
+                (current_alloc->size + sizeof(alloc_t) + next_alloc->size) >= size &&
+                (current_alloc->size + next_alloc->size) < size + sizeof(alloc_t)) {
+                current_alloc->next = next_alloc->next;
+                current_alloc->next->prev = current_alloc;
+                current_alloc->size += next_alloc->size + sizeof(alloc_t);
+                return ptr;
+            }
+
+            // This is not the last alloc, and is larger than what we need, so split it
+            if (next_alloc != current_heap.last_alloc_loc &&
+                (current_alloc->size + sizeof(alloc_t) + next_alloc->size) >= size + sizeof(alloc_t)) {
+                size_t old_next_alloc_size = next_alloc->size;
+                size_t old_current_alloc_size = current_alloc->size; 
+                alloc_t *next_next_alloc = next_alloc->next;
+                current_alloc->size = size;
+
+                alloc_t *new_alloc = (char *)current_alloc->data + size;
+                current_alloc->next = new_alloc;
+
+                new_alloc->used = false;
+                new_alloc->size = old_next_alloc_size - (size - old_current_alloc_size);
+                new_alloc->next = next_next_alloc;
+                new_alloc->prev = current_alloc;
+
+                next_next_alloc->prev = new_alloc;
+
+                return ptr;
+            }
+            
+            // This is the last alloc, so grow the heap if needed
+            if (next_alloc->next == NULL) {
+                while ((current_alloc->size + next_alloc->size) < size) {
+                    if (!grow_heap()) break;
+                    next_alloc->size += 4096;
+                }
+
+                size_t old_next_alloc_size = next_alloc->size;
+                size_t old_current_alloc_size = current_alloc->size; 
+                current_alloc->size = size;
+
+                alloc_t *new_alloc = (char *)current_alloc->data + size;
+                current_alloc->next = new_alloc;
+
+                new_alloc->used = false;
+                new_alloc->size = old_next_alloc_size - (size - old_current_alloc_size);
+                new_alloc->next = NULL;
+                new_alloc->prev = current_alloc;
+
+                current_heap.last_alloc_loc = new_alloc;
+
+                return ptr;
+            }
+        }
+
+        // There wasn't a suitable next alloc, so we need to malloc and copy
+        void *new_ptr = malloc(size);
+        if (new_ptr) {
+            memcpy(new_ptr, ptr, current_alloc->size < size ? current_alloc->size : size);
+            free(ptr);
+        }
+
+        return new_ptr;
+    } else { // (current_alloc->size > size)
+        // Shrink the allocation
+
+        // If we can't fit another alloc, then just return the same pointer
+        if (current_alloc->size - size < sizeof(alloc_t)) return ptr;
+
+        alloc_t *new_alloc = (char *)current_alloc->data + size;
+
+        new_alloc->used = false;
+        new_alloc->size = current_alloc->size - (sizeof(alloc_t) + size);
+        new_alloc->next = current_alloc->next;
+        new_alloc->prev = current_alloc;
+
+        // Merge our new unused alloc with the next alloc if they're both unused
+        if (!new_alloc->next->used) {
+            if (new_alloc->next == current_heap.last_alloc_loc) current_heap.last_alloc_loc = new_alloc;
+            new_alloc->size += new_alloc->next->size + sizeof(alloc_t);
+            new_alloc->next = new_alloc->next->next;
+        }
+
+        if (new_alloc->next) new_alloc->next->prev = new_alloc;
+        current_alloc->next = new_alloc;
+        current_alloc->size = size;
+    
+        return ptr;
+    }
+}
+
+void *calloc(size_t num, size_t size)
+{
+    if (size != 0 && num > SIZE_MAX / size) return NULL;
+
+    void *ptr = malloc(num * size);
+
+    if (ptr) memset(ptr, 0, num * size);
+    
+    return ptr;
 }
