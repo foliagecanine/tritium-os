@@ -83,17 +83,20 @@ void *malloc(size_t size)
     alloc_t *current_alloc = current_heap.heap_start;
     while (true)
     {
-        while (current_alloc->used)
+        // Walk through used or undersized blocks
+        while (current_alloc->used || (current_alloc != current_heap.last_alloc_loc && current_alloc->size < size))
         {
             current_alloc = current_alloc->next;
         }
+
+        // If the block is exactly the right size, use it
         if (current_alloc->size == size)
         {
             // If it is the last alloc, we will need to create one after this.
             // Grow the heap and treat it as current_alloc->size > size.
             if (current_alloc == current_heap.last_alloc_loc)
             {
-                if (!grow_heap()) return 0;
+                if (!grow_heap()) return NULL;
                 current_alloc->size += 4096;
             }
             else
@@ -102,6 +105,8 @@ void *malloc(size_t size)
                 return (void *)current_alloc->data;
             }
         }
+
+        // If the block is larger, then split it and use the front portion
         if (current_alloc->size > size)
         {
             if (current_alloc->size < size + sizeof(alloc_t))
@@ -109,7 +114,7 @@ void *malloc(size_t size)
                 // Not enough space for a new alloc. Treat as if equal.
                 if (current_alloc == current_heap.last_alloc_loc)
                 {
-                    grow_heap();
+                    if (!grow_heap()) return NULL;
                     current_alloc->size += 4096;
                     // Assume sizeof(alloc_t) < 4096
                 }
@@ -126,7 +131,11 @@ void *malloc(size_t size)
             new_alloc->next = current_alloc->next;
             new_alloc->prev = current_alloc;
 
-            if (new_alloc->next == NULL) current_heap.last_alloc_loc = new_alloc;
+            if (new_alloc->next == NULL) {
+                current_heap.last_alloc_loc = new_alloc;
+            } else {
+                new_alloc->next->prev = new_alloc;
+            }
 
             current_alloc->used = true;
             current_alloc->size = size;
@@ -135,11 +144,13 @@ void *malloc(size_t size)
 
             return (void *)current_alloc->data;
         }
+
+        // If we reached the end and there's still not enough memory, grow the heap
         if (current_alloc == current_heap.last_alloc_loc && current_alloc->size < size)
         {
             while (true)
             {
-                if (!grow_heap()) return 0;
+                if (!grow_heap()) return NULL;
                 current_alloc->size += 4096;
                 if (current_alloc->size >= size) break;
             }
