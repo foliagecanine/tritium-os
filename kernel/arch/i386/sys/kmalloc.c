@@ -45,9 +45,8 @@ kheap_t heap_create(uint32_t pages)
     void *  mem        = alloc_page(pages);
     ret.heap_start     = mem;
     ret.last_alloc_loc = ret.heap_start;
-    ret.heap_end       = ret.heap_start;
+    ret.heap_end       = ret.heap_start + (pages * 4096);
     ret.heap_size      = pages;
-    memset((char *)ret.heap_start, 0, ret.heap_end - ret.heap_start);
     alloc_t *root_alloc = ret.heap_start;
     root_alloc->used    = false;
     root_alloc->size    = pages * 4096;
@@ -73,9 +72,14 @@ kheap_t get_current_heap()
 
 static bool grow_heap()
 {
+    void *new_heap = realloc_page(current_heap.heap_start, current_heap.heap_size, current_heap.heap_size + 1, false);
+
+    if (!new_heap) return false;
+
     current_heap.heap_end += 4096;
-    if ((uintptr_t)(current_heap.heap_end - current_heap.heap_start) < current_heap.heap_size * 4096) return true;
-    return false;
+    current_heap.heap_size += 1;
+
+    return true;
 }
 
 void *malloc(size_t size)
@@ -124,7 +128,7 @@ void *malloc(size_t size)
                     return (void *)current_alloc->data;
                 }
             }
-            alloc_t *new_alloc = (char *)current_alloc->data + size;
+            alloc_t *new_alloc = (alloc_t *)((char *)current_alloc->data + size);
 
             new_alloc->used = false;
             new_alloc->size = current_alloc->size - (sizeof(alloc_t) + size);
@@ -160,6 +164,10 @@ void *malloc(size_t size)
 
 void free(void *ptr)
 {
+    // Sanity check the pointer
+    if (ptr == NULL) return;
+    if (ptr < current_heap.heap_start + sizeof(alloc_t) || ptr >= current_heap.heap_end - sizeof(alloc_t)) return;
+
     alloc_t *current_alloc = ptr - sizeof(alloc_t);
     current_alloc->used    = false;
 
@@ -170,19 +178,29 @@ void free(void *ptr)
     {
         current_alloc->next = next_alloc->next;
         current_alloc->size += next_alloc->size + sizeof(alloc_t);
-        if (current_alloc->next == NULL) current_heap.last_alloc_loc = current_alloc;
+        if (current_alloc->next == NULL) {
+            current_heap.last_alloc_loc = current_alloc;
+        } else {
+            current_alloc->next->prev = current_alloc;
+        }
     }
 
     if (prev_alloc && !prev_alloc->used)
     {
         prev_alloc->next = current_alloc->next;
         prev_alloc->size += current_alloc->size + sizeof(alloc_t);
-        if (prev_alloc->next == NULL) current_heap.last_alloc_loc = prev_alloc;
+        if (prev_alloc->next == NULL) {
+            current_heap.last_alloc_loc = prev_alloc;
+        } else {
+            prev_alloc->next->prev = prev_alloc;
+        }
     }
 }
 
 void *realloc(void *ptr, size_t size) {
     if (!ptr) return malloc(size);
+
+    if (ptr < current_heap.heap_start + sizeof(alloc_t) || ptr >= current_heap.heap_end - sizeof(alloc_t)) return NULL;
     
     if (size == 0) {
         free(ptr);
@@ -215,7 +233,7 @@ void *realloc(void *ptr, size_t size) {
                 alloc_t *next_next_alloc = next_alloc->next;
                 current_alloc->size = size;
 
-                alloc_t *new_alloc = (char *)current_alloc->data + size;
+                alloc_t *new_alloc = (alloc_t *)((char *)current_alloc->data + size);
                 current_alloc->next = new_alloc;
 
                 new_alloc->used = false;
@@ -239,7 +257,7 @@ void *realloc(void *ptr, size_t size) {
                 size_t old_current_alloc_size = current_alloc->size; 
                 current_alloc->size = size;
 
-                alloc_t *new_alloc = (char *)current_alloc->data + size;
+                alloc_t *new_alloc = (alloc_t *)((char *)current_alloc->data + size);
                 current_alloc->next = new_alloc;
 
                 new_alloc->used = false;
@@ -267,7 +285,7 @@ void *realloc(void *ptr, size_t size) {
         // If we can't fit another alloc, then just return the same pointer
         if (current_alloc->size - size < sizeof(alloc_t)) return ptr;
 
-        alloc_t *new_alloc = (char *)current_alloc->data + size;
+        alloc_t *new_alloc = (alloc_t *)((char *)current_alloc->data + size);
 
         new_alloc->used = false;
         new_alloc->size = current_alloc->size - (sizeof(alloc_t) + size);

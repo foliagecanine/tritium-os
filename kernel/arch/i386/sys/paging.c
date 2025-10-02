@@ -67,6 +67,10 @@ inline void flush_tlb() {
     asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3" ::: "ecx", "memory");
 }
 
+inline void invalidate_page(void *vaddr) {
+    asm volatile("invlpg (%0)" ::"r"(vaddr) : "memory");
+}
+
 inline void update_cr3(uint32_t new_cr3) {
     asm volatile("mov %0, %%cr3" ::"r"(new_cr3) : "memory");
 }
@@ -212,7 +216,7 @@ void identity_map(void *addr)
     kernel_tables[page /* (directory_entry*1024)+table_entry */].address   = page;
     kernel_tables[page /* (directory_entry*1024)+table_entry */].readwrite = 1;
     kernel_tables[page /* (directory_entry*1024)+table_entry */].present   = 1;
-    flush_tlb();
+    invalidate_page(addr);
 }
 
 void map_addr(void *vaddr, void *paddr)
@@ -225,7 +229,7 @@ void map_addr(void *vaddr, void *paddr)
     kernel_tables[vaddr_page].address   = paddr_page;
     kernel_tables[vaddr_page].readwrite = 1;
     kernel_tables[vaddr_page].present   = 1;
-    flush_tlb();
+    invalidate_page(vaddr);
 }
 
 void unmap_vaddr(void *vaddr)
@@ -236,7 +240,7 @@ void unmap_vaddr(void *vaddr)
     kernel_tables[vaddr_page].address   = 0;
     kernel_tables[vaddr_page].readwrite = 0;
     kernel_tables[vaddr_page].present   = 0;
-    flush_tlb();
+    invalidate_page(vaddr);
 }
 
 void trade_vaddr(void *vaddr)
@@ -247,19 +251,19 @@ void trade_vaddr(void *vaddr)
     kernel_tables[vaddr_page].address   = 0;
     kernel_tables[vaddr_page].readwrite = 0;
     kernel_tables[vaddr_page].present   = 0;
-    flush_tlb();
+    invalidate_page(vaddr);
 }
 
 void mark_user(void *vaddr, bool user)
 {
     kernel_tables[(uint32_t)vaddr / PAGE_SIZE].user = user ? 1 : 0;
-    flush_tlb();
+    invalidate_page(vaddr);
 }
 
 void mark_write(void *vaddr, bool write)
 {
     kernel_tables[(uint32_t)vaddr / PAGE_SIZE].readwrite = write ? 1 : 0;
-    flush_tlb();
+    invalidate_page(vaddr);
 }
 
 void *get_phys_addr(void *vaddr)
@@ -312,7 +316,8 @@ void map_page_secretly(void *vaddr, void *paddr)
     kernel_tables[vaddr_page].address   = paddr_page;
     kernel_tables[vaddr_page].readwrite = 1;
     kernel_tables[vaddr_page].present   = 1;
-    flush_tlb();
+
+    invalidate_page(vaddr);
 }
 
 void unmap_secret_page(void *vaddr, size_t pages)
@@ -324,8 +329,8 @@ void unmap_secret_page(void *vaddr, size_t pages)
         kernel_tables[vaddr_page + i].address   = 0;
         kernel_tables[vaddr_page + i].readwrite = 0;
         kernel_tables[vaddr_page + i].present   = 0;
+        invalidate_page(vaddr + (i * PAGE_SIZE));
     }
-    flush_tlb();
 }
 
 void *map_paddr(void *paddr, size_t pages)
@@ -530,14 +535,13 @@ uint32_t free_pages()
     return retval;
 }
 
-void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages)
+void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages, bool allow_remap)
 {
     int64_t  amt_pages = (int64_t)new_pages - (int64_t)old_pages;
     uint32_t ptr_page  = (uint32_t)ptr / PAGE_SIZE;
-    if (old_pages == new_pages)
+    if (old_pages == new_pages) {
         return ptr;
-    else if (old_pages < new_pages)
-    {
+    } else if (old_pages < new_pages) {
         bool failed = false;
         for (uint32_t i = 0; i < (uint32_t)amt_pages; i++)
         {
@@ -549,7 +553,12 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages)
         }
         if (failed)
         {
+            if (!allow_remap) return NULL;
+
             void *ret = alloc_page(new_pages);
+
+            if (!ret) return NULL;
+            
             memcpy(ret, ptr, old_pages * PAGE_SIZE);
             free_page(ptr, old_pages);
             return ret;
@@ -611,8 +620,8 @@ bool clone_user_pages()
             uint8_t rw                 = kernel_tables[i].readwrite;
             kernel_tables[i].readwrite = true;
 
-            // Flush TLB to update the map
-            flush_tlb();
+            // Invalidate the page
+            invalidate_page((void *)(i * PAGE_SIZE));
 
             // Copy the data into the new page
             memcpy((void *)(i * PAGE_SIZE), clone_data, PAGE_SIZE);

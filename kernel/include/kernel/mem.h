@@ -23,7 +23,7 @@ void *map_page_to(void *vaddr);
 void map_page_secretly(void *vaddr, void *paddr);
 void unmap_secret_page(void *vaddr, size_t pages);
 void *map_paddr(void *paddr, size_t pages);
-void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages);
+void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages, bool allow_remap);
 void mark_user(void *vaddr,_Bool user);
 void mark_write(void *vaddr,_Bool write);
 bool check_user(void *vaddr);
