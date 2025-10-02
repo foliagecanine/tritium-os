@@ -173,7 +173,7 @@ void init_paging(multiboot_info_t *mbi)
     memset((void *)&pmem_used[0], 255, 131072);
 
     // Scan the memory map for areas that we can use for general purposes
-    for (uint8_t i = 0; i < 15; i++)
+    for (uint8_t i = 0; i < mbi->mmap_length / sizeof(multiboot_memory_map_t); i++)
     {
         uint32_t type = mmap[i].type;
         if (mmap[i].type > 5) type = 2;
@@ -441,9 +441,10 @@ void *alloc_sequential(size_t pages)
                 else
                     break;
             }
+            
             if (successful_pages == pages)
             {
-                for (uint32_t j = PAGE_SIZE; j < 1048576; j++)
+                for (uint32_t j = 4096; j < 1048576; j++)
                 {
                     successful_pages = 1;
                     if (check_page_cluster((void *)(j * PAGE_SIZE)) == 255)
@@ -553,7 +554,10 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages, bool allow
         }
         if (failed)
         {
-            if (!allow_remap) return NULL;
+            if (!allow_remap) {
+                free_page(ptr, old_pages);
+                return NULL;
+            }
 
             void *ret = alloc_page(new_pages);
 

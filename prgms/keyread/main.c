@@ -10,6 +10,6 @@ int main(int argc, char **argv) {
 	while (g != 0x81) {
 		g = getkey();
 		if (g)
-			printf("0x%#\n", (uint64_t)g);
+			printf("0x%X\n", (uint64_t)g);
 	}
 }
