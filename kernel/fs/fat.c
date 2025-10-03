@@ -1,4 +1,5 @@
 #include <fs/fat.h>
+#include <ctype.h>
 
 int findCharInArray(char *array, char c)
 {

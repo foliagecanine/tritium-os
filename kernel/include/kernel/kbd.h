@@ -2,20 +2,7 @@
 #define _KERNEL_KBD_H
 
 #include <kernel/stdio.h>
-//#include <kernel/kbd.h>
 #include <kernel/exceptions.h>
-//#include <kernel/pit.h>
-
-#define PS2_KEY_PRESSED 0
-#define PS2_KEY_RELEASED 128
-
-#define PS2_LSHIFT 42
-#define PS2_RSHIFT 54
-#define PS2_CTRL 29
-#define PS2_ALT 56
-#define PS2_CAPSLCK 58
-#define PS2_SCRLCK 70
-#define PS2_NUMLCK 69
 
 unsigned int getkey();
 int get_raw_scancode();

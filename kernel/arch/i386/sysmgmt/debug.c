@@ -8,6 +8,7 @@
 #include <usb/usb.h>
 #include <usb/uhci.h>
 #include <kernel/graphics.h>
+#include <ctype.h>
 
 char *currentDirectory;
 char  commandPart[256];
@@ -103,7 +104,7 @@ bool check_command(char *command)
         for (uint8_t i = 0; i < 8; i++)
         {
             if (get_disk_mount(i).mountEnabled)
-                printf("mnt%$ (%c): %s%$, %s\n", i, (const char[]){'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'}[i], "SATA",
+                printf("mnt%hhu (%c): %s%llu, %s\n", i, (const char[]){'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'}[i], "SATA",
                        get_disk_mount(i).drive, get_disk_mount(i).type);
         }
         usingNewline = false;
@@ -153,7 +154,7 @@ bool check_command(char *command)
         for (uint8_t i = 0; i < sizeof(pci_t) / 4; i++)
         {
             if (i && !(i % 4)) printf("\n");
-            printf("%X ", dump[i]);
+            printf("%lX ", dump[i]);
         }
         pci_write_config_dword(command[9] - '0', command[10] - '0', command[11] - '0', 4,
                                pci_read_config_dword(command[9] - '0', command[10] - '0', command[11] - '0', 4) |
@@ -163,10 +164,10 @@ bool check_command(char *command)
 
     if (!strcmp(command, "acpi"))
     {
-        uint32_t rsdptr = acpi_find_rsdp();
-        printf("ACPI RSD PTR is at %p\n", rsdptr);
-        uint32_t fadtptr = acpi_find_fadt();
-        printf("ACPI FADT PTR is at %p\n", fadtptr);
+        uintptr_t rsdptr = (uintptr_t)acpi_find_rsdp();
+        printf("ACPI RSD PTR is at %p\n", (void *)rsdptr);
+        uintptr_t fadtptr = (uintptr_t)acpi_find_fadt();
+        printf("ACPI FADT PTR is at %p\n", (void *)fadtptr);
         acpi_list_tables();
         cmdAck = true;
     }
@@ -475,7 +476,7 @@ void debug_console()
 /*void VGA_write_register(uint32_t reg, uint8_t value) {
     uint16_t port = (reg>>16)&0xFFFF;
     uint8_t addr = reg&0xFF;
-    //printf("Writing %$ to %# index %#\n",(uint32_t)value,(uint64_t)port,(uint64_t)addr);
+    //printf("Writing %$ to %X index %X\n",(uint32_t)value,(uint64_t)port,(uint64_t)addr);
     outb(port,addr);
     outb(port+1,value);
 }

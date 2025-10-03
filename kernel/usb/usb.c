@@ -15,7 +15,7 @@ void usb_get_driver_for_class(uint16_t dev_addr, uint8_t class, uint8_t subclass
     else if (class == USB_CLASS_HID)
         init_hid(dev_addr, config);
     else
-        printf("No driver for class %u subclass %u protocol %u\n");
+        printf("No driver for class %u subclass %u protocol %u\n", class, subclass, protocol);
 }
 
 void check_pci(pci_t pci, uint8_t i, uint8_t j, uint8_t k)

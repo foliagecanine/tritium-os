@@ -72,23 +72,23 @@ void exception_general_protection_fault() {
 	for (;;);
 }
 
-uint32_t address;
+void *address;
 
-void exception_page_fault(uint32_t retaddr, uint32_t error) {
+void exception_page_fault(void *retaddr, uint32_t error) {
 	disable_tasking();
-	asm volatile("mov %%cr2, %0":"=a"(address):);
-	if(error&4) {
+	asm volatile("mov %%cr2, %0" : "=a" (address) :);
+	if(error & 4) {
 		kerror("[Exception.Fault] Usermode Page Privelage Fault!");
-		printf("Fault address: %p\n",address);
-		printf("Return address: %p\n",retaddr);
-		printf("Current PID: %u\n",getpid());
-		printf("Error: 0x%X\n",(error&7) | (error&0x10));
-		printf("Permissions: 0x%X\n",get_page_permissions((void *)address));
-		dprintf("Fault address: 0x%X\n",address);
-		dprintf("Return address: 0x%X\n",retaddr);
-		dprintf("Current PID: %u\n",getpid());
-		dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
-		dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
+		printf("Fault address: %p\n", address);
+		printf("Return address: %p\n", retaddr);
+		printf("Current PID: %lu\n", getpid());
+		printf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
+		printf("Permissions: 0x%X\n",get_page_permissions(address));
+		dprintf("Fault address: %p\n", address);
+		dprintf("Return address: %p\n", retaddr);
+		dprintf("Current PID: %lu\n", getpid());
+		dprintf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
+		dprintf("Permissions: 0x%X\n", get_page_permissions(address));
 		exit_program(1);
 		// Should not reach here.
 		for(;;);
@@ -97,14 +97,14 @@ void exception_page_fault(uint32_t retaddr, uint32_t error) {
 		terminal_setcolor(0x1F);
 		terminal_refresh();
 		kerror("[Exception.Fault] Kernel Page Fault!");
-		printf("Fault address: %p\n",address);
-		printf("Return address: %p\n",retaddr);
-		printf("Error: 0x%X\n",(error&7) | (error&0x10));
-		printf("Permissions: 0x%X\n",get_page_permissions((void *)address));
-		dprintf("Fault address: 0x%X\n",address);
-		dprintf("Return address: 0x%X\n",retaddr);
-		dprintf("Error: 0x%X\n",(error&7) | (error&0x10));
-		dprintf("Permissions: 0x%X\n",get_page_permissions((void *)address));
+		printf("Fault address: %p\n", address);
+		printf("Return address: %p\n", retaddr);
+		printf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
+		printf("Permissions: 0x%X\n", get_page_permissions(address));
+		dprintf("Fault address: %p\n", address);
+		dprintf("Return address: %p\n", retaddr);
+		dprintf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
+		dprintf("Permissions: 0x%X\n", get_page_permissions(address));
 		kprint("\nIf you are a user seeing this, your computer has crashed.");
 		kprint("Reboot your computer. If the error happens again...");
 		kprint("just don't do the thing that made it happen.\n");

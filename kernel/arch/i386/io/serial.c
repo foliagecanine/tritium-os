@@ -25,7 +25,7 @@ void serial_init()
     serial_write("Serial initialized.\n");
 }
 
-static bool dprint(const char *data, size_t length)
+static int dprint(const char *data, size_t length)
 {
     for (size_t i = 0; i < length; i++)
     {
@@ -33,7 +33,8 @@ static bool dprint(const char *data, size_t length)
             ;
         outb(0x3f8, data[i]);
     }
-    return true;
+    
+    return length;
 }
 
 int dprintf(const char *restrict format, ...)

@@ -185,10 +185,8 @@ void init_paging(multiboot_info_t *mbi)
                 release_phys_page((void *)(uint32_t)physptr);
             }
         }
-        dprintf("%hhu: %010p+%010p %s\n", i, (void *)(uintptr_t)mmap[i].addr, (void *)(uintptr_t)mmap[i].len,
-                mem_types[type]);
-        printf("%hhu: %010p+%010p %s\n", i, (void *)(uintptr_t)mmap[i].addr, (void *)(uintptr_t)mmap[i].len,
-               mem_types[type]);
+        dprintf("%hhu: 0x%08llX+0x%08llX %s\n", i, mmap[i].addr, mmap[i].len, mem_types[type]);
+        printf("%hhu: 0x%08llX+0x%08llX %s\n", i, mmap[i].addr, mmap[i].len, mem_types[type]);
     }
 
     // Reclaim all the way up to 8MiB (for the kernel and the page tables)
@@ -478,9 +476,9 @@ void *alloc_sequential(size_t pages)
     return 0;
 }
 
-uint32_t *get_current_tables()
+void *get_current_tables()
 {
-    return (uint32_t *)kernel_tables;
+    return (void *)kernel_tables;
 }
 
 void switch_tables(void *new)

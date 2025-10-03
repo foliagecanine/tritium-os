@@ -34,9 +34,9 @@ void *last_stack;
 
 void init_tasking(uint32_t num_pages) {
 	threads = alloc_page(num_pages);
-	memset(threads,0,num_pages*4096);
-	max_threads = (num_pages*4096)/sizeof(thread_t);
-	printf("Max threads: %u\n",max_threads);
+	memset(threads, 0, num_pages * 4096);
+	max_threads = (num_pages * 4096) / sizeof(thread_t);
+	printf("Max threads: %lu\n",max_threads);
 	kprint("[INIT] Tasking initialized.");
 }
 
@@ -205,7 +205,7 @@ void kill_process(uint32_t pid, uint32_t retval) {
 	}
 	uint32_t current_cr3;
 	current_cr3 = get_cr3();
-	uint32_t *current_tables = get_current_tables();
+	void *current_tables = get_current_tables();
 	switch_tables(threads[pid-1].tables);
 	set_cr3((threads[pid-1].cr3));
 	free_all_user_pages();
@@ -248,7 +248,7 @@ uint32_t envl_v;
 uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 	uint32_t current_cr3;
 	current_cr3 = get_cr3();
-	uint32_t *current_tables = get_current_tables();
+	void *current_tables = get_current_tables();
 
 	prgm = fopen(name,"r");
 	if (prgm.valid&&!prgm.directory) {
@@ -348,7 +348,7 @@ uint32_t fork_process() {
 	disable_tasking();
 	uint32_t current_cr3;
 	current_cr3 = get_cr3();
-	uint32_t *current_tables = get_current_tables();
+	void *current_tables = get_current_tables();
 
 	uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
@@ -371,7 +371,7 @@ uint32_t fork_process() {
 	threads[pid-1].tss.eax = 0;
 	threads[pid-1].parent = current_task;
 
-	switch_tables((void *)current_tables);
+	switch_tables(current_tables);
 	set_cr3(current_cr3);
 
 #ifdef TASK_DEBUG

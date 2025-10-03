@@ -60,7 +60,7 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     {
         if (!mount_drive(i))
         {
-            printf("Mounted drive %X.%X\n", 0, i);
+            printf("Mounted drive %X.%lX\n", 0, i);
             valid_drives++;
         }
     }
@@ -72,7 +72,7 @@ void kernel_main(uint32_t magic, uint32_t ebx)
         {
             if (!mount_drive((handler_id << 16) | i))
             {
-                printf("Mounted drive %X.%X\n", handler_id, i);
+                printf("Mounted drive %X.%lX\n", handler_id, i);
                 valid_drives++;
             }
         }

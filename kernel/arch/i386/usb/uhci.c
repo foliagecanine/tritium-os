@@ -81,18 +81,18 @@ bool uhci_port_reset(uint16_t iobase, uint8_t port) {
 }
 
 void dump_ioregs(uint16_t iobase) {
-	dbgprintf("[UHCI] USBCMD: %#\n", (uint64_t)inw(iobase + UHCI_USBCMD));
-	dbgprintf("[UHCI] USBSTS: %#\n", (uint64_t)inw(iobase + UHCI_USBSTS));
-	dbgprintf("[UHCI] USBINTR: %#\n", (uint64_t)inw(iobase + UHCI_USBINTR));
-	dbgprintf("[UHCI] FRNUM: %#\n", (uint64_t)inw(iobase + UHCI_FRNUM));
-	dbgprintf("[UHCI] FRBASEADD: %#\n", (uint64_t)inl(iobase + UHCI_FRBASEADD));
-	dbgprintf("[UHCI] PORTSC1: %#\n", (uint64_t)inw(iobase + UHCI_PORTSC1));
-	dbgprintf("[UHCI] PORTSC2: %#\n", (uint64_t)inw(iobase + UHCI_PORTSC2));
+	dbgprintf("[UHCI] USBCMD: %llX\n", (uint64_t)inw(iobase + UHCI_USBCMD));
+	dbgprintf("[UHCI] USBSTS: %llX\n", (uint64_t)inw(iobase + UHCI_USBSTS));
+	dbgprintf("[UHCI] USBINTR: %llX\n", (uint64_t)inw(iobase + UHCI_USBINTR));
+	dbgprintf("[UHCI] FRNUM: %llX\n", (uint64_t)inw(iobase + UHCI_FRNUM));
+	dbgprintf("[UHCI] FRBASEADD: %llX\n", (uint64_t)inl(iobase + UHCI_FRBASEADD));
+	dbgprintf("[UHCI] PORTSC1: %llX\n", (uint64_t)inw(iobase + UHCI_PORTSC1));
+	dbgprintf("[UHCI] PORTSC2: %llX\n", (uint64_t)inw(iobase + UHCI_PORTSC2));
 }
 
-void dump_xfr_desc(uhci_usb_xfr_desc td, uint8_t id) { dbgprintf("[UHCI] TD%$: %# %# %# %#\n", (uint32_t)id, (uint64_t)td.linkptr, (uint64_t)td.flags0, (uint64_t)td.flags1, (uint64_t)td.bufferptr); }
+void dump_xfr_desc(uhci_usb_xfr_desc td, uint8_t id) { dbgprintf("[UHCI] TD%$: %llX %llX %llX %llX\n", (uint32_t)id, (uint64_t)td.linkptr, (uint64_t)td.flags0, (uint64_t)td.flags1, (uint64_t)td.bufferptr); }
 
-void dump_queue(uhci_usb_queue q) { dbgprintf("[UHCI] Q: %# %#\n", (uint64_t)q.headlinkptr, (uint64_t)q.elemlinkptr); }
+void dump_queue(uhci_usb_queue q) { dbgprintf("[UHCI] Q: %llX %llX\n", (uint64_t)q.headlinkptr, (uint64_t)q.elemlinkptr); }
 
 void uhci_interrupt() {
 	for (uint8_t i = 0; i < USB_MAX_CTRLRS; i++) {
@@ -109,12 +109,21 @@ void uhci_interrupt() {
 	}
 }
 
-uint8_t data_table[] = {0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 7};
+uint8_t ideal_indices[] = {
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,
+    0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+    0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 7
+};
 
-uint8_t calculate_index(uint8_t index) { return data_table[index]; }
+uint8_t calculate_index(uint8_t index) { return ideal_indices[index]; }
 
 uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
-	dbgprintf("[UHCI] IOBase: %#\n", (uint64_t)iobase);
+	dbgprintf("[UHCI] IOBase: %llX\n", (uint64_t)iobase);
 	uhci_global_reset(iobase);
 
 	// Check if reset succeeded
@@ -177,7 +186,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 	uint8_t current_port = 0;
 
 	while (uhci_port_reset(iobase, current_port)) {
-		dbgprintf("[UHCI] Reset port %$\n", (uint32_t)current_port);
+		dbgprintf("[UHCI] Reset port %u\n", (uint32_t)current_port);
 		if (inw(iobase + UHCI_PORTSC1 + (current_port * 2)) & 1) {
 			dbgprintf("[UHCI] Found device at port %$, geting descriptor...\n", current_port);
 			usb_device usbdev;
@@ -195,7 +204,7 @@ uint8_t init_uhci_ctrlr(uint16_t iobase, uint8_t irq) {
 			devdesc = uhci_get_usb_dev_descriptor(&usbdev, 8);
 			if (devdesc.length) {
 				usbdev.max_pkt_size = devdesc.max_pkt_size;
-				dbgprintf("[UHCI] Max packet size: %$\n", devdesc.max_pkt_size);
+				dbgprintf("[UHCI] Max packet size: %u\n", devdesc.max_pkt_size);
 				uhci_port_reset(iobase, current_port);
 				uint8_t devaddr = uhci_get_unused_device(this_ctrlr);
 				if (uhci_set_address(&usbdev, devaddr)) {

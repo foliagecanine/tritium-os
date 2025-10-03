@@ -261,7 +261,7 @@ void initialize_abar(HBAData *abar) {
 					name[i] = info.model_number[i + 1];
 					name[i + 1] = info.model_number[i];
 				}
-				printf("[AHCI] Detected SATA drive: %s (%u MiB)\n", name, info.total_sectors / 2048);
+				printf("[AHCI] Detected SATA drive: %s (%llu MiB)\n", name, info.total_sectors / 2048);
 				num_ports++;
 			}
 		}

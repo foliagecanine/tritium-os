@@ -1,4 +1,21 @@
 #include <usb/hid.h>
+#include <stdint.h>
+
+#define USB_HID_KBD_LCTRL	1
+#define USB_HID_KBD_LSHIFT	(1<<1)
+#define USB_HID_KBD_LALT	(1<<2)
+#define USB_HID_KBD_LGUI	(1<<3)
+#define USB_HID_KBD_RCTRL	(1<<4)
+#define USB_HID_KBD_RSHIFT	(1<<5)
+#define USB_HID_KBD_RALT	(1<<6)
+#define USB_HID_KBD_RGUI	(1<<7)
+
+#define USB_INTEROP_PS2_KEY_PRESSED 0
+#define USB_INTEROP_PS2_KEY_RELEASED 128
+#define USB_INTEROP_PS2_CTRL 29
+#define USB_INTEROP_PS2_LSHIFT 42
+#define USB_INTEROP_PS2_ALT 56
+#define USB_INTEROP_PS2_RSHIFT 54
 
 uint8_t calc_interval(uint8_t interval_in) {
 	for (uint8_t i = 0; i < 8; i++) {
@@ -32,20 +49,19 @@ bool key_exists(uint8_t key, uint8_t *keylist) {
 }
 
 void insert_repeatable(uint8_t scancode) {
-	dprintf("Make : %#\n", (uint64_t)scancode);
+	dprintf("Make : %X\n", (uint64_t)scancode);
 	insert_scancode(usb_scancode_to_ps2[scancode]);
 	keyboard_repeat_key = scancode;
 	repeat_key_press_time = get_ticks_k();
 }
 
 void remove_repeatable(uint8_t scancode) {
-	dprintf("Break: %#\n", (uint64_t)scancode);
 	if (keyboard_repeat_key == scancode)
 		keyboard_repeat_key = 0;
-	insert_scancode(usb_scancode_to_ps2[scancode] + PS2_KEY_RELEASED);
+	insert_scancode(usb_scancode_to_ps2[scancode] + USB_INTEROP_PS2_KEY_RELEASED);
 }
 
-uint8_t PS2_modifiers[8] = {PS2_CTRL, PS2_LSHIFT, PS2_ALT, 0, PS2_CTRL, PS2_RSHIFT, PS2_ALT, 0};
+uint8_t PS2_modifiers[8] = {USB_INTEROP_PS2_CTRL, USB_INTEROP_PS2_LSHIFT, USB_INTEROP_PS2_ALT, 0, USB_INTEROP_PS2_CTRL, USB_INTEROP_PS2_RSHIFT, USB_INTEROP_PS2_ALT, 0};
 
 void check_modifiers(uint8_t key, uint8_t bufferkey, uint8_t direction) {
 	for (uint8_t i = 0; i < 8; i++) {
@@ -53,11 +69,11 @@ void check_modifiers(uint8_t key, uint8_t bufferkey, uint8_t direction) {
 		uint8_t bkeymod = bufferkey & (1 << i);
 		if (!direction) {
 			if (keymod && !bkeymod) {
-				insert_scancode(PS2_modifiers[i]);
+				insert_scancode(PS2_modifiers[i] + USB_INTEROP_PS2_KEY_PRESSED);
 			}
 		} else {
 			if (!keymod && bkeymod) {
-				insert_scancode(PS2_modifiers[i] + PS2_KEY_RELEASED);
+				insert_scancode(PS2_modifiers[i] + USB_INTEROP_PS2_KEY_RELEASED);
 			}
 		}
 	}
@@ -151,7 +167,7 @@ void hid_mouse_irq(uint16_t dev_addr) {
 		int8_t *mouse_input = device->driver1;
 		mouse_add_delta(mouse_input[1], mouse_input[2]);
 		mouse_buttons_override(*(uint8_t *)device->driver1);
-		// printf("%#\n",(uint64_t)mouse_input[3]);
+		// printf("%llX\n",(uint64_t)mouse_input[3]);
 	}
 }
 
@@ -222,6 +238,6 @@ bool init_hid(uint16_t dev_addr, usb_config_desc config) {
 		return init_hid_kbd(dev_addr, config, interface);
 	else if (interface.iprotocol == 2)
 		return init_hid_mouse(dev_addr, config, interface);
-	printf("Unknown protocol %$.\n", (uint32_t)interface.iprotocol);
+	printf("Unknown protocol %lu.\n", (uint32_t)interface.iprotocol);
 	return false;
 }

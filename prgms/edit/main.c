@@ -4,8 +4,6 @@
 #include <string.h>
 #include <tty.h>
 
-static inline void syscall(unsigned int syscall_num) { asm volatile("mov %0,%%eax;int $0x80" ::"r"(syscall_num)); }
-
 char file[1024 * 32];   // Reserve 32KiB for file. That is max size.
 char lines[2048][1024]; // Files can be up to 2048 lines of 1023 chars. Takes 2 MiB of program space.
 char fname[4096];

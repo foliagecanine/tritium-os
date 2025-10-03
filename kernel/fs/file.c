@@ -1,5 +1,6 @@
 #include <fs/file.h>
 #include <stdint.h>
+#include <ctype.h>
 
 // Codes:
 // 0 = Success

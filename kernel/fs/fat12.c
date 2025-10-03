@@ -192,7 +192,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_n
     uint8_t derr = disk_read_sectors(drive_num, location / 512, 1, read);
     if (derr)
     {
-        printf("Drive error: %$!", derr);
+        printf("Drive error: %u!", derr);
         free_page(read, ((numEntries * 32) / 4096) + 1);
         return;
     }
@@ -221,7 +221,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_n
             }
             uint32_t nextCluster = (reading[27] << 8) | reading[26];
             uint32_t size        = *(uint32_t *)&reading[28];
-            printf(" [0x%lX+%u]", (uint64_t)((nextCluster - 2) * 512) + (224 * 32) + (19 * 512), size);
+            printf(" [0x%llX+%lu]", (uint64_t)((nextCluster - 2) * 512) + (224 * 32) + (19 * 512), size);
             printf("\n");
         }
         reading += 32;
