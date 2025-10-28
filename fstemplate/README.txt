@@ -1,4 +1,4 @@
-Hello, and welcome to floppy.flp!
+Hello, and welcome to exampledisk.img!
 This file is formatted as FAT16.
 It can be used as a hard drive (or possibly other media).
 
