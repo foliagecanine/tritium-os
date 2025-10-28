@@ -1,4 +1,6 @@
 #include "macros.h"
+#include "asmtypes.h"
+#include <ctype.h>
 
 #define LOAD_ADDRESS 0x8040000
 

@@ -1,23 +1,29 @@
-GCC=i686-tritium-gcc
-CFLAGS?=
+CXX:=i686-tritium-g++
+CXXFLAGS:=-fno-exceptions -g
 OUTPRG=EDIT.PRG
 OUTFLDR=bin
 
 .PHONY: all clean upload
-.SUFFIXES: .o .c
+.SUFFIXES: .o .cpp
+
+OBJS=\
+main.o \
 
 all: $(OUTPRG)
 
-$(OUTPRG): main.c
-	$(GCC) $(CFLAGS) main.c -o $(OUTPRG)
+$(OUTPRG): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $(OUTPRG)
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 dump: $(OUTPRG)
 	i686-tritium-objdump -D $(OUTPRG)
-	
+
 clean:
-	rm *.o
-	rm *.d
-	rm $(OUTPRG)
+	rm -f $(OBJS)
+	rm -f *.d
+	rm -f $(OUTPRG)
 
 install: $(OUTPRG)
 	mcopy -o -i ../../exampledisk.img $(OUTPRG) ::$(OUTFLDR)/$(OUTPRG)

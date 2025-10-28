@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "macros.h": "c",
+        "vector": "cpp",
+        "string": "cpp",
+        "algorithm": "cpp",
+        "cctype": "cpp",
+        "cerrno": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "cgui": "cpp",
+        "ctty": "cpp",
+        "cunixfile": "cpp",
+    },
+    "makefile.configureOnOpen": true
+}
