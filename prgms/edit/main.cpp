@@ -420,8 +420,13 @@ public:
 
             delete[] cd;
 
-            // Construct lines from raw content
             parse_lines();
+
+            modified = false;
+            draw_statusbar();
+            cursor_x = 0;
+            cursor_y = 1;
+            terminal_setcursor(cursor_x, cursor_y);
         } else if (action == "save") {
             resolve_content();
             FILE *fp = fopen(filename.c_str(), "w");
@@ -434,6 +439,7 @@ public:
             char *cd = new char[cwd.length() + 1];
             strcpy(cd, cwd.c_str());
             char *new_filename = fileselector(cd, true);
+            terminal_setcursor(cursor_x, cursor_y);
 
             // Save file content
             if (new_filename != nullptr) {
