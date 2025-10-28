@@ -1,5 +1,5 @@
-#ifndef EDITOO_TOOLBAR_HPP
-#define EDITOO_TOOLBAR_HPP
+#ifndef EDIT_TOOLBAR_HPP
+#define EDIT_TOOLBAR_HPP
 
 #include "graphics.hpp"
 #include <string>

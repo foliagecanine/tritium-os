@@ -1,5 +1,5 @@
-#ifndef EDITOO_GRAPHICS_HPP
-#define EDITOO_GRAPHICS_HPP
+#ifndef EDIT_GRAPHICS_HPP
+#define EDIT_GRAPHICS_HPP
 
 #include <ctty>
 #include <string>

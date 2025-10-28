@@ -30,8 +30,8 @@ clean:
 create_image:
 	@if [ ! -f ../exampledisk.img ]; then \
 		echo "Creating exampledisk.img..."; \
-		dd if=/dev/zero of=../exampledisk.img bs=1M count=1; \
-		mformat -i ../exampledisk.img -T 65536 -v "TRITIUM OS " ::; \
+		dd if=/dev/zero of=../exampledisk.img bs=32M count=1; \
+		mkfs.fat -F 16 -n "TRITIUM OS " ../exampledisk.img; \
 		mmd -i ../exampledisk.img bin; \
 		mmd -i ../exampledisk.img bin/os; \
 		mmd -i ../exampledisk.img prgms; \

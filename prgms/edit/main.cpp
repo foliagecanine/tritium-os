@@ -428,6 +428,11 @@ public:
             cursor_y = 1;
             terminal_setcursor(cursor_x, cursor_y);
         } else if (action == "save") {
+            if (filename.empty()) {
+                handle_action("saveas");
+                return;
+            }
+
             resolve_content();
             FILE *fp = fopen(filename.c_str(), "w");
             if (fp != nullptr) {
@@ -474,7 +479,7 @@ public:
         } else if (action == "about") {
             redraw();
             graphics.draw_rect(10, 5, 70, 18, 0xF0, 0x0F);
-            graphics.put_text_centered(10, 7, 60, "EDITOO.PRG");
+            graphics.put_text_centered(10, 7, 60, "EDIT.PRG");
             graphics.put_text_centered(10, 9, 60, "Version 1.0");
             graphics.put_text_centered(10, 11, 60, "by foliagecanine");
             string link = "http://github.com/foliagecanine/tritium-os";
@@ -483,6 +488,7 @@ public:
             graphics.draw_rect((screen_width - 6) / 2, 15, (screen_width + 6) / 2, 16, 0x9F, 0x9F);
             graphics.put_text_centered(10, 15, 60, "OK");
             while (getchar() != '\n');
+            while (getkey() & 0x80);
         }
 
         if (menu_selected != nullptr) {
