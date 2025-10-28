@@ -31,6 +31,11 @@ Then you will need QEMU, which you can get on a Debian distribution (like Ubuntu
 or for other distributions
 `sudo [Package Manager Install Command] qemu`
 
+You need mtools to create the filesystem image. You can get it by running this command:
+`sudo apt-get install mtools`
+or for other distributions
+`sudo [Package Manager Install Command] mtools`
+
 You will also need grub-mkrescue, which is a part of the grub2 package. You can get it by running this command:
 `sudo apt-get install grub2`
 or for other distributions

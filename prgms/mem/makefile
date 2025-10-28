@@ -27,4 +27,4 @@ clean:
 	rm $(OUTPRG)
 
 install: $(OUTPRG)
-	sudo cp $(OUTPRG) /mnt/F1/$(OUTFLDR)
+	mcopy -o -i ../../exampledisk.img $(OUTPRG) ::$(OUTFLDR)/$(OUTPRG)

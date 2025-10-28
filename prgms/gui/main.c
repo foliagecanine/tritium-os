@@ -153,6 +153,7 @@ bool programselector()
                     terminal_clear();
                     uint32_t pid = exec_args(program, p_argv, p_envp);
                     waitpid(pid);
+                    terminal_clearcursor();
                     printf("Press a key to return to file manager...");
                     getkey();
                     unsigned int g;
