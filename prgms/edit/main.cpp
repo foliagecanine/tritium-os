@@ -47,7 +47,7 @@ private:
     } clipboard;
 
 public:
-    Editor(string cwd) : cwd(cwd) {
+    Editor(string cwd, string filename = "") : cwd(cwd), filename(filename) {
         ToolbarMenu *file_menu = new ToolbarMenu("File", 0);
         ToolbarMenuItem *new_item = new ToolbarMenuItem("New", "new", 0, 10);
         ToolbarMenuItem *open_item = new ToolbarMenuItem("Open", "open", 0);
@@ -61,16 +61,17 @@ public:
         file_menu->set_first_item(new_item);
 
         ToolbarMenu *edit_menu = new ToolbarMenu("Edit", 0);
-        ToolbarMenuItem *undo_item = new ToolbarMenuItem("Undo", "undo", 0, 10);
-        ToolbarMenuItem *redo_item = new ToolbarMenuItem("Redo", "redo", 0);
+        // ToolbarMenuItem *undo_item = new ToolbarMenuItem("Undo", "undo", 0, 10);
+        // ToolbarMenuItem *redo_item = new ToolbarMenuItem("Redo", "redo", 0);
         ToolbarMenuItem *cut_item = new ToolbarMenuItem("Cut", "cut", 2);
         ToolbarMenuItem *copy_item = new ToolbarMenuItem("Copy", "copy", 0);
         ToolbarMenuItem *paste_item = new ToolbarMenuItem("Paste", "paste", 0);
-        undo_item->set_next(redo_item);
-        redo_item->set_next(cut_item);
+        // undo_item->set_next(redo_item);
+        // redo_item->set_next(cut_item);
         cut_item->set_next(copy_item);
         copy_item->set_next(paste_item);
-        edit_menu->set_first_item(undo_item);
+        // edit_menu->set_first_item(undo_item);
+        edit_menu->set_first_item(cut_item);
         file_menu->set_next(edit_menu);
 
         ToolbarMenu *help_menu = new ToolbarMenu("Help", 0);
@@ -79,6 +80,23 @@ public:
         edit_menu->set_next(help_menu);
 
         first_toolbar_menu = file_menu;
+
+        // Load file if provided
+        if (!filename.empty()) {
+            FILE *fp = fopen(filename.c_str(), "r");
+            if (fp != nullptr) {
+                content.clear();
+                char buffer[1024];
+                size_t bytes_read;
+                while ((bytes_read = fread(buffer, 1, sizeof(buffer) - 1, fp)) > 0) {
+                    buffer[bytes_read] = '\0';
+                    content += string(buffer);
+                }
+                fclose(fp);
+            }
+
+            parse_lines();
+        }
     }
 
     void draw_toolbar(bool hidden = true) {
@@ -269,6 +287,16 @@ public:
         }
     }
 
+    void resolve_content() {
+        content.clear();
+        for (unsigned int i = 0; i < line_count; i++) {
+            content += lines[i];
+            if (i < line_count - 1) {
+                content += "\n";
+            }
+        }
+    }
+
     void clipboard_copy() {
         if (selection.active) {
             unsigned int sel_start_y = selection.start_y;
@@ -395,9 +423,31 @@ public:
             // Construct lines from raw content
             parse_lines();
         } else if (action == "save") {
-            // Implement file save functionality
+            resolve_content();
+            FILE *fp = fopen(filename.c_str(), "w");
+            if (fp != nullptr) {
+                fwrite(content.c_str(), 1, content.length(), fp);
+                fclose(fp);
+                modified = false;
+            }
         } else if (action == "saveas") {
-            // Implement file save as dialog and saving content
+            char *cd = new char[cwd.length() + 1];
+            strcpy(cd, cwd.c_str());
+            char *new_filename = fileselector(cd, true);
+
+            // Save file content
+            if (new_filename != nullptr) {
+                filename = string(new_filename);
+                resolve_content();
+                FILE *fp = fopen(filename.c_str(), "w");
+                if (fp != nullptr) {
+                    fwrite(content.c_str(), 1, content.length(), fp);
+                    fclose(fp);
+                    modified = false;
+                }
+            }
+
+            delete[] cd;
         } else if (action == "exit") {
             terminal_clearcursor();
             terminal_setcolor(0x07);
@@ -1243,7 +1293,12 @@ public:
 int main(int argc, char** argv) {
     string cd = string(getenv("CD"));
 
-    Editor editor(cd);
+    string filename = "";
+    if (argc > 1) {
+        filename = string(argv[1]);
+    }
+    
+    Editor editor(cd, filename);
     editor.run();
     terminal_clearcursor();
     terminal_setcolor(0x07);
