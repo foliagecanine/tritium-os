@@ -1,6 +1,6 @@
 #include <kernel/syscalls.h>
 
-#define NUM_SYSCALLS	38
+#define NUM_SYSCALLS	39
 
 uint32_t get_input_data(uint8_t input);
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
@@ -18,6 +18,7 @@ bool safe_dereg_ipc_port(uint16_t port);
 size_t safe_receive_ipc_size(uint16_t port);
 uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size);
 uint8_t safe_receive_ipc(uint16_t port, void *data);
+void serial_putchar(char c);
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -57,7 +58,8 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&null_function,			// 34 (reserved for future IPC-related functions)
 	&null_function,			// 35 (reserved for future IPC-related functions)
 	&null_function,			// 36 (reserved for future IPC-related functions)
-	&null_function			// 37 (reserved for future IPC-related functions)
+	&null_function,			// 37 (reserved for future IPC-related functions)
+	&serial_putchar			// 38
 };
 
 extern bool ts_enabled;

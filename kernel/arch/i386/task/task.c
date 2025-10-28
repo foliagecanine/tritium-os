@@ -110,14 +110,14 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 }
 
 void create_idle_process(void *prgm, size_t size) {
-	init_new_process(prgm,size,0,0);
+	init_new_process(prgm, size, 0, 0);
 	use_kernel_map();
 }
 
 extern void enter_usermode();
 
-void create_process(void *prgm,size_t size) {
-	uint32_t pid = init_new_process(prgm,size,0,0);
+void create_process(void *prgm, size_t size) {
+	uint32_t pid = init_new_process(prgm, size, 0, 0);
 	if (!pid)
 		return;
 	current_task = &threads[pid-1];
@@ -138,7 +138,7 @@ bool is_task_runnable(thread_t *thread) {
 }
 
 uint32_t next_task() {
-	for (uint32_t i = current_task->pid+1; i < max_threads; i++) {
+	for (uint32_t i = current_task->pid + 1; i < max_threads; i++) {
 		if (threads[i-1].pid!=0) {
 			if (is_task_runnable(&threads[i-1])) {
 				return i;
@@ -146,8 +146,8 @@ uint32_t next_task() {
 		}
 	}
 	for (uint32_t i = 1; i < max_threads; i++) {
-		if (threads[i-1].pid!=0) {
-			if (is_task_runnable(&threads[i-1])) {
+		if (threads[i - 1].pid != 0) {
+			if (is_task_runnable(&threads[i - 1])) {
 				return i;
 			}
 		}
@@ -182,8 +182,8 @@ void task_switch(tss_entry_t tss) {
 		last_entrypoint = &kernel_exit;
 		exit_usermode();
 	}
-	current_task = &threads[new_pid-1];
-	switch_tables(threads[new_pid-1].tables);
+	current_task = &threads[new_pid - 1];
+	switch_tables(threads[new_pid - 1].tables);
 	set_cr3((current_task->cr3));
 	new_temp_tss = current_task->tss;
 	memcpy((char *)fxsave_region, current_task->savedfloats, 512);
@@ -194,11 +194,11 @@ void task_switch(tss_entry_t tss) {
 void kill_process(uint32_t pid, uint32_t retval) {
 	disable_tasking();
 	deregister_ipc_ports_pid(pid);
-	reclaim_ipc_response_buffer(pid, threads[pid-1].ipc_responses);
+	reclaim_ipc_response_buffer(pid, threads[pid - 1].ipc_responses);
 	uint32_t old_pid = current_task->pid;
-	thread_t *parent = threads[pid-1].parent;
-	if (parent!=0) {
-		if (parent->state==TASK_STATE_WAITPID&&(parent->waitval==current_task->pid||parent->waitval==0)) {
+	thread_t *parent = threads[pid - 1].parent;
+	if (parent != 0) {
+		if (parent->state == TASK_STATE_WAITPID && (parent->waitval == current_task->pid || parent->waitval == 0)) {
 			parent->state = TASK_STATE_ACTIVE;
 			parent->waitval = retval;
 		}
@@ -210,12 +210,12 @@ void kill_process(uint32_t pid, uint32_t retval) {
 	set_cr3((threads[pid-1].cr3));
 	free_all_user_pages();
 	use_kernel_map();
-	free_page(threads[pid-1].tables-4096,1025);
-	threads[pid-1].state = TASK_STATE_NULL;
-	threads[pid-1].cr3 = 0;
-	threads[pid-1].tables = 0;
-	threads[pid-1].waitval = 0;
-	threads[pid-1].pid = 0;
+	free_page(threads[pid - 1].tables - 4096, 1025);
+	threads[pid - 1].state = TASK_STATE_NULL;
+	threads[pid - 1].cr3 = 0;
+	threads[pid - 1].tables = 0;
+	threads[pid - 1].waitval = 0;
+	threads[pid - 1].pid = 0;
 #ifdef TASK_DEBUG
 	kprint("[KDBG] Process killed:");
 	printf("====== pid=%u\n",pid);
@@ -226,12 +226,12 @@ void kill_process(uint32_t pid, uint32_t retval) {
 		task_switch(current_task->tss);
 	}
 	switch_tables(current_tables);
-	set_cr3((current_cr3));
+	set_cr3(current_cr3);
 	enable_tasking();
 }
 
 void exit_program(int retval) {
-	kill_process(current_task->pid,retval);
+	kill_process(current_task->pid, retval);
 }
 
 tss_entry_t syscall_temp_tss;

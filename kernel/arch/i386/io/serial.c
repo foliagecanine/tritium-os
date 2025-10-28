@@ -3,14 +3,17 @@
 #include <limits.h>
 #include <stdarg.h>
 
+void serial_putchar(char c)
+{
+    while (!(inb(0x3fd) & 0x20))
+        ;
+    outb(0x3f8, c);
+}
+
 void serial_write(const char *msg)
 {
-    for (size_t l = 0; l < strlen(msg); l++)
-    {
-        while (!(inb(0x3fd) & 0x20))
-            ;
-        outb(0x3f8, msg[l]);
-    }
+    while (*msg)
+        serial_putchar(*msg++);
 }
 
 void serial_init()

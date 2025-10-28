@@ -13,6 +13,7 @@
 
 void debug_console(); // Hopefully temporary
 void serial_write(const char *msg);
+void serial_putchar(char c);
 int  dprintf(const char *restrict format, ...);
 int  noprintf(const char *restrict format, ...);
 

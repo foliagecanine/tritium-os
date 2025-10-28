@@ -127,6 +127,7 @@ void kernel_exit()
 {
     sleep(1000);
     power_shutdown();
-    for (;;)
-        ;
+    for (;;) {
+        asm volatile("hlt");
+    }
 }

@@ -14,3 +14,5 @@ rpi-qemu.sh
 *.PRG
 *.SYS
 core
+tritium-compiler
+libc-tritium
