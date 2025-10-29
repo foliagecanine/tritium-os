@@ -1,5 +1,6 @@
 isodir
 sysroot
+fs/disk_template.img
 ExtraInfo
 bootloader
 *.d

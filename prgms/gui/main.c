@@ -319,7 +319,7 @@ void main(uint32_t argc, char **argv)
         {
             memset(buf, 0, 31);
             r = finddir(currdir, buf, i);
-            if (r->valid && buf[0])
+            if (r->valid && buf[0] && strcmp(buf, "./"))
             {
                 memset(name[count], ' ', 30);
                 memcpy(name[count], buf, strlen(buf));

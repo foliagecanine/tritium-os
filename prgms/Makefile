@@ -29,13 +29,18 @@ clean:
 
 create_image:
 	@if [ ! -f ../exampledisk.img ]; then \
+		if [ ! -f ../fs/disk_template.img ]; then \
+			echo "Disk template not found. Creating..."; \
+			./../scripts/create_disk_template.sh ../fs/disk_template.img; \
+		fi; \
+		\
 		echo "Creating exampledisk.img..."; \
-		dd if=/dev/zero of=../exampledisk.img bs=32M count=1; \
-		mkfs.fat -F 16 -n "TRITIUM OS " ../exampledisk.img; \
+		cp ../fs/disk_template.img ../exampledisk.img; \
+		mcopy -i ../exampledisk.img ../kernel/myos.kernel ::/boot/; \
 		mmd -i ../exampledisk.img bin; \
 		mmd -i ../exampledisk.img bin/os; \
 		mmd -i ../exampledisk.img prgms; \
-		mcopy -i ../exampledisk.img ../fstemplate/* ::/; \
+		mcopy -i ../exampledisk.img ../fs/fstemplate/* ::/; \
 	fi
 
 $(PRGMS):
