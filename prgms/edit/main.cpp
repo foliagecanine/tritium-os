@@ -8,6 +8,16 @@
 
 using namespace std;
 
+const static vga_color_t editor_textarea_color = VGA_BACKGROUND(VGA_COLOR_WHITE) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t toolbar_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_GREY) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t offscreen_arrow_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_GREY) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t highlight_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_CYAN) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t statusbar_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_GREY) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t terminal_color = VGA_BACKGROUND(VGA_COLOR_BLACK) | VGA_FOREGROUND(VGA_COLOR_LIGHT_GREY);
+const static vga_color_t aboutbox_color = VGA_BACKGROUND(VGA_COLOR_WHITE) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+const static vga_color_t aboutbox_link_color = VGA_BACKGROUND(VGA_COLOR_WHITE) | VGA_FOREGROUND(VGA_COLOR_LIGHT_BLUE);
+const static vga_color_t aboutbox_ok_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_BLUE) | VGA_FOREGROUND(VGA_COLOR_WHITE);
+
 class Editor {
 private:
     GraphicsPanel graphics;
@@ -63,7 +73,7 @@ public:
         ToolbarMenu *edit_menu = new ToolbarMenu("Edit", 0);
         // ToolbarMenuItem *undo_item = new ToolbarMenuItem("Undo", "undo", 0, 10);
         // ToolbarMenuItem *redo_item = new ToolbarMenuItem("Redo", "redo", 0);
-        ToolbarMenuItem *cut_item = new ToolbarMenuItem("Cut", "cut", 2);
+        ToolbarMenuItem *cut_item = new ToolbarMenuItem("Cut", "cut", 2, 10);
         ToolbarMenuItem *copy_item = new ToolbarMenuItem("Copy", "copy", 0);
         ToolbarMenuItem *paste_item = new ToolbarMenuItem("Paste", "paste", 0);
         // undo_item->set_next(redo_item);
@@ -101,7 +111,7 @@ public:
 
     void draw_toolbar(bool hidden = true) {
         graphics.set_buffer(true);
-        graphics.draw_rect(0, 0, screen_width, 1, 0x70, 0x70);
+        graphics.draw_rect(0, 0, screen_width, 1, toolbar_color, toolbar_color);
 
         graphics.put_text_centered(0, 0, screen_width, "TritiumOS Text Editor");
 
@@ -115,7 +125,7 @@ public:
 
     void draw_editor_area() {
         graphics.set_buffer(true);
-        graphics.draw_rect(0, 1, screen_width, screen_height - 1, 0xF0, 0xF0);
+        graphics.draw_rect(0, 1, screen_width, screen_height - 1, editor_textarea_color, editor_textarea_color);
     
         int lines_to_draw = screen_height - 2;
         if (line_count < lines_to_draw) {
@@ -129,12 +139,22 @@ public:
 
                 string visible_line;
                 
-                if (line.length() < scroll_x) {
+                if (line.length() == 0) {
                     visible_line = "";
-                } else if (line.length() < scroll_x + screen_width) {
-                    visible_line = line.substr(scroll_x, line.length() - scroll_x);
+                } else if (line.length() > 0 && scroll_x > 0) {
+                    visible_line = "<" + line.substr(1);
+                    graphics.set_color(0, i + 1, offscreen_arrow_color);
                 } else {
-                    visible_line = line.substr(scroll_x, screen_width);
+                    visible_line = line;
+                }
+                
+                if (line.length() < scroll_x + screen_width) {
+                    visible_line = visible_line.substr(scroll_x, line.length() - scroll_x);
+                } else if (line.length() > scroll_x + screen_width) {
+                    visible_line = visible_line.substr(scroll_x, screen_width - 1) + ">";
+                    graphics.set_color(screen_width - 1, i + 1, offscreen_arrow_color);
+                } else {
+                    visible_line = visible_line.substr(scroll_x, screen_width);
                 }
 
                 graphics.put_text(0, i + 1, visible_line);
@@ -171,7 +191,7 @@ public:
                         }
 
                         for (unsigned int x = highlight_start_x; x < highlight_end_x && x < screen_width; x++) {
-                            graphics.set_color(x, i + 1, 0xB0);
+                            graphics.set_color(x, i + 1, highlight_color);
                         }
                     }
                 }
@@ -183,7 +203,7 @@ public:
 
     void draw_statusbar() {
         graphics.set_buffer(true);
-        graphics.draw_rect(0, screen_height - 1, screen_width, screen_height, 0x70, 0x70);
+        graphics.draw_rect(0, screen_height - 1, screen_width, screen_height, statusbar_color, statusbar_color);
 
         graphics.put_text(0, screen_height - 1, "\263");
 
@@ -461,7 +481,7 @@ public:
             delete[] cd;
         } else if (action == "exit") {
             terminal_clearcursor();
-            terminal_setcolor(0x07);
+            terminal_setcolor(terminal_color);
             terminal_clear();
             exit(0);
         } else if (action == "copy") {
@@ -478,17 +498,17 @@ public:
             clipboard_paste();
         } else if (action == "about") {
             redraw();
-            graphics.draw_rect(10, 5, 70, 18, 0xF0, 0x0F);
+            graphics.draw_rect(10, 5, 70, 18, aboutbox_color, aboutbox_color >> 4 | (char)(aboutbox_color << 4));
             graphics.put_text_centered(10, 7, 60, "EDIT.PRG");
             graphics.put_text_centered(10, 9, 60, "Version 1.0");
             graphics.put_text_centered(10, 11, 60, "by foliagecanine");
             string link = "http://github.com/foliagecanine/tritium-os";
-            graphics.draw_rect((screen_width - link.length()) / 2, 13, (screen_width + link.length()) / 2, 14, 0xF1, 0xF1);
+            graphics.draw_rect((screen_width - link.length()) / 2, 13, (screen_width + link.length()) / 2, 14, aboutbox_link_color, aboutbox_link_color);
             graphics.put_text_centered(10, 13, 60, link.c_str());
-            graphics.draw_rect((screen_width - 6) / 2, 15, (screen_width + 6) / 2, 16, 0x9F, 0x9F);
+            graphics.draw_rect((screen_width - 6) / 2, 15, (screen_width + 6) / 2, 16, aboutbox_ok_color, aboutbox_ok_color);
             graphics.put_text_centered(10, 15, 60, "OK");
             while (getchar() != '\n');
-            while (getkey() & 0x80);
+            while (getkey() & KBDIN_KEY_RELEASED);
         }
 
         if (menu_selected != nullptr) {
@@ -680,30 +700,42 @@ public:
 
             // If we are at the end of the line, move to end of the new line
             if (line_end) {
-                cursor_x = lines[current_line].length() - scroll_x;
-                if (cursor_x >= screen_width) {
-                    scroll_x = cursor_x - screen_width + 1;
-                    cursor_x = screen_width - 1;
-                } else {
-                    scroll_x = 0;
-                }
-            // Else, maintain desired x position
-            } else {
-                if (desired_x < lines[current_line].length()) {
-                    cursor_x = desired_x - scroll_x;
-                    if (cursor_x >= screen_width) {
-                        scroll_x = desired_x - screen_width + 1;
-                        cursor_x = screen_width - 1;
-                    }
-                } else {
-                    cursor_x = lines[current_line].length() - scroll_x;
-                    if (cursor_x >= screen_width) {
-                        scroll_x = cursor_x - screen_width + 1;
-                        cursor_x = screen_width - 1;
+                while (lines[current_line].length() < scroll_x) {
+                    if (scroll_x > screen_width) {
+                        scroll_x -= screen_width;
                     } else {
                         scroll_x = 0;
+                        break;
                     }
                 }
+
+                while (lines[current_line].length() > scroll_x + screen_width) {
+                    scroll_x += screen_width;
+                }
+
+                cursor_x = lines[current_line].length() - scroll_x;
+            // Else, maintain desired x position
+            } else {
+                unsigned int actual_x = desired_x;
+                
+                if (actual_x > lines[current_line].length()) {
+                    actual_x = lines[current_line].length();
+                }
+
+                while (actual_x < scroll_x) {
+                    if (scroll_x > screen_width) {
+                        scroll_x -= screen_width;
+                    } else {
+                        scroll_x = 0;
+                        break;
+                    }
+                }
+
+                while (actual_x > scroll_x + screen_width) {
+                    scroll_x += screen_width;
+                }
+
+                cursor_x = actual_x - scroll_x;
             } 
         }
 
@@ -761,30 +793,42 @@ public:
 
             // If we are at the end of the line, move to end of the new line
             if (line_end) {
-                cursor_x = lines[current_line].length() - scroll_x;
-                if (cursor_x >= screen_width) {
-                    scroll_x = cursor_x - screen_width + 1;
-                    cursor_x = screen_width - 1;
-                } else {
-                    scroll_x = 0;
-                }
-            // Else, maintain desired x position
-            } else {
-                if (desired_x < lines[current_line].length()) {
-                    cursor_x = desired_x - scroll_x;
-                    if (cursor_x >= screen_width) {
-                        scroll_x = desired_x - screen_width + 1;
-                        cursor_x = screen_width - 1;
-                    }
-                } else {
-                    cursor_x = lines[current_line].length() - scroll_x;
-                    if (cursor_x >= screen_width) {
-                        scroll_x = cursor_x - screen_width + 1;
-                        cursor_x = screen_width - 1;
+                while (lines[current_line].length() < scroll_x) {
+                    if (scroll_x > screen_width) {
+                        scroll_x -= screen_width;
                     } else {
                         scroll_x = 0;
+                        break;
                     }
                 }
+
+                while (lines[current_line].length() > scroll_x + screen_width) {
+                    scroll_x += screen_width;
+                }
+                
+                cursor_x = lines[current_line].length() - scroll_x;
+            // Else, maintain desired x position
+            } else {
+                unsigned int actual_x = desired_x;
+
+                if (actual_x > lines[current_line].length()) {
+                    actual_x = lines[current_line].length();
+                }
+
+                while (actual_x < scroll_x) {
+                    if (scroll_x > screen_width) {
+                        scroll_x -= screen_width;
+                    } else {
+                        scroll_x = 0;
+                        break;
+                    }
+                }
+
+                while (actual_x > scroll_x + screen_width) {
+                    scroll_x += screen_width;
+                }
+
+                cursor_x = actual_x - scroll_x;
             } 
         }
 

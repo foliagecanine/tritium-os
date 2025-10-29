@@ -6,6 +6,9 @@
 #include <cctype>
 #include <cstdio>
 
+static const vga_color_t toolbar_menu_color = VGA_BACKGROUND(VGA_COLOR_LIGHT_GREY) | VGA_FOREGROUND(VGA_COLOR_BLACK);
+static const vga_color_t toolbar_item_highlight = VGA_BACKGROUND(VGA_COLOR_LIGHT_GREY) | VGA_FOREGROUND(VGA_COLOR_DARK_GREY);
+
 class ToolbarMenuItem {
 private:
     std::string name;
@@ -19,7 +22,7 @@ public:
     ToolbarMenuItem(std::string name, std::string action, int highlighted_char = -1, unsigned int min_width = 0) 
         : name(name), action(action), highlighted_char(highlighted_char), min_width(min_width) {
         if (min_width < name.length() + 1) {
-            min_width = name.length() + 1;
+            this->min_width = name.length() + 1;
         }
     }
 
@@ -47,10 +50,10 @@ public:
     }
 
     void render(GraphicsPanel& panel, unsigned int x, unsigned int y, unsigned int width) {
-        panel.draw_rect(x, y, x + width, y + 1, 0x70, 0x70);
+        panel.draw_rect(x, y, x + width, y + 1, toolbar_menu_color, toolbar_menu_color);
         panel.put_text(x, y, name);
         if (highlighted_char >= 0 && highlighted_char < (int)name.length()) {
-            panel.set_color(x + highlighted_char, y, 0x78);
+            panel.set_color(x + highlighted_char, y, toolbar_item_highlight);
         }
     }
 
@@ -138,10 +141,10 @@ public:
     }
 
     void render(GraphicsPanel& panel, unsigned int x) {
-        panel.draw_rect(x, 0, x + get_width(), 1, 0x70, 0x70);
+        panel.draw_rect(x, 0, x + get_width(), 1, toolbar_menu_color, toolbar_menu_color);
         panel.put_text(x, 0, name);
         if (highlighted_char >= 0 && highlighted_char < (int)name.length()) {
-            panel.set_color(x + highlighted_char, 0, 0x78);
+            panel.set_color(x + highlighted_char, 0, toolbar_item_highlight);
         }
 
         if (selected && first_item != nullptr) {

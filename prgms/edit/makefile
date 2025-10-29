@@ -1,10 +1,10 @@
 CXX:=i686-tritium-g++
-CXXFLAGS:=-fno-exceptions -g
+CXXFLAGS:=-fno-exceptions -g -MMD
 OUTPRG=EDIT.PRG
 OUTFLDR=bin
 
 .PHONY: all clean upload
-.SUFFIXES: .o .cpp
+.SUFFIXES: .o .cpp .hpp
 
 OBJS=\
 main.o \
@@ -27,3 +27,5 @@ clean:
 
 install: $(OUTPRG)
 	mcopy -o -i ../../exampledisk.img $(OUTPRG) ::$(OUTFLDR)/$(OUTPRG)
+
+-include $(OBJS:.o=.d)

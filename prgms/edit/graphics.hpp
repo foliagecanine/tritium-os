@@ -6,13 +6,13 @@
 
 class GraphicsPanel {
 private:
-    char *colors;
+    vga_color_t *colors;
     char *characters; 
     unsigned int width;
     unsigned int height;
     bool buffered = false;
 
-    char& color_at(unsigned int x, unsigned int y) {
+    vga_color_t& color_at(unsigned int x, unsigned int y) {
         return colors[y * width + x];
     }
 
@@ -21,12 +21,12 @@ private:
     }
 
 public:
-    GraphicsPanel(unsigned int width = 80, unsigned int height = 25, char default_color = 0x07, bool buffered = false) {
+    GraphicsPanel(unsigned int width = 80, unsigned int height = 25, vga_color_t default_color = 0x07, bool buffered = false) {
         this->width = width;
         this->height = height;
         this->buffered = buffered;
 
-        colors = new char[width * height];
+        colors = new vga_color_t[width * height];
         characters = new char[width * height];
         
         for (unsigned int y = 0; y < height; y++) {
@@ -54,7 +54,7 @@ public:
         }
     }
 
-    void set_color(unsigned int x, unsigned int y, unsigned char color) {
+    void set_color(unsigned int x, unsigned int y, vga_color_t color) {
         if (x < width && y < height) {
             color_at(x, y) = color;
             if (!buffered)
@@ -62,7 +62,7 @@ public:
         }
     }
 
-    void draw_rect(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, unsigned char color, unsigned char border) {
+    void draw_rect(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, vga_color_t color, vga_color_t border) {
         for (unsigned int y = y0; y < y1; y++) {
             for (unsigned int x = x0; x < x1; x++) {
                 if (y - y0 < 1 || y1 - y < 2 || x - x0 < 2 || x1 - x < 3) {
