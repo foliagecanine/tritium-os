@@ -32,6 +32,7 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
 FILE    FAT16_readdir(FILE *file, char *buf, uint32_t n, uint32_t drive_num);
 FILE    FAT16_fcreate(char *name, FAT16_MOUNT fm, uint32_t drive_num);
 uint8_t FAT16_fdelete(char *name, uint32_t drive_num);
+uint8_t FAT16_fmove(char *src_name, char *dest_name, FAT16_MOUNT fm, uint32_t drive_num);
 uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num);
 void    print_fat16_values(uint32_t drive_num);
 

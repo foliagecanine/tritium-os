@@ -215,7 +215,7 @@ uint8_t fdelete_usermode(char *filename) {
 }
 
 uint8_t fmove_usermode(char *filename, char *dest) {
-	if (check_range(filename,strlen(filename)) && (check_range(dest, strlen(dest))) || dest==NULL) {
+	if (check_range(filename,strlen(filename)) && (check_range(dest, strlen(dest)) || dest==NULL)) {
 		return fmove(filename, dest);
 	}
 	return UNKNOWN_ERROR;

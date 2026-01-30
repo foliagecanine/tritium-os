@@ -247,9 +247,18 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
     char *searchpath = filename + 1;
     if (strlen(filename) > 0)
     {
-        memcpy(searchname, searchpath, ((int)strchr(searchpath, '/') - (int)searchpath));
-        searchname[((int)strchr(searchpath, '/') - (int)searchpath)] = 0;
-        searchpath += ((int)strchr(searchpath, '/') - (int)searchpath);
+        char *slash = strchr(searchpath, '/');
+        if (slash)
+        {
+            memcpy(searchname, searchpath, ((int)slash - (int)searchpath));
+            searchname[((int)slash - (int)searchpath)] = 0;
+            searchpath += ((int)slash - (int)searchpath);
+        }
+        else
+        {
+            strcpy(searchname, searchpath);
+            searchpath = NULL;
+        }
     }
     else
     {
@@ -260,7 +269,7 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
     LongToShortFilename(searchname, shortfn); // Get the 8.3 name of the file/folder we are looking for
 
     // If we added a /, don't bother looking for NULL. Instead, return our current location.
-    if (strcmp(shortfn, "           "))
+    if (!strcmp(shortfn, "           "))
     {
         retFile.valid     = true;
         retFile.location  = (uint64_t)location;

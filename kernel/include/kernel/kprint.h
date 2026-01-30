@@ -12,5 +12,6 @@ void kprint(const char* str);
 void kwarn(const char* str);
 int kprintf(const char* format, ...);
 const char* get_symbol_name(uint32_t addr);
+void dump_stacktrace();
 
 #endif

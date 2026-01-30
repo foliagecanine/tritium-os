@@ -286,9 +286,18 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
     char *searchpath = filename + 1;
     if (strlen(filename) > 0)
     {
-        memcpy(searchname, searchpath, ((int)strchr(searchpath, '/') - (int)searchpath));
-        searchname[((int)strchr(searchpath, '/') - (int)searchpath)] = 0;
-        searchpath += ((int)strchr(searchpath, '/') - (int)searchpath);
+        char *slash = strchr(searchpath, '/');
+        if (slash)
+        {
+            memcpy(searchname, searchpath, ((int)slash - (int)searchpath));
+            searchname[((int)slash - (int)searchpath)] = 0;
+            searchpath += ((int)slash - (int)searchpath);
+        }
+        else
+        {
+            strcpy(searchname, searchpath);
+            searchpath = NULL;
+        }
     }
     else
     {
@@ -573,7 +582,9 @@ uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num)
 // Create the dest file, absorb the FAT mapping from the source file, then delete the src file
 uint8_t FAT16_fmove(char *src_name, char *dest_name, FAT16_MOUNT fm, uint32_t drive_num)
 {
-    FILE src_file = FAT16_fopen(fm.RootDirectoryOffset * 512, fm.NumRootDirectoryEntries, src_name, drive_num, fm, 1);
+    char *src_longname = src_name;
+    if (src_name[1] == ':') src_longname += 2;
+    FILE src_file = FAT16_fopen(fm.RootDirectoryOffset * 512 + 1, fm.NumRootDirectoryEntries, src_longname, drive_num, fm, 1);
     if (!src_file.valid) return FILE_NOT_FOUND;
     FILE dest_file = FAT16_fcreate(dest_name, fm, drive_num);
     if (!dest_file.valid) return UNKNOWN_ERROR;
