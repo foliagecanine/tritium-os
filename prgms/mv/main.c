@@ -9,8 +9,9 @@ int main(int argc, char *argv[]) {
     const char *source = argv[1];
     const char *destination = argv[2];
 
-    if (movefile(source, destination) != 0) {
-        printf("Error: Could not move file from %s to %s\n", source, destination);
+    uint8_t error;
+    if ((error = movefile(source, destination)) != 0) {
+        printf("Error: Could not move file from %s to %s: Error %u\n", source, destination, error);
         return 1;
     }
 

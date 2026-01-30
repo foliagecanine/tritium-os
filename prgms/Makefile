@@ -40,7 +40,7 @@ create_image:
 		mmd -i ../exampledisk.img bin; \
 		mmd -i ../exampledisk.img bin/os; \
 		mmd -i ../exampledisk.img prgms; \
-		mcopy -D o -i ../exampledisk.img ../fs/fstemplate/* ::/; \
+		mcopy -s -D o -i ../exampledisk.img ../fs/fstemplate/* ::/; \
 	fi
 
 $(PRGMS):
