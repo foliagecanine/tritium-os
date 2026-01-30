@@ -43,10 +43,44 @@ typedef struct {
 	uint8_t reg:3;
 } modrm_t;
 
+/**
+ * Match mnemonic with one operand string.
+ * 
+ * @param match Opcode structure with mnemonic and operand information.
+ * @returns On success returns the matched opcode structure. On failure returns an opcode structure with mnemonic set to NULL.
+ */
 opcode_t match_mnem_1opstr(opcode_t match);
+
+/**
+ * Match mnemonic with two operand strings.
+ * 
+ * @param match Opcode structure with mnemonic and operand information.
+ * @returns On success returns the matched opcode structure. On failure returns an opcode structure with mnemonic set to NULL.
+ */
 opcode_t match_mnem_2opstr(opcode_t match);
+
+/**
+ * Match mnemonic with operand types.
+ * 
+ * @param match Opcode structure with mnemonic and operand type information.
+ * @returns On success returns the matched opcode structure. On failure returns an opcode structure with mnemonic set to NULL.
+ */
 opcode_t match_mnem_1opstr_2optype(opcode_t match);
+
+/**
+ * Match mnemonic with operand types.
+ * 
+ * @param match Opcode structure with mnemonic and operand type information.
+ * @returns On success returns the matched opcode structure. On failure returns an opcode structure with mnemonic set to NULL.
+ */
 opcode_t match_mnem_optypes(opcode_t match);
+
+/**
+ * Get the operand type from the operand string.
+ * 
+ * @param op Pointer to the operand string.
+ * @returns On success returns the operand type. On failure returns NONE.
+ */
 optype_t get_optype(char *op);
 
 #endif

@@ -24,6 +24,10 @@ void disable_blink() {
 	outb(0x3C0,inb(0x3C1)&0xF7);
 }
 
+void set_vga_buffer_address(void* addr) {
+	terminal_buffer = (uint16_t*)addr;
+}
+
 void terminal_initialize(void) {
 	terminal_row = 0;
 	terminal_column = 0;
@@ -88,7 +92,7 @@ void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }
 
-void set_scroll(_Bool allow_scroll) {
+void set_scroll(bool allow_scroll) {
 	scroll = allow_scroll;
 }
 

@@ -1,4 +1,6 @@
 #include <fs/disk.h>
+#include <kernel/pmm.h>
+#include <stdint.h>
 
 /* Error codes:
  *
@@ -8,7 +10,7 @@
  * 4 : Drive not found
  */
 
-uint8_t driver_id;
+uint8_t ahci_driver_id;
 
 typedef struct {
 	HBAData *abar;
@@ -48,7 +50,7 @@ uint8_t ahci_identify_device(ahci_port aport, void *buf) {
 
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 
-	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
+	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_kphys(buf);
 	cmdtable->prdt_entry[0].dbau = 0;
 	cmdtable->prdt_entry[0].dbc = 511;
 	cmdtable->prdt_entry[0].i = 1;
@@ -90,6 +92,12 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 	if (slot == 0xFFFFFFFF)
 		return 1;
 
+	size_t bytes = count * 512;
+	size_t pages = (bytes + 4095) / 4096;
+	void *temp_buf = kalloc_sequential(pages);
+	if (!temp_buf)
+		return 1; // Allocation failed
+	
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader += slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice) / sizeof(uint32_t);
@@ -97,9 +105,9 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 
-	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
+	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_kphys(temp_buf);
 	cmdtable->prdt_entry[0].dbau = 0;
-	cmdtable->prdt_entry[0].dbc = (count * 512) - 1;
+	cmdtable->prdt_entry[0].dbc = bytes - 1;
 	cmdtable->prdt_entry[0].i = 1;
 
 	FIS_HostToDevice *cmdfis = (FIS_HostToDevice *)(&cmdtable->cfis);
@@ -124,21 +132,29 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t startl, uint32_t st
 		if (!(port->tfd & (SATA_BUSY | SATA_DRQ)))
 			break;
 	}
-	if ((port->tfd & (SATA_BUSY | SATA_DRQ)))
+	if ((port->tfd & (SATA_BUSY | SATA_DRQ))) {
+		kfree_pages(temp_buf, pages);
 		return 2;
+	}
 
 	port->ci = (1 << slot);
 
 	while (1) {
 		if (!(port->ci & (1 << slot)))
 			break;
-		if (port->is & (1 << 30))
+		if (port->is & (1 << 30)) {
+			kfree_pages(temp_buf, pages);
 			return 3;
+		}
 	}
 
-	if (port->is & (1 << 30))
+	if (port->is & (1 << 30)) {
+		kfree_pages(temp_buf, pages);
 		return 3;
+	}
 
+	memcpy(buf, temp_buf, bytes);
+	kfree_pages(temp_buf, pages);
 	return 0;
 }
 
@@ -149,6 +165,14 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 	if (slot == 0xFFFFFFFF)
 		return 1;
 
+	size_t bytes = count * 512;
+	size_t pages = (bytes + 4095) / 4096;
+	void *temp_buf = kalloc_sequential(pages);
+	if (!temp_buf)
+		return 1; // Allocation failed
+
+	memcpy(temp_buf, buf, bytes);
+
 	HBACommandHeader *cmdheader = (HBACommandHeader *)aport.clb;
 	cmdheader += slot;
 	cmdheader->cfl = sizeof(FIS_HostToDevice) / sizeof(uint32_t);
@@ -156,9 +180,9 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 
 	HBACommandTable *cmdtable = (HBACommandTable *)aport.ctba[slot];
 
-	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
+	cmdtable->prdt_entry[0].dba = (uint32_t)(intptr_t)get_kphys(temp_buf);
 	cmdtable->prdt_entry[0].dbau = 0;
-	cmdtable->prdt_entry[0].dbc = (count * 512) - 1;
+	cmdtable->prdt_entry[0].dbc = bytes - 1;
 	cmdtable->prdt_entry[0].i = 1;
 
 	FIS_HostToDevice *cmdfis = (FIS_HostToDevice *)(&cmdtable->cfis);
@@ -183,21 +207,28 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t startl, uint32_t s
 		if (!(port->tfd & (SATA_BUSY | SATA_DRQ)))
 			break;
 	}
-	if ((port->tfd & (SATA_BUSY | SATA_DRQ)))
+	if ((port->tfd & (SATA_BUSY | SATA_DRQ))) {
+		kfree_pages(temp_buf, pages);
 		return 2;
+	}
 
 	port->ci = (1 << slot);
 
 	while (1) {
 		if (!(port->ci & (1 << slot)))
 			break;
-		if (port->is & (1 << 30))
+		if (port->is & (1 << 30)) {
+			kfree_pages(temp_buf, pages);
 			return 3;
+		}
 	}
 
-	if (port->is & (1 << 30))
+	if (port->is & (1 << 30)) {
+		kfree_pages(temp_buf, pages);
 		return 3;
+	}
 
+	kfree_pages(temp_buf, pages);
 	return 0;
 }
 
@@ -209,15 +240,18 @@ void initialize_port(ahci_port *aport) {
 	while ((port->cmd & HBA_CMD_FR) || (port->cmd & HBA_CMD_CR))
 		;
 
-	void *mapped_clb = alloc_page(1);
+	port->serr = 0xFFFFFFFF;
+	port->is = 0xFFFFFFFF;
+
+	void *mapped_clb = kalloc_pages(1);
 	memset(mapped_clb, 0, 4096);
-	port->clb = (uint32_t)get_phys_addr(mapped_clb);
+	port->clb = (uint32_t)get_kphys(mapped_clb);
 	port->clbu = 0;
 	aport->clb = mapped_clb;
 
-	void *mapped_fb = alloc_page(1);
+	void *mapped_fb = kalloc_pages(1);
 	memset(mapped_fb, 0, 4096);
-	port->fb = (uint32_t)get_phys_addr(mapped_fb);
+	port->fb = (uint32_t)get_kphys(mapped_fb);
 	port->fbu = 0;
 	aport->fb = mapped_fb;
 
@@ -225,9 +259,10 @@ void initialize_port(ahci_port *aport) {
 
 	for (uint8_t i = 0; i < 32; i++) {
 		cmdheader[i].prdtl = 1;
-		void *ctba_buf = calloc_page(1);
+		void *ctba_buf = kalloc_pages(1);
+		memset(ctba_buf, 0, 4096);
 		aport->ctba[i] = ctba_buf;
-		cmdheader[i].ctba = (uint32_t)get_phys_addr(ctba_buf);
+		cmdheader[i].ctba = (uint32_t)get_kphys(ctba_buf);
 		cmdheader[i].ctbau = 0;
 	}
 
@@ -235,6 +270,8 @@ void initialize_port(ahci_port *aport) {
 		;
 	port->cmd |= HBA_CMD_FRE;
 	port->cmd |= HBA_CMD_ST;
+
+	for (volatile int i = 0; i < 100000; i++) ; // Delay to allow SATA link to stabilize
 }
 
 bool is_sata(HBAPort *port) {
@@ -245,31 +282,39 @@ bool is_sata(HBAPort *port) {
 	return true;
 }
 
-void initialize_abar(HBAData *abar) {
-	uint32_t pi = abar->pi;
+void initialize_abar(iovaddr_t *abar) {
+	HBAData *hba_data = (HBAData *)abar;
+	uint32_t pi = hba_data->pi;
+	
 	for (uint8_t i = 0; i < 32; i++) {
 		if (pi & 1) {
-			if (is_sata(&abar->ports[i])) {
+			if (is_sata(&hba_data->ports[i])) {
 				memset(&ports[num_ports], 0, 256);
-				ports[num_ports].abar = abar;
-				ports[num_ports].port = &abar->ports[i];
+				ports[num_ports].abar = hba_data;
+				ports[num_ports].port = &hba_data->ports[i];
 				initialize_port(&ports[num_ports]);
-				sata_identify_packet info;
-				ahci_identify_device(ports[num_ports], &info);
-				char name[41] = {0};
-				for (int i = 0; i < 40; i += 2) {
-					name[i] = info.model_number[i + 1];
-					name[i + 1] = info.model_number[i];
+
+				kvaddr_t buf = kalloc_pages(1);
+				memset(buf, 0, 4096);
+				sata_identify_packet *info = (sata_identify_packet *)buf;
+				
+				if (ahci_identify_device(ports[num_ports], buf) == 0) {
+					char name[41] = {0};
+					for (int i = 0; i < 40; i += 2) {
+						name[i] = info->model_number[i + 1];
+						name[i + 1] = info->model_number[i];
+					}
+					printf("[AHCI] Detected SATA drive: %s (%llu MiB)\n", name, info->total_sectors / 2048);
+					num_ports++;
 				}
-				printf("[AHCI] Detected SATA drive: %s (%u MiB)\n", name, info.total_sectors / 2048);
-				num_ports++;
 			}
 		}
+		
 		pi >>= 1;
 	}
 }
 
-void print_pci_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
+void init_sata_pci(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 	(void)i;
 	(void)j;
 	(void)k;
@@ -281,35 +326,38 @@ void print_pci_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 		  printf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
 		  dprintf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
 		}*/
-		identity_map((void *)pci.BAR5);
-		initialize_abar((HBAData *)pci.BAR5);
+		iovaddr_t bar5 = ioalloc_pages((paddr_t)pci.BAR5, 1) + (pci.BAR5 & 0xFFF);
+		initialize_abar(bar5);
 	}
 }
 
 void init_ahci() {
-	ports = alloc_page(16); // 256*256 = 65536 bytes, or 16 pages. 256 ports is probably enough
+	ports = kalloc_pages(16); // 256*256 = 65536 bytes, or 16 pages. 256 ports is probably enough
+	memset(ports, 0, 16 * PAGE_SIZE);
 
-	register_pci_driver(print_pci_data, 1, 6);
-	driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors, 255);
+	register_pci_driver(init_sata_pci, 1, 6);
+	ahci_driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors, ahci_drive_exists, 255);
 
 	kprint("[INIT] Initialized AHCI driver");
 }
 
+bool ahci_drive_exists(uint16_t drive_num) {
+	return drive_num < 256 && (ports[drive_num].abar != NULL);
+}
+
 uint8_t ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
-	if (ports[drive_num].abar != 0)
+	if (ports[drive_num].abar != NULL)
 		return ahci_read_sectors_internal(ports[drive_num], start_sector & 0xFFFFFFFF, (start_sector >> 32) & 0xFFFFFFFF, count, buf);
 	else
 		return 4;
 }
 
 uint8_t ahci_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf) {
-	if (ports[drive_num].abar != 0)
+	if (ports[drive_num].abar != NULL)
 		return ahci_write_sectors_internal(ports[drive_num], start_sector & 0xFFFFFFFF, (start_sector >> 32) & 0xFFFFFFFF, count, buf);
 	else
 		return 4;
 }
-
-bool drive_exists(uint16_t drive_num) { return drive_num < 256 && (ports[drive_num].abar != 0); }
 
 void print_sector(uint8_t *read) {
 	for (int j = 0; j < 16; j++) {

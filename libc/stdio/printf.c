@@ -1,322 +1,646 @@
-#include <limits.h>
-#include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <string.h>
+#include <ctype.h>
 
-static bool print(const char *data, size_t length) {
-	const unsigned char *bytes = (const unsigned char *)data;
-	for (size_t i = 0; i < length; i++)
-		if (putchar(bytes[i]) == EOF)
-			return false;
-	return true;
+typedef enum __printf_flags
+{
+    PRINTF_FLAG_NONE      = (0),
+    PRINTF_FLAG_LJUSTIFY  = (1 << 0),
+    PRINTF_FLAG_FORCESIGN = (1 << 1),
+    PRINTF_FLAG_SPACE     = (1 << 2),
+    PRINTF_FLAG_PRECEDE   = (1 << 3),
+    PRINTF_FLAG_LEFTPAD   = (1 << 4)
+} __printf_flags;
+
+/**
+ * Gets the printf flags
+ *
+ * @param[in, out] format a pointer to the current format pointer
+ *
+ * @returns a printf flag that matches a PRINTF_FLAG_[*] constant
+ */
+static int PrintfGetFlags(const char **format)
+{
+    int flags = PRINTF_FLAG_NONE;
+
+    if (**format == '-')
+    {
+        flags |= PRINTF_FLAG_LJUSTIFY;
+        (*format)++;
+    }
+
+    if (**format == '+')
+    {
+        flags |= PRINTF_FLAG_FORCESIGN;
+        (*format)++;
+    }
+
+    if (**format == ' ')
+    {
+        flags |= PRINTF_FLAG_SPACE;
+        (*format)++;
+    }
+
+    if (**format == '#')
+    {
+        flags |= PRINTF_FLAG_PRECEDE;
+        (*format)++;
+    }
+
+    if (**format == '0')
+    {
+        flags |= PRINTF_FLAG_LEFTPAD;
+    }
+
+    return flags;
 }
 
-int __printf_template(bool (*printfn)(const char *, size_t), const char *restrict format, va_list parameters) {
-	int written = 0;
+typedef enum __printf_width
+{
+    PRINTF_WIDTH_NONE = -(1 << 0)
+} __printf_width;
 
-	while (*format != '\0') {
-		size_t maxrem = INT_MAX - written;
+/**
+ * Gets the printf width
+ *
+ * @param[in, out] format a pointer to the current format pointer
+ *
+ * @returns the width specified, or PRINTF_WIDTH_NONE if none specified
+ */
+static int PrintfGetWidth(const char **format)
+{
+    if (!isdigit(**format))
+    {
+        return PRINTF_WIDTH_NONE;
+    }
 
-		if (format[0] != '%' || format[1] == '%') {
-			if (format[0] == '%')
-				format++;
-			size_t amount = 1;
-			while (format[amount] && format[amount] != '%')
-				amount++;
-			if (maxrem < amount) {
-				// TODO: Set errno to EOVERFLOW.
-				return -1;
-			}
-			if (!printfn(format, amount))
-				return -1;
-			format += amount;
-			written += amount;
-			continue;
-		}
-
-		const char *format_begun_at = format++;
-		long long   vararg = 0;
-		bool        format_specified = false;
-
-		if (*format == 'l') {
-			format++;
-			if (*format == 'l') {
-				format++;
-				vararg = (long long)va_arg(parameters, long long);
-			} else {
-				vararg = (long long)(long)va_arg(parameters, long);
-			}
-			format_specified = true;
-		}
-
-		if (*format == 'c') {
-			format++;
-			char c = (char)va_arg(parameters, int /* char promotes to int */);
-			if (!maxrem) {
-				// TODO: Set errno to EOVERFLOW.
-				return -1;
-			}
-			if (!printfn(&c, sizeof(c)))
-				return -1;
-			written++;
-		} else if (*format == 's') {
-			format++;
-			const char *str = va_arg(parameters, const char *);
-			size_t      len = strlen(str);
-			if (maxrem < len) {
-				// TODO: Set errno to EOVERFLOW.
-				return -1;
-			}
-			if (!printfn(str, len))
-				return -1;
-			written += len;
-		} else if (*format == '#') { // For backwards compatibility only. Will be removed later. Use a length attribute (if applicable) and 'x' (or 'X') as proper format specifier
-			format++;
-			unsigned long long num = (unsigned long long)va_arg(parameters, unsigned long long);
-			if (!num) {
-				if (!printfn("0", 1))
-					return -1;
-				written++;
-			} else {
-				unsigned long long tnum = num; // Count number of digits to make a new array
-				int                count = 0;
-				while (tnum > 0) {
-					tnum = tnum / 16;
-					++count;
-				}
-				int size = count;
-
-				char               outlist[size];
-				char               numlist[] = {"0123456789ABCDEF"};
-				unsigned long long dig;
-				tnum = num;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 16;
-					outlist[size - count - 1] = numlist[dig];
-					tnum = tnum / 16;
-					++count;
-				}
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else if (*format == 'p') { // p format is same as x format except it takes a vararg of type void *, it redefines 0 as (nil), and it prepends "0x" to non-null pointers
-			format++;
-#if __SIZEOF_POINTER__ == 8
-			unsigned long long num = (unsigned long long)va_arg(parameters, void *);
-#else
-			unsigned long long num = (unsigned long long)(unsigned long)va_arg(parameters, void *);
-#endif
-			if (!num) {
-				if (!printfn("(nil)", 5))
-					return -1;
-				written++;
-			} else {
-				// Count number of digits to make a new array
-				unsigned long long tnum = num;
-				int                count = 0;
-				while (tnum > 0) {
-					tnum = tnum / 16;
-					++count;
-				}
-				int size = count + 2;
-
-				char               outlist[size];
-				char               numlist[] = {"0123456789ABCDEF"};
-				unsigned long long dig;
-				tnum = num;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 16;
-					outlist[size - count - 1] = numlist[dig];
-					tnum = tnum / 16;
-					++count;
-				}
-
-				outlist[0] = '0';
-				outlist[1] = 'x';
-
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else if (*format == 'x' || *format == 'X') {
-			if (!format_specified)
-				vararg = (long long)(int)va_arg(parameters, int);
-
-			char numlist[16];
-			if (*format == 'X')
-				memcpy(numlist, "0123456789ABCDEF", 16);
-			else
-				memcpy(numlist, "0123456789abcdef", 16);
-			format++;
-			if (!vararg) {
-				if (!printfn("0", 1))
-					return -1;
-				written++;
-			} else {
-				// Count number of digits to make a new array
-				unsigned long long tnum = (unsigned long long)vararg;
-				int                count = 0;
-				while (tnum > 0) {
-					tnum = tnum / 16;
-					++count;
-				}
-				int size = count;
-
-				char outlist[size];
-
-				unsigned long long dig;
-				tnum = vararg;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 16;
-					outlist[size - count - 1] = numlist[dig];
-					tnum = tnum / 16;
-					++count;
-				}
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else if (*format == 'u') {
-			if (!format_specified)
-				vararg = (long long)(int)va_arg(parameters, int);
-
-			format++;
-			if (!vararg) {
-				if (!printfn("0", 1))
-					return -1;
-				written++;
-			} else {
-				// Count number of digits to create a new array
-				unsigned long long tnum = (unsigned long long)vararg; // Cast to unsigned since format is u
-				unsigned long long dig;
-				int                count = 0;
-				while (tnum > 0) {
-					tnum /= 10;
-					++count;
-				}
-				int size = count;
-
-				char outlist[size];
-				char numlist[] = {"0123456789"};
-				tnum = vararg;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 10;
-					outlist[size - count - 1] = numlist[dig];
-					tnum /= 10;
-					++count;
-				}
-
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else if (*format == 'd') {
-			if (!format_specified)
-				vararg = (long long)(int)va_arg(parameters, int);
-
-			format++;
-			if (!vararg) {
-				if (!printfn("0", 1))
-					return -1;
-				written++;
-			} else {
-				// Convert negative number to positive number
-				if (vararg < 0) {
-					printfn("-", 1);
-					vararg = ~vararg;
-					vararg++;
-				}
-
-				// Count number of digits to create a new array
-				unsigned long long tnum = (unsigned long long)vararg; // Cast to unsigned since format is u
-				unsigned long long dig;
-				int                count = 0;
-				while (tnum > 0) {
-					tnum /= 10;
-					++count;
-				}
-				int size = count;
-
-				char outlist[size];
-				char numlist[] = {"0123456789"};
-				tnum = vararg;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 10;
-					outlist[size - count - 1] = numlist[dig];
-					tnum /= 10;
-					++count;
-				}
-
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else if (*format == '$') { // This implemation exists solely for backwards compatibility. Existing uses should be updated.
-			format++;
-			long long num = (long long)(long)va_arg(parameters, long); // For backwards compatibility for now. Should be reset to int.
-			if (!num) {
-				if (!printfn("0", 1))
-					return -1;
-				written++;
-			} else {
-				long long tnum = num; // Count number of digits to make a new array
-				int       count = 0;
-				while (tnum > 0) {
-					tnum /= 10;
-					++count;
-				}
-				int size = count;
-
-				if (num < 0)
-					size++; // Add space for negative in char array
-
-				char      outlist[size];
-				char      numlist[] = {"0123456789"};
-				long long dig;
-				tnum = num;
-				count = 0;
-				while (tnum > 0) {
-					dig = tnum % 10;
-					outlist[size - count - 1] = numlist[dig];
-					tnum /= 10;
-					++count;
-				}
-
-				if (num < 0)
-					outlist[0] = '-'; // Char array fills backwards, so just put negative at first char
-
-				if (!printfn(outlist, size))
-					return -1;
-				written += size;
-			}
-		} else {
-			format = format_begun_at;
-			size_t len = strlen(format);
-			if (maxrem < len) {
-				// TODO: Set errno to EOVERFLOW.
-				return -1;
-			}
-			if (!printfn(format, len))
-				return -1;
-			written += len;
-			format += len;
-		}
-	}
-
-	return written;
+    char *   endptr;
+    long int num = strtol(*format, &endptr, 10);
+    *format      = endptr;
+    return num;
 }
 
-int printf(const char *format, ...) {
-	va_list parameters;
-	va_start(parameters, format);
-	int written = __printf_template(print, format, parameters);
-	va_end(parameters);
-	return written;
+typedef enum __printf_precision
+{
+    PRINTF_PRECISION_NONE = -(1 << 0)
+} __printf_precision;
+
+/**
+ * Gets the printf precision
+ *
+ * @param[in, out] format a pointer to the current format pointer
+ *
+ * @returns the precision specified, or PRINTF_PRECISION_NONE if none specified
+ */
+static int PrintfGetPrecision(const char **format)
+{
+    if (**format != '.')
+    {
+        return PRINTF_PRECISION_NONE;
+    }
+
+    (*format)++;
+
+    char *   endptr;
+    long int num = strtol(*format, &endptr, 10);
+    if (endptr != *format)
+    {
+        *format = endptr;
+        return num;
+    }
+
+    return 0;
+}
+
+typedef enum __printf_length
+{
+    PRINTF_LENGTH_NONE      = (0),
+    PRINTF_LENGTH_CHAR      = (1 << 0),
+    PRINTF_LENGTH_SHORT     = (1 << 1),
+    PRINTF_LENGTH_LONG      = (1 << 2),
+    PRINTF_LENGTH_LONGLONG  = (1 << 3),
+    PRINTF_LENGTH_INTMAX_T  = (1 << 4),
+    PRINTF_LENGTH_SIZE_T    = (1 << 5),
+    PRINTF_LENGTH_PTRDIFF_T = (1 << 6),
+    PRINTF_LENGTH_LONGDBL   = (1 << 7)
+} __printf_length;
+
+/**
+ * Gets the printf length modifier
+ *
+ * @param[in, out] format a pointer to the current format pointer
+ *
+ * @returns a length modifier constant that matches PRINTF_LENGTH_[*]
+ */
+__printf_length PrintfGetLength(const char **format)
+{
+    if (**format == 'h')
+    {
+        (*format)++;
+        if (**format == 'h')
+        {
+            (*format)++;
+            return PRINTF_LENGTH_CHAR;
+        }
+        return PRINTF_LENGTH_SHORT;
+    }
+
+    if (**format == 'l')
+    {
+        (*format)++;
+        if (**format == 'l')
+        {
+            (*format)++;
+            return PRINTF_LENGTH_LONGLONG;
+        }
+        return PRINTF_LENGTH_LONG;
+    }
+
+    if (**format == 'j')
+    {
+        (*format)++;
+        return PRINTF_LENGTH_INTMAX_T;
+    }
+
+    if (**format == 'z')
+    {
+        (*format)++;
+        return PRINTF_LENGTH_SIZE_T;
+    }
+
+    if (**format == 't')
+    {
+        (*format)++;
+        return PRINTF_LENGTH_PTRDIFF_T;
+    }
+
+    if (**format == 't')
+    {
+        (*format)++;
+        return PRINTF_LENGTH_LONGDBL;
+    }
+
+    return PRINTF_LENGTH_NONE;
+}
+
+static const char __printfFormatAllowed[] = {'d', 'i', 'u', 'o', 'x', 'X', 'f', 'F', 'e', 'E',
+                                             'g', 'G', 'a', 'A', 'c', 's', 'p', 'n', '%', '\0'};
+
+typedef enum __printf_format
+{
+    PRINTF_FORMAT_DECIMAL    = 'd',
+    PRINTF_FORMAT_SIGNED     = 'i',
+    PRINTF_FORMAT_UNSIGNED   = 'u',
+    PRINTF_FORMAT_OCTAL      = 'o',
+    PRINTF_FORMAT_UHEX       = 'x',
+    PRINTF_FORMAT_UHEXUP     = 'X',
+    PRINTF_FORMAT_FLOAT      = 'f',
+    PRINTF_FORMAT_FLOATUP    = 'F',
+    PRINTF_FORMAT_SCI        = 'e',
+    PRINTF_FORMAT_SCIUP      = 'E',
+    PRINTF_FORMAT_SHORT      = 'g',
+    PRINTF_FORMAT_SHORTUP    = 'G',
+    PRINTF_FORMAT_HEXFLOAT   = 'a',
+    PRINTF_FORMAT_HEXFLOATUP = 'A',
+    PRINTF_FORMAT_CHAR       = 'c',
+    PRINTF_FORMAT_STRING     = 's',
+    PRINTF_FORMAT_POINTER    = 'p',
+    PRINTF_FORMAT_STORE      = 'n',
+    PRINTF_FORMAT_PERCENT    = '%',
+    PRINTF_FORMAT_ERROR      = '\0'
+} __printf_format;
+
+/**
+ * Gets the printf format mode
+ *
+ * @param[in, out] format a pointer to the current format pointer
+ *
+ * @returns a printf format mode that matches a PRINTF_FORMAT_[*] constant
+ */
+static __printf_format PrintfGetFormat(const char **format)
+{
+    for (unsigned int i = 0; i < sizeof(__printfFormatAllowed) / sizeof(char); i++)
+    {
+        if (__printfFormatAllowed[i] == **format)
+        {
+            __printf_format formatChar = (__printf_format)(**format);
+            (*format)++;
+            return formatChar;
+        }
+    }
+
+    return PRINTF_FORMAT_ERROR;
+}
+
+static const char _printf_hex_lower_chars[] = "0123456789abcdef";
+static const char _printf_hex_upper_chars[] = "0123456789ABCDEF";
+
+/**
+ * Prints a formatted string using printfn as the function
+ *
+ * @param[in] printfn the print function
+ * @param[in] format the format to print
+ * @param[in] parameters the format replacements
+ */
+int __print_formatted(int (*printfn)(const char *, size_t), const char *format, va_list parameters)
+{
+    int written = 0;
+
+    while (*format != '\0')
+    {
+        if (*format != '%')
+        {
+            written += printfn(format, 1);
+            format++;
+            continue;
+        }
+
+        format++;
+
+        int     printFlags     = PrintfGetFlags(&format);
+        int     printWidth     = PrintfGetWidth(&format);
+        int     printPrecision = PrintfGetPrecision(&format);
+        int     printLength    = PrintfGetLength(&format);
+        int     printFormat    = PrintfGetFormat(&format);
+
+        if (printFormat == PRINTF_FORMAT_ERROR)
+        {
+            continue;
+        }
+
+        size_t width     = (size_t)printWidth;
+        size_t precision = (size_t)printPrecision;
+
+        if (printFormat == PRINTF_FORMAT_PERCENT)
+        {
+            written += printfn("%", 1);
+        }
+        else if (printFormat == PRINTF_FORMAT_CHAR)
+        {
+            if (printLength & PRINTF_LENGTH_LONG)
+            {
+                wchar_t *printReadInChar = va_arg(parameters, wchar_t *);
+                written += printfn((char *)printReadInChar, 1);
+            }
+            else
+            {
+                unsigned char printReadinChar = va_arg(parameters, int);
+                written += printfn((char *)&printReadinChar, 1);
+            }
+        }
+        else if (printFormat == PRINTF_FORMAT_STRING)
+        {
+            char *read = (char *)va_arg(parameters, void *);
+            if (precision == (size_t)PRINTF_PRECISION_NONE)
+            {
+                written += printfn(read, strlen(read));
+            }
+            else
+            {
+                // TODO SPEC: Wide chars may not work correctly
+                int haveWritten = 0;
+                while (*read)
+                {
+                    if ((size_t)haveWritten == precision)
+                    {
+                        break;
+                    }
+                    written += printfn(read, 1);
+                    haveWritten++;
+                    if (printLength & PRINTF_LENGTH_LONG)
+                    {
+                        haveWritten++;
+                        read++;
+                    }
+                    read++;
+                }
+            }
+        }
+        else if (printFormat == PRINTF_FORMAT_DECIMAL || printFormat == PRINTF_FORMAT_SIGNED)
+        {
+            long long value = 0;
+            if (printLength == PRINTF_LENGTH_CHAR || printLength == PRINTF_LENGTH_SHORT ||
+                printLength == PRINTF_LENGTH_NONE)
+            {
+                value = (long long)va_arg(parameters, int);
+            }
+            else if (printLength == PRINTF_LENGTH_LONG)
+            {
+                value = (long long)va_arg(parameters, long);
+            }
+            else if (printLength == PRINTF_LENGTH_LONGLONG)
+            {
+                value = (long long int)va_arg(parameters, long long);
+            }
+            else if (printLength == PRINTF_LENGTH_INTMAX_T)
+            {
+                value = (long long)va_arg(parameters, intmax_t);
+            }
+            else if (printLength == PRINTF_LENGTH_SIZE_T)
+            {
+                value = (long long)va_arg(parameters, size_t);
+            }
+            else if (printLength == PRINTF_LENGTH_PTRDIFF_T)
+            {
+                value = (long long)va_arg(parameters, ptrdiff_t);
+            }
+
+            size_t numDigits = 1;
+            int    lastDigit = value % 10;
+
+            if (printFlags & PRINTF_FLAG_FORCESIGN && value >= 0)
+            {
+                written += printfn("+", 1);
+                numDigits++;
+            }
+            else if (printFlags & PRINTF_FLAG_SPACE && value >= 0)
+            {
+                written += printfn(" ", 1);
+                numDigits++;
+            }
+
+            if (value < 0)
+            {
+                written += printfn("-", 1);
+                numDigits++;
+                value     = -(value / 10);
+                lastDigit = -lastDigit;
+            }
+            else
+            {
+                value /= 10;
+            }
+
+            long long multiple = 1;
+            do
+            {
+                multiple *= 10;
+                numDigits++;
+            } while (value - (value % multiple) > 0);
+            multiple /= 10;
+
+            if (printFlags & PRINTF_FLAG_LEFTPAD ||
+                (!(printFlags & PRINTF_FLAG_LJUSTIFY) && width != (size_t)PRINTF_WIDTH_NONE))
+            {
+                for (size_t i = numDigits; i < width; i++)
+                {
+                    if (printFlags & PRINTF_FLAG_LEFTPAD)
+                    {
+                        written += printfn("0", 1);
+                    }
+                    else
+                    {
+                        written += printfn(" ", 1);
+                    }
+                }
+            }
+
+            static const char decimalCharacters[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+            while (multiple > 0)
+            {
+                int digit = value / multiple;
+                written += printfn(&decimalCharacters[digit], 1);
+                value -= digit * multiple;
+                multiple /= 10;
+            }
+
+            if (width != 0 || (value == 0 && lastDigit != 0))
+            {
+                written += printfn(&decimalCharacters[lastDigit], 1);
+            }
+
+            if (printFlags & PRINTF_FLAG_LJUSTIFY)
+            {
+                for (size_t i = numDigits; i < width; i++)
+                {
+                    written += printfn(" ", 1);
+                }
+            }
+        }
+        else if (printFormat == PRINTF_FORMAT_UNSIGNED || printFormat == PRINTF_FORMAT_OCTAL ||
+                 printFormat == PRINTF_FORMAT_UHEX || printFormat == PRINTF_FORMAT_UHEXUP ||
+                 printFormat == PRINTF_FORMAT_POINTER)
+        {
+            unsigned long long value = 0;
+            if (printFormat == PRINTF_FORMAT_POINTER)
+            {
+                value = (uintptr_t)va_arg(parameters, void *);
+            }
+            else if (printLength == PRINTF_LENGTH_CHAR || printLength == PRINTF_LENGTH_SHORT ||
+                     printLength == PRINTF_LENGTH_NONE)
+            {
+                value = (unsigned long long)va_arg(parameters, unsigned int);
+            }
+            else if (printLength == PRINTF_LENGTH_LONG)
+            {
+                value = (unsigned long long)va_arg(parameters, unsigned long);
+            }
+            else if (printLength == PRINTF_LENGTH_LONGLONG)
+            {
+                value = (unsigned long long)va_arg(parameters, unsigned long long);
+            }
+            else if (printLength == PRINTF_LENGTH_INTMAX_T)
+            {
+                value = (unsigned long long)va_arg(parameters, intmax_t);
+            }
+            else if (printLength == PRINTF_LENGTH_SIZE_T)
+            {
+                value = (unsigned long long)va_arg(parameters, size_t);
+            }
+            else if (printLength == PRINTF_LENGTH_PTRDIFF_T)
+            {
+                value = (unsigned long long)va_arg(parameters, ptrdiff_t);
+            }
+
+            int   base = 10;
+            const char *characterSet = _printf_hex_lower_chars;
+
+            size_t numDigits = 1;
+
+            if (printFormat == PRINTF_FORMAT_OCTAL)
+            {
+                base = 8;
+            }
+            else if (printFormat == PRINTF_FORMAT_UHEX)
+            {
+                base = 16;
+            }
+            else if (printFormat == PRINTF_FORMAT_UHEXUP)
+            {
+                base         = 16;
+                characterSet = _printf_hex_upper_chars;
+            }
+            else if (printFormat == PRINTF_FORMAT_POINTER)
+            {
+                base = 16;
+                numDigits += 2;
+                if (value == 0 && width == (size_t)PRINTF_WIDTH_NONE)
+                {
+                    if (printFlags & PRINTF_FLAG_LEFTPAD)
+                    {
+                        for (size_t i = 5; i < width; i++)
+                        {
+                            written += printfn(" ", 1);
+                        }
+                    }
+                    written += printfn("(nil)", 5);
+                    continue;
+                }
+            }
+
+            int lastDigit = value % base;
+            value /= base;
+
+            unsigned long long multiple = 1;
+            do
+            {
+                multiple *= base;
+                numDigits++;
+            } while (value - (value % multiple) > 0);
+            multiple /= base;
+
+            if (width == 0)
+            {
+                numDigits--;
+            }
+
+            if (printFormat == PRINTF_FORMAT_POINTER && printFlags & PRINTF_FLAG_LEFTPAD)
+            {
+                written += printfn("0x", 2);
+            }
+
+            if (printFlags & PRINTF_FLAG_LEFTPAD ||
+                (!(printFlags & PRINTF_FLAG_LJUSTIFY) && width != (size_t)PRINTF_WIDTH_NONE))
+            {
+                for (size_t i = numDigits; i < width; i++)
+                {
+                    if (printFlags & PRINTF_FLAG_LEFTPAD)
+                    {
+                        written += printfn("0", 1);
+                    }
+                    else
+                    {
+                        written += printfn(" ", 1);
+                    }
+                }
+            }
+
+            if (printFormat == PRINTF_FORMAT_POINTER && !(printFlags & PRINTF_FLAG_LEFTPAD))
+            {
+                written += printfn("0x", 2);
+            }
+
+            if (value != 0)
+            {
+                while (multiple > 0)
+                {
+                    int digit = value / multiple;
+                    written += printfn(&characterSet[digit], 1);
+                    value -= digit * multiple;
+                    multiple /= base;
+                }
+            }
+
+            if (width != 0 || (value == 0 && lastDigit != 0))
+            {
+                written += printfn(&characterSet[lastDigit], 1);
+            }
+
+            if (printFlags & PRINTF_FLAG_LJUSTIFY)
+            {
+                for (size_t i = numDigits; i < width; i++)
+                {
+                    written += printfn(" ", 1);
+                }
+            }
+        }
+        else if (printFormat == PRINTF_FORMAT_STORE)
+        {
+            int *outWritten = (int *)va_arg(parameters, void *);
+            *outWritten     = written;
+        }
+        /*
+        printFormat == PRINTF_FORMAT_FLOAT || printFormat == PRINTF_FORMAT_FLOATUP ||
+                 printFormat == PRINTF_FORMAT_HEXFLOAT || printFormat == PRINTF_FORMAT_HEXFLOATUP ||
+                 printFormat == PRINTF_FORMAT_SCI || printFOrmat == PRINTF_FORMAT_SCIUP
+        */
+        else if (printFormat != PRINTF_FORMAT_ERROR)
+        {
+            if (printFlags & PRINTF_FLAG_LEFTPAD ||
+                (!(printFlags & PRINTF_FLAG_LJUSTIFY) && width != (size_t)PRINTF_WIDTH_NONE))
+            {
+                for (size_t i = 10; i < width + (size_t)printPrecision; i++)
+                {
+                    if (printFlags & PRINTF_FLAG_LEFTPAD)
+                    {
+                        written += printfn("0", 1);
+                    }
+                    else
+                    {
+                        written += printfn(" ", 1);
+                    }
+                }
+            }
+            written += printfn("NOT.IMPL_", 9);
+            written += printfn((char *)&printFormat, 1);
+            if (printFlags & PRINTF_FLAG_LJUSTIFY)
+            {
+                for (size_t i = 10; i < width; i++)
+                {
+                    written += printfn(" ", 1);
+                }
+            }
+        }
+    }
+    return written;
+}
+
+/**
+ * Prints characters using putchar
+ *
+ * @param[in] data the characters to print
+ * @param[in] length the number of characters to print
+ *
+ * @returns the number of characters printed
+ */
+static int print(const char *data, size_t length)
+{
+    const unsigned char *bytes = (const unsigned char *)data;
+    for (size_t i = 0; i < length; i++)
+        if (putchar(bytes[i]) == EOF) return i;
+    return length;
+}
+
+/**
+ * Prints a formatted string with varargs
+ *
+ * @param[in] format the format string
+ * @param[in] args the format replacements varargs
+ *
+ * @returns the number of characters written
+ */
+int vprintf(const char *format, va_list args)
+{
+    return __print_formatted(print, format, args);
+}
+
+/**
+ * Prints a formatted string to stdio
+ *
+ * @param[in] format the format string
+ * @param[in] ... the format replacements
+ *
+ * @returns the number of characters written
+ */
+int printf(const char *format, ...)
+{
+    va_list parameters;
+    va_start(parameters, format);
+    int written = vprintf(format, parameters);
+    va_end(parameters);
+    return written;
 }

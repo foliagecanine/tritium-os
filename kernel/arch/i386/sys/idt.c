@@ -1,4 +1,5 @@
 #include <kernel/idt.h>
+#include <stdbool.h>
 
 //(pretty heavily) Based on https://wiki.osdev.org/Interrupts_tutorial
 
@@ -98,56 +99,56 @@ void init_idt() {
 	//Initialize all interrupts with default handler
 	uint32_t default_handler_addr = (uint32_t)default_handler;
 	for (uint16_t i = 0; i < 16; i++) {
-		set_idt_values(i,default_handler_addr);
+		set_idt_values(i, default_handler_addr);
 	}
 
 	irq0_addr = (uint32_t) irq0;
-	set_idt_values(32,irq0_addr);
+	set_idt_values(32, irq0_addr);
 
 	irq1_addr = (uint32_t) irq1;
-	set_idt_values(33,irq1_addr);
+	set_idt_values(33, irq1_addr);
 
 	irq2_addr = (uint32_t) irq2;
-	set_idt_values(34,irq2_addr);
+	set_idt_values(34, irq2_addr);
 
 	irq3_addr = (uint32_t) irq3;
-	set_idt_values(35,irq3_addr);
+	set_idt_values(35, irq3_addr);
 
 	irq4_addr = (uint32_t) irq4;
-	set_idt_values(36,irq4_addr);
+	set_idt_values(36, irq4_addr);
 
 	irq5_addr = (uint32_t) irq5;
-	set_idt_values(37,irq5_addr);
+	set_idt_values(37, irq5_addr);
 
 	irq6_addr = (uint32_t) irq6;
-	set_idt_values(38,irq6_addr);
+	set_idt_values(38, irq6_addr);
 
 	irq7_addr = (uint32_t) irq7;
-	set_idt_values(39,irq7_addr);
+	set_idt_values(39, irq7_addr);
 
 	irq8_addr = (uint32_t) irq8;
-	set_idt_values(40,irq8_addr);
+	set_idt_values(40, irq8_addr);
 
 	irq9_addr = (uint32_t) irq9;
-	set_idt_values(41,irq9_addr);
+	set_idt_values(41, irq9_addr);
 
 	irq10_addr = (uint32_t) irq10;
-	set_idt_values(42,irq10_addr);
+	set_idt_values(42, irq10_addr);
 
 	irq11_addr = (uint32_t) irq11;
-	set_idt_values(43,irq11_addr);
+	set_idt_values(43, irq11_addr);
 
 	irq12_addr = (uint32_t) irq12;
-	set_idt_values(44,irq12_addr);
+	set_idt_values(44, irq12_addr);
 
 	irq13_addr = (uint32_t) irq13;
-	set_idt_values(45,irq13_addr);
+	set_idt_values(45, irq13_addr);
 
 	irq14_addr = (uint32_t) irq14;
-	set_idt_values(46,irq14_addr);
+	set_idt_values(46, irq14_addr);
 
 	irq15_addr = (uint32_t) irq15;
-	set_idt_values(47,irq15_addr);
+	set_idt_values(47, irq15_addr);
 
 	init_exceptions();
 
@@ -160,9 +161,9 @@ void init_idt() {
 	kprint("[INIT] IDT Enabled");
 }
 
-_Bool irq_finished[16];
+bool irq_finished[16];
 
-_Bool has_irq_finished(uint8_t irq) {
+bool has_irq_finished(uint8_t irq) {
 	if (irq_finished[irq]) {
 		irq_finished[irq] = false;
 		return true;
@@ -194,11 +195,11 @@ void add_irq_function(uint8_t irq, void (*function)()) {
 	}
 }
 
-/*void set_irq_finish_state(uint8_t irq, _Bool state) {
+/*void set_irq_finish_state(uint8_t irq, bool state) {
 	irq_finished[irq] = state;
 }*/
 
-_Bool ts_enabled = false;
+bool ts_enabled = false;
 tss_entry_t temp_tss;
 
 void irq0_handler(void) {
@@ -208,7 +209,7 @@ void irq0_handler(void) {
 	usb_keyboard_repeat();
 	execute_irq(0);
 	outb(0x20, 0x20); //EOI early since task switching returns on its own
-	if (ts_enabled&&!(get_ticks_k()%10))
+	if (ts_enabled && !(get_ticks_k() % 10))
 		task_switch(temp_tss);
 }
 

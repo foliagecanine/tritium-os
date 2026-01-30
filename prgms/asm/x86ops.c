@@ -2,7 +2,7 @@
 
 char *regs32[] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
 char *regs16[] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
-char *regs8[] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
+char *regs8[]  = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
 
 const opcode_t opcodes[] = {
     // Mnemonic	opstr1	os2  opcode prefix modreg	outop1	outop2	optype1...		optype2...
@@ -173,14 +173,14 @@ const opcode_t opcodes[] = {
     {"mov", "si", NULL, 0xBE, 0x66, 0xff, NONE, IMM16, BIT(REGRM32), BIT(IMM8) | BIT(IMM16)},
     {"mov", "di", NULL, 0xBF, 0x66, 0xff, NONE, IMM16, BIT(REGRM32), BIT(IMM8) | BIT(IMM16)},
 
-    {"mov", "eax", NULL, 0xB8, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "ecx", NULL, 0xB9, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "edx", NULL, 0xBA, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "ebx", NULL, 0xBB, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "esp", NULL, 0xBC, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "ebp", NULL, 0xBD, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "esi", NULL, 0xBE, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
-    {"mov", "edi", NULL, 0xBF, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32)},
+    {"mov", "eax", NULL, 0xB8, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "ecx", NULL, 0xB9, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "edx", NULL, 0xBA, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "ebx", NULL, 0xBB, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "esp", NULL, 0xBC, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "ebp", NULL, 0xBD, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "esi", NULL, 0xBE, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
+    {"mov", "edi", NULL, 0xBF, 0, 0xff, NONE, IMM32, BIT(REGRM32), BIT(IMM8) | BIT(IMM16) | BIT(IMM32) | BIT(LABEL)},
 
     {"ret", NULL, NULL, 0xC3, 0, 0xff, NONE, NONE, BIT(NONE), BIT(NONE)},
     {"retd", NULL, NULL, 0xC3, 0, 0xff, NONE, NONE, BIT(NONE), BIT(NONE)},
@@ -225,220 +225,249 @@ const opcode_t opcodes[] = {
     {NULL, NULL, NULL, 0, 0, 0xff, NONE, NONE, BIT(NONE), BIT(NONE)},
 };
 
-opcode_t match_mnem_1opstr(opcode_t match) {
-	int i = 0;
-	while (opcodes[i].mnemonic) {
-		if (opcodes[i].opstring1) {
-			if (!memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic))) {
-				if (!memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1))) {
-					return opcodes[i];
-				}
-			}
-		}
-		i++;
-	}
-	return opcodes[i];
+opcode_t match_mnem_1opstr(opcode_t match)
+{
+    int i = 0;
+    while (opcodes[i].mnemonic)
+    {
+        if (opcodes[i].opstring1 && !memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic)) &&
+            !memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1)))
+        {
+            return opcodes[i];
+        }
+        i++;
+    }
+    return opcodes[i];
 }
 
-opcode_t match_mnem_2opstr(opcode_t match) {
-	int i = 0;
-	while (opcodes[i].mnemonic) {
-		if (opcodes[i].opstring1) {
-			if (opcodes[i].opstring2) {
-				if (!memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic))) {
-					if (!memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1))) {
-						if (!memcmp(match.opstring2, opcodes[i].opstring2, strlen(opcodes[i].opstring2))) {
-							return opcodes[i];
-						}
-					}
-				}
-			}
-		}
-		i++;
-	}
-	return opcodes[i];
+opcode_t match_mnem_2opstr(opcode_t match)
+{
+    int i = 0;
+    while (opcodes[i].mnemonic)
+    {
+        if (opcodes[i].opstring1 && opcodes[i].opstring2 &&
+            !memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic)) &&
+            !memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1)) &&
+            !memcmp(match.opstring2, opcodes[i].opstring2, strlen(opcodes[i].opstring2)))
+        {
+            return opcodes[i];
+        }
+        i++;
+    }
+    return opcodes[i];
 }
 
-opcode_t match_mnem_1opstr_2optype(opcode_t match) {
-	int i = 0;
-	while (opcodes[i].mnemonic) {
-		if (opcodes[i].opstring1) {
-			if (!memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic))) {
-				if (!memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1))) {
-					if (BIT(match.outop2) & opcodes[i].optype2)
-						return opcodes[i];
-				}
-			}
-		}
-		i++;
-	}
-	return opcodes[i];
+opcode_t match_mnem_1opstr_2optype(opcode_t match)
+{
+    int i = 0;
+    while (opcodes[i].mnemonic)
+    {
+        if (opcodes[i].opstring1 && !memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic)) &&
+            !memcmp(match.opstring1, opcodes[i].opstring1, strlen(opcodes[i].opstring1)))
+        {
+            if (BIT(match.outop2) & opcodes[i].optype2)
+                return opcodes[i];
+        }
+        i++;
+    }
+    return opcodes[i];
 }
 
-opcode_t match_mnem_optypes(opcode_t match) {
-	int i = 0;
-	while (opcodes[i].mnemonic) {
-		if (!memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic))) {
-			if (BIT(match.outop1) & opcodes[i].optype1 && BIT(match.outop2) & opcodes[i].optype2) {
-				if (!opcodes[i].opstring1)
-					return opcodes[i];
-			}
-		}
-		i++;
-	}
-	return opcodes[i];
+opcode_t match_mnem_optypes(opcode_t match)
+{
+    int i = 0;
+    while (opcodes[i].mnemonic)
+    {
+        if (!memcmp(match.mnemonic, opcodes[i].mnemonic, strlen(opcodes[i].mnemonic)))
+        {
+            if (BIT(match.outop1) & opcodes[i].optype1 && BIT(match.outop2) & opcodes[i].optype2)
+            {
+                if (!opcodes[i].opstring1)
+                    return opcodes[i];
+            }
+        }
+        i++;
+    }
+    return opcodes[i];
 }
 
-regsz_t get_regsz(const char *s) {
-	for (int i = 0; i < 8; i++) {
-		if (!strncmp(s, regs32[i], 3))
-			return 32;
-		if (!strncmp(s, regs16[i], 2))
-			return 16;
-		if (!strncmp(s, regs8[i], 2))
-			return 8;
-	}
-	return 0;
+regsz_t get_regsz(const char *s)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if (!strncmp(s, regs32[i], 3))
+            return 32;
+        if (!strncmp(s, regs16[i], 2))
+            return 16;
+        if (!strncmp(s, regs8[i], 2))
+            return 8;
+    }
+    return 0;
 }
 
-int numscale(char *n) {
-	unsigned long immval;
+int numscale(char *n)
+{
+    unsigned long immval;
 
-	if (n[0] == '0') {
-		if (n[1] == 'x') {
-			immval = strtoul(n + 2, NULL, 16);
-		} else if (n[1] == 'b') {
-			immval = strtoul(n + 2, NULL, 2);
-		} else {
-			// Assume octal. If the value was zero,
-			// it will be treated as octal, but that's
-			// OK since it will still be zero.
-			immval = strtoul(n + 1, NULL, 8);
-		}
-	} else {
-		if (isdigit(n[0])) {
-			immval = strtoul(n, NULL, 10);
-		} else {
-			return 0;
-		}
-	}
+    if (n[0] == '0')
+    {
+        if (n[1] == 'x')
+        {
+            immval = strtoul(n + 2, NULL, 16);
+        }
+        else if (n[1] == 'b')
+        {
+            immval = strtoul(n + 2, NULL, 2);
+        }
+        else
+        {
+            // Assume octal. If the value was zero,
+            // it will be treated as octal, but that's
+            // OK since it will still be zero.
+            immval = strtoul(n + 1, NULL, 8);
+        }
+    }
+    else
+    {
+        if (isdigit(n[0]))
+        {
+            immval = strtoul(n, NULL, 10);
+        }
+        else
+        {
+            return 0;
+        }
+    }
 
-	if (immval < 0x100)
-		return 8;
-	if (immval < 0x10000)
-		return 16;
-	return 32;
+    if (immval < 0x100)
+        return 8;
+    if (immval < 0x10000)
+        return 16;
+    return 32;
 }
 
-optype_t get_optype(char *op) {
-	// Immediate value
-	int     scale = numscale(op);
-	regsz_t regsz;
-	switch (scale) {
-	case 8:
-		return IMM8;
-	case 16:
-		return IMM16;
-	case 32:
-		return IMM32;
-	default:
-		break;
-	}
+optype_t get_optype(char *op)
+{
+    // Immediate value
+    int     scale = numscale(op);
+    regsz_t regsz;
+    switch (scale)
+    {
+        case 8:
+            return IMM8;
+        case 16:
+            return IMM16;
+        case 32:
+            return IMM32;
+        default:
+            break;
+    }
 
-	// Memory-based (ModRM)
-	if (*op == '[') {
-		op++;
-		scale = numscale(op);
+    // Memory-based (ModRM)
+    if (*op == '[')
+    {
+        op++;
+        scale = numscale(op);
 
-		char *endbracket = strchr(op, ']');
-		if (!endbracket) {
-			printf("Error: no ending bracket: %s\n", op);
-			return NONE;
-		}
+        char *endbracket = strchr(op, ']');
+        if (!endbracket)
+        {
+            printf("Error: no ending bracket: %s\n", op);
+            return NONE;
+        }
 
-		switch (scale) {
-		case 8:
-		case 16:
-			return MEM16;
-		case 32:
-			return MEM32;
-		default:
-			break;
-		}
+        switch (scale)
+        {
+            case 8:
+            case 16:
+                return MEM16;
+            case 32:
+                return MEM32;
+            default:
+                break;
+        }
 
-		regsz = get_regsz(op);
-		switch (regsz) {
-		case 8:
-			return REGRM8;
-		case 16:
-			return REGRM16;
-		case 32:
-			return REGRM32;
-		default:
-			break;
-		}
+        regsz = get_regsz(op);
+        switch (regsz)
+        {
+            case 8:
+                return REGRM8;
+            case 16:
+                return REGRM16;
+            case 32:
+                return REGRM32;
+            default:
+                break;
+        }
 
-		// Assume label
-		return LABEL;
-	}
+        // Assume label
+        return LABEL;
+    }
 
-	regsz = get_regsz(op);
-	switch (regsz) {
-	case 8:
-		return REGRM8;
-	case 16:
-		return REGRM16;
-	case 32:
-		return REGRM32;
-	default:
-		break;
-	}
+    regsz = get_regsz(op);
+    switch (regsz)
+    {
+        case 8:
+            return REGRM8;
+        case 16:
+            return REGRM16;
+        case 32:
+            return REGRM32;
+        default:
+            break;
+    }
 
-	// Assume label
-	return LABEL;
+    // Assume label
+    return LABEL;
 }
 
-int encode_modrm(char *op1, char *op2, optype_t type1, optype_t type2) {
-	modrm_t modrm;
-	char ** reglist;
-	char *  plusminus;
-	if (type1 == REGRM8)
-		reglist = regs8;
-	else if (type1 == REGRM16)
-		reglist = regs16;
-	else if (type1 == REGRM32)
-		reglist = regs32;
-	else {
-		printf("Error encoding ModRM\n");
-		return 0;
-	}
+int encode_modrm(char *op1, char *op2, optype_t type1, optype_t type2)
+{
+    modrm_t modrm;
+    char ** reglist;
+    char *  plusminus;
+    if (type1 == REGRM8)
+        reglist = regs8;
+    else if (type1 == REGRM16)
+        reglist = regs16;
+    else if (type1 == REGRM32)
+        reglist = regs32;
+    else
+    {
+        printf("Error encoding ModRM\n");
+        return 0;
+    }
 
-	int i;
-	for (i = 0; i < 8; i++) {
-		if (!strncmp(op1, reglist[i], strlen(reglist[i])))
-			break;
-	}
-	modrm.reg = i;
+    int i;
+    for (i = 0; i < 8; i++)
+    {
+        if (!strncmp(op1, reglist[i], strlen(reglist[i])))
+            break;
+    }
+    modrm.reg = i;
 
-	if (type1 == REGRM8)
-		reglist = regs8;
-	else if (type1 == REGRM16)
-		reglist = regs16;
-	else if (type1 == REGRM32)
-		reglist = regs32;
-	else {
-		printf("Error encoding ModRM\n");
-		return 0;
-	}
+    if (type1 == REGRM8)
+        reglist = regs8;
+    else if (type1 == REGRM16)
+        reglist = regs16;
+    else if (type1 == REGRM32)
+        reglist = regs32;
+    else
+    {
+        printf("Error encoding ModRM\n");
+        return 0;
+    }
 
-	for (i = 0; i < 8; i++) {
-		if (!strncmp(op1, reglist[i], strlen(reglist[i]))) {
-			modrm.mod = 3;
-			modrm.rm = i;
-			return (BYTE)((modrm.mod << 6) | (modrm.reg << 3) | modrm.rm);
-		}
-	}
+    for (i = 0; i < 8; i++)
+    {
+        if (!strncmp(op1, reglist[i], strlen(reglist[i])))
+        {
+            modrm.mod = 3;
+            modrm.rm  = i;
+            return (BYTE)((modrm.mod << 6) | (modrm.reg << 3) | modrm.rm);
+        }
+    }
 
-	printf("How to handle %s?\n", op2);
-	exit(99); // for(;;);
+    printf("How to handle %s?\n", op2);
+    exit(99); // for(;;);
 }

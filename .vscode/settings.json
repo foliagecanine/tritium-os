@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "macros.h": "c",
+        "vector": "cpp",
+        "string": "cpp",
+        "algorithm": "cpp",
+        "cctype": "cpp",
+        "cerrno": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "cgui": "cpp",
+        "ctty": "cpp",
+        "cunixfile": "cpp",
+        "mem.h": "c",
+        "stdio.h": "c",
+        "multiboot.h": "c",
+        "pmm.h": "c",
+        "kprint.h": "c",
+        "ksetup.h": "c",
+        "*.bkp": "c",
+        "memconst.h": "c"
+    },
+    "makefile.configureOnOpen": true
+}

@@ -1,5 +1,6 @@
 isodir
 sysroot
+fs/disk_template.img
 ExtraInfo
 bootloader
 *.d
@@ -14,3 +15,5 @@ rpi-qemu.sh
 *.PRG
 *.SYS
 core
+tritium-compiler
+libc-tritium

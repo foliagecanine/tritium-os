@@ -1,24 +1,22 @@
 #ifndef _STDIO_H
 #define _STDIO_H 1
 
-#include <sys/cdefs.h>
 #include <stdarg.h>
 #include <stddef.h>
+// REMOVEME
 #include <stdbool.h>
 
 #define EOF (-1)
+#define NULL ((void *)0)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int __printf_template(bool (*)(const char *, size_t), const char* __restrict, va_list);
-int printf(const char* __restrict, ...);
+int __print_formatted(int (*)(const char *, size_t), const char *, va_list);
+int vprintf(const char *format, va_list arg);
+int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
+int sprintf(char *str, const char *format, ...) __attribute__((format(printf, 2, 3)));
+int snprintf(char *str, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
+int vsprintf(char *str, const char *format, va_list ap);
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 int putchar(int);
-int puts(const char*);
-
-#ifdef __cplusplus
-}
-#endif
+int puts(const char *);
 
 #endif

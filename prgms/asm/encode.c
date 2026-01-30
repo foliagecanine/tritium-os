@@ -4,7 +4,7 @@
 #define OPER_MAX 20
 #define TEMPSTRING_MAX 200
 
-void estring_db(char *db, bool instr, estring *out) {
+void encode_db(char *db, bool instr, estring *out) {
 	estring_write(out, ".db");
 	if (instr)
 		estring_write(out, "i ");
@@ -14,7 +14,7 @@ void estring_db(char *db, bool instr, estring *out) {
 	estring_write(out, "\n");
 }
 
-void estring_dw(char *dw, bool instr, estring *out) {
+void encode_dw(char *dw, bool instr, estring *out) {
 	estring_write(out, ".dw");
 	if (instr)
 		estring_write(out, "i ");
@@ -24,7 +24,7 @@ void estring_dw(char *dw, bool instr, estring *out) {
 	estring_write(out, "\n");
 }
 
-void estring_dd(char *dd, bool instr, estring *out) {
+void encode_dd(char *dd, bool instr, estring *out) {
 	estring_write(out, ".dd");
 	if (instr)
 		estring_write(out, "i ");
@@ -34,7 +34,7 @@ void estring_dd(char *dd, bool instr, estring *out) {
 	estring_write(out, "\n");
 }
 
-void estring_rel(char *rel, regsz_t size, estring *out) {
+void encode_rel(char *rel, regsz_t size, estring *out) {
 	estring_write(out, ".r");
 	switch (size) {
 	case 8:
@@ -59,13 +59,13 @@ int encode_opcode(optype_t operand, char *op, estring *out) {
 	if (operand != NONE) {
 		switch (operand) {
 		case IMM8:
-			estring_db(op, false, out);
+			encode_db(op, false, out);
 			break;
 		case IMM16:
-			estring_dw(op, false, out);
+			encode_dw(op, false, out);
 			break;
 		case IMM32:
-			estring_dd(op, false, out);
+			encode_dd(op, false, out);
 			break;
 		case MEM16:
 			strncpy(temp_tostring, op + 1, TEMPSTRING_MAX);
@@ -74,7 +74,7 @@ int encode_opcode(optype_t operand, char *op, estring *out) {
 				return -1;
 			}
 			*strchr(temp_tostring, ']') = 0;
-			estring_dw(temp_tostring, false, out);
+			encode_dw(temp_tostring, false, out);
 			break;
 		case MEM32:
 			strncpy(temp_tostring, op + 1, TEMPSTRING_MAX);
@@ -83,16 +83,16 @@ int encode_opcode(optype_t operand, char *op, estring *out) {
 				return -1;
 			}
 			*strchr(temp_tostring, ']') = 0;
-			estring_dd(temp_tostring, false, out);
+			encode_dd(temp_tostring, false, out);
 			break;
 		case REL8:
-			estring_rel(op, 8, out);
+			encode_rel(op, 8, out);
 			break;
 		case REL16:
-			estring_rel(op, 16, out);
+			encode_rel(op, 16, out);
 			break;
 		case REL32:
-			estring_rel(op, 32, out);
+			encode_rel(op, 32, out);
 			break;
 		}
 	}
@@ -119,11 +119,11 @@ int encode_op0(char *mnemonic, estring *out) {
 	if (opcode.prefix) {
 		memset(temp_tostring, 0, TEMPSTRING_MAX);
 		snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.prefix);
-		estring_db(temp_tostring, true, out);
+		encode_db(temp_tostring, true, out);
 	}
 	memset(temp_tostring, 0, TEMPSTRING_MAX);
 	snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.opcode);
-	estring_db(temp_tostring, opcode.prefix == 0, out);
+	encode_db(temp_tostring, opcode.prefix == 0, out);
 
 	return 0;
 }
@@ -155,11 +155,11 @@ int encode_op1(char *mnemonic, char *op1, estring *out) {
 	if (opcode.prefix) {
 		memset(temp_tostring, 0, TEMPSTRING_MAX);
 		snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.prefix);
-		estring_db(temp_tostring, true, out);
+		encode_db(temp_tostring, true, out);
 	}
 	memset(temp_tostring, 0, TEMPSTRING_MAX);
 	snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.opcode);
-	estring_db(temp_tostring, opcode.prefix == 0, out);
+	encode_db(temp_tostring, opcode.prefix == 0, out);
 
 	int retval;
 	if (retval = encode_opcode(opcode.outop1, op1, out)) {
@@ -206,11 +206,11 @@ int encode_op2(char *mnemonic, char *op1, char *op2, estring *out) {
 	if (opcode.prefix) {
 		memset(temp_tostring, 0, TEMPSTRING_MAX);
 		snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.prefix);
-		estring_db(temp_tostring, true, out);
+		encode_db(temp_tostring, true, out);
 	}
 	memset(temp_tostring, 0, TEMPSTRING_MAX);
 	snprintf(temp_tostring, TEMPSTRING_MAX, "0x%X", opcode.opcode);
-	estring_db(temp_tostring, opcode.prefix == 0, out);
+	encode_db(temp_tostring, opcode.prefix == 0, out);
 
 	int retval;
 	if (retval = encode_opcode(opcode.outop1, op1, out)) {

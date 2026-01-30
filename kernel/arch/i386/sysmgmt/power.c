@@ -15,8 +15,7 @@ void power_shutdown() {
 	sleep(1000);
 	kerror("ACPI shutdown failed.");
 	extern void bios32();
-	identity_map((void *)0x7000);
-	identity_map((void *)0x8000);
+	identity_map_pages((paddr_t)0x7000, 2);
 	kprint("[KMSG] Attempting shutdown using BIOS.");
 	asm("\
 	mov $0x1553,%ax;\
