@@ -43,6 +43,10 @@ typedef struct {
 	uint32_t align;
 } __attribute__((packed)) elfph32;
 
+#define ELF_PH_FLAG_EXECUTE	1
+#define ELF_PH_FLAG_WRITE	2
+#define ELF_PH_FLAG_READ	4
+
 typedef struct {
 	uint32_t name;
 	uint32_t type;
@@ -55,6 +59,15 @@ typedef struct {
 	uint32_t addralign;
 	uint32_t entry_size;
 } __attribute__((packed)) elfsh32;
+
+typedef struct {
+	uint32_t sym_name;
+	uint32_t sym_value;
+	uint32_t sym_size;
+	uint8_t  sym_info;
+	uint8_t  sym_other;
+	uint16_t sym_shndx;
+} __attribute__((packed)) elfsym32;
 
 bool verify_elf(void *elf_file, size_t size);
 void *load_elf(void *elf_file);

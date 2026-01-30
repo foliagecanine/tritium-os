@@ -165,16 +165,16 @@ bool register_pci_driver(void (*pci_function)(pci_t, uint8_t, uint8_t, uint8_t),
 void launch_driver(pci_t pci, uint8_t bus, uint8_t device, uint8_t function) {
 	for (uint16_t i = 0; i < 255; i++) {
 		if (pci_drivers[i].used && pci_drivers[i].class == pci.class && pci_drivers[i].subclass == pci.subclass) {
-			printf("%X.%X.%u: Launching the driver for %s\n", bus, device, function, pci_find_name(pci.class, pci.subclass));
+			kprintf("%X.%X.%u: Launching the driver for %s", bus, device, function, pci_find_name(pci.class, pci.subclass));
 			pci_drivers[i].pci_function(pci, bus, device, function);
 			return;
 		}
 	}
-	printf("%X.%X.%u: No driver registered for %s\n", bus, device, function, pci_find_name(pci.class, pci.subclass));
+	kprintf("%X.%X.%u: No driver registered for %s", bus, device, function, pci_find_name(pci.class, pci.subclass));
 }
 
 void pci_scan() {
-	kprint("[INIT] Scanning PCI bus");
+	kprint("[PCI] Scanning PCI bus");
 	pci_t c_pci;
 	for (uint16_t i = 0; i < 256; i++) {
 		c_pci = get_pci_data(i, 0, 0);
@@ -193,7 +193,7 @@ void pci_scan() {
 			}
 		}
 	}
-	kprint("[INIT] Finished scanning PCI bus");
+	kprint("[PCI] Finished scanning PCI bus");
 }
 
 uint32_t pci_read_config_dword(uint8_t bus, uint8_t num, uint8_t function, uint8_t offset) {
@@ -221,11 +221,12 @@ void pci_write_config_byte(uint8_t bus, uint8_t num, uint8_t function, uint8_t o
 }
 
 pci_t get_pci_data(uint8_t bus, uint8_t num, uint8_t function) {
+	uint16_t p[32];
 	pci_t     pciData;
-	uint16_t *p = (uint16_t *)&pciData;
 	for (uint8_t i = 0; i < 32; i++) {
 		p[i] = pci_read_config_word(bus, num, function, i * 2);
 	}
+	memcpy(&pciData, p, sizeof(pci_t));
 	return pciData;
 }
 

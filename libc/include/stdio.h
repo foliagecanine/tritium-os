@@ -12,6 +12,10 @@
 int __print_formatted(int (*)(const char *, size_t), const char *, va_list);
 int vprintf(const char *format, va_list arg);
 int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
+int sprintf(char *str, const char *format, ...) __attribute__((format(printf, 2, 3)));
+int snprintf(char *str, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
+int vsprintf(char *str, const char *format, va_list ap);
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 int putchar(int);
 int puts(const char *);
 

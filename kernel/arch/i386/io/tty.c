@@ -24,6 +24,10 @@ void disable_blink() {
 	outb(0x3C0,inb(0x3C1)&0xF7);
 }
 
+void set_vga_buffer_address(void* addr) {
+	terminal_buffer = (uint16_t*)addr;
+}
+
 void terminal_initialize(void) {
 	terminal_row = 0;
 	terminal_column = 0;

@@ -1,4 +1,6 @@
 #include <kernel/exceptions.h>
+#include <kernel/mem.h>
+#include <kernel/kprint.h>
 
 //List all exceptions from https://wiki.osdev.org/Exceptions
 
@@ -74,21 +76,102 @@ void exception_general_protection_fault() {
 
 void *address;
 
+void dump_page_tables();
+
+const char *page_fault_reasons[] = {
+	"",
+	"Write",
+	"User",
+	"Reserved Write",
+	"Instruction Fetch",
+	"Protection Key Violation",
+	"Shadow Stack Access",
+	"SGX Access"
+};
+
+const char *page_fault_inverse_reasons[] = {
+	"Not Present",
+	"Read",
+	"Kernel",
+	"",
+	"",
+	"",
+	"",
+	""
+};
+
 void exception_page_fault(void *retaddr, uint32_t error) {
 	disable_tasking();
 	asm volatile("mov %%cr2, %0" : "=a" (address) :);
 	if(error & 4) {
 		kerror("[Exception.Fault] Usermode Page Privelage Fault!");
+		uint8_t page_permissions = get_page_permissions(address);
 		printf("Fault address: %p\n", address);
 		printf("Return address: %p\n", retaddr);
 		printf("Current PID: %lu\n", getpid());
-		printf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
-		printf("Permissions: 0x%X\n",get_page_permissions(address));
+		
+		printf("Error:");
+		for (int i = 0; i < 8; i++) {
+			if (error & (1 << i)) {
+				printf(" %s", page_fault_reasons[i]);
+			} else {
+				printf(" %s", page_fault_inverse_reasons[i]);
+			}
+		}
+		printf("\n");
+
+		printf("Permissions:");
+
+		if (page_permissions == PAGE_ERROR_NOT_PRESENT) {
+			printf(" Page not present");
+		} else {
+			if(page_permissions & PAGE_PERM_USER) {
+				printf(" User");
+			} else {
+				printf(" Kernel");
+			}
+
+			if(page_permissions & PAGE_PERM_WRITE) {
+				printf(" Write");
+			} else {
+				printf(" Read");
+			}
+		}
+
+		printf("\n");
+
 		dprintf("Fault address: %p\n", address);
 		dprintf("Return address: %p\n", retaddr);
 		dprintf("Current PID: %lu\n", getpid());
-		dprintf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
-		dprintf("Permissions: 0x%X\n", get_page_permissions(address));
+		dprintf("Error:");
+		for (int i = 0; i < 8; i++) {
+			if (error & (1 << i)) {
+				dprintf(" %s", page_fault_reasons[i]);
+			} else {
+				dprintf(" %s", page_fault_inverse_reasons[i]);
+			}
+		}
+		dprintf("\n");
+		dprintf("Permissions:");
+
+		if(page_permissions & PAGE_PERM_USER) {
+			dprintf(" User");
+		} else {
+			dprintf(" Kernel");
+		}
+
+		if(page_permissions & PAGE_PERM_WRITE) {
+			dprintf(" Write");
+		} else {
+			dprintf(" Read");
+		}
+
+		dprintf("\n");
+
+		dump_stacktrace();
+		
+		dump_page_tables();
+
 		exit_program(1);
 		// Should not reach here.
 		for(;;);
@@ -97,17 +180,73 @@ void exception_page_fault(void *retaddr, uint32_t error) {
 		terminal_setcolor(0x1F);
 		terminal_refresh();
 		kerror("[Exception.Fault] Kernel Page Fault!");
+		uint8_t page_permissions = get_page_permissions(address);
 		printf("Fault address: %p\n", address);
 		printf("Return address: %p\n", retaddr);
-		printf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
-		printf("Permissions: 0x%X\n", get_page_permissions(address));
+		printf("Error:");
+		for (int i = 0; i < 8; i++) {
+			if (error & (1 << i)) {
+				printf(" %s", page_fault_reasons[i]);
+			} else {
+				printf(" %s", page_fault_inverse_reasons[i]);
+			}
+		}
+		printf("\n");
+		printf("Permissions:");
+
+		if(page_permissions & PAGE_PERM_USER) {
+			printf(" User");
+		} else {
+			printf(" Kernel");
+		}
+
+		if(page_permissions & PAGE_PERM_WRITE) {
+			printf(" Write");
+		} else {
+			printf(" Read");
+		}
+
+		printf("\n");
+
 		dprintf("Fault address: %p\n", address);
 		dprintf("Return address: %p\n", retaddr);
-		dprintf("Error: 0x%lX\n", (error & 7) | (error & 0x10));
-		dprintf("Permissions: 0x%X\n", get_page_permissions(address));
+		dprintf("Error:");
+		for (int i = 0; i < 8; i++) {
+			if (error & (1 << i)) {
+				dprintf(" %s", page_fault_reasons[i]);
+			} else {
+				dprintf(" %s", page_fault_inverse_reasons[i]);
+			}
+		}
+		dprintf("\n");
+		dprintf("Permissions:");
+
+		if (page_permissions == PAGE_ERROR_NOT_PRESENT) {
+			dprintf(" Page not present");
+		} else {
+			if(page_permissions & PAGE_PERM_USER) {
+				dprintf(" User");
+			} else {
+				dprintf(" Kernel");
+			}
+	
+			if(page_permissions & PAGE_PERM_WRITE) {
+				dprintf(" Write");
+			} else {
+				dprintf(" Read");
+			}
+		}
+
+		dprintf("\n");
+
 		kprint("\nIf you are a user seeing this, your computer has crashed.");
 		kprint("Reboot your computer. If the error happens again...");
 		kprint("just don't do the thing that made it happen.\n");
+		
+		dump_stacktrace();
+
+		dump_page_tables();
+		
 		abort();
 		for(;;);
 	}

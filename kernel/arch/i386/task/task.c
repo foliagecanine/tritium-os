@@ -1,6 +1,10 @@
 #include <kernel/task.h>
 #include <kernel/ipc.h>
 #include <kernel/sysfunc.h>
+#include <kernel/mem.h>
+#include <kernel/memconst.h>
+#include <kernel/pmm.h>
+#include <kernel/kprint.h>
 
 //#define TASK_DEBUG
 
@@ -18,8 +22,7 @@ struct thread_t {
 	thread_t *parent;
 	uint8_t state;
 	uint32_t waitval;
-	uint32_t cr3;
-	void *tables;
+	page_directory_t *tables;
 	uint16_t ipc_response_produced;
 	uint16_t ipc_response_consumed;
 	ipc_response *ipc_responses;
@@ -33,14 +36,14 @@ void *last_entrypoint;
 void *last_stack;
 
 void init_tasking(uint32_t num_pages) {
-	threads = alloc_page(num_pages);
-	memset(threads, 0, num_pages * 4096);
-	max_threads = (num_pages * 4096) / sizeof(thread_t);
+	threads = kalloc_pages(num_pages);
+	memset(threads, 0, num_pages * PAGE_SIZE);
+	max_threads = (num_pages * PAGE_SIZE) / sizeof(thread_t);
 	printf("Max threads: %lu\n",max_threads);
 	kprint("[INIT] Tasking initialized.");
 }
 
-uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t envl_paddr) {
+uint32_t init_new_process(void *prgm, size_t size, paddr_t argl_paddr, paddr_t envl_paddr) {
 	uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
 		if (threads[pid-1].pid==0)
@@ -54,45 +57,43 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	if (!verify_elf(prgm, size))
 		return 0;
 
-	void * new = clone_tables();
-	threads[pid-1].pid = pid;
-	threads[pid-1].state = TASK_STATE_IDLE;
-	threads[pid-1].cr3 = (uint32_t)(uintptr_t)new;
-	threads[pid-1].tables = get_current_tables();
-
+	page_directory_t *new_process_tables = clone_tables();
+	switch_tables(new_process_tables);
+	threads[pid - 1].pid = pid;
+	threads[pid - 1].state = TASK_STATE_IDLE;
+	threads[pid - 1].tables = new_process_tables;
 	void *elf_enter = load_elf(prgm);
-	threads[pid-1].tss.eip = (uintptr_t)elf_enter;
+	threads[pid - 1].tss.eip = (uintptr_t)elf_enter;
 
 	// Map arguments to the process
 	if (argl_paddr) {
-		map_page_secretly((void *)(uintptr_t)0xBFFFE000,(void *)argl_paddr);
+		map_user_page_paddr(ARGL_ADDR, (void *)argl_paddr);
 	} else {
-		map_page_to((void *)(uintptr_t)0xBFFFE000);
+		map_user_page(ARGL_ADDR);
 	}
-	mark_user((void *)(uintptr_t)0xBFFFE000,true);
 
 	// Map environment variables to the process
 	if (envl_paddr) {
-		map_page_secretly((void *)(uintptr_t)0xBFFFF000,(void *)envl_paddr);
+		map_user_page_paddr(ENVL_ADDR, (void *)envl_paddr);
 	} else {
-		map_page_to((void *)(uintptr_t)0xBFFFF000);
+		map_user_page(ENVL_ADDR);
 	}
-	mark_user((void *)(uintptr_t)0xBFFFF000,true);
 
-	// Create stack: 4 pages = 16KiB
-	for (uint8_t i = 0; i < 4; i++) {
-		map_page_to((void *)(uintptr_t)(0xBFFFA000+(i*4096)));
-		mark_user((void *)(uintptr_t)(0xBFFFA000+(i*4096)), true);
+	// Create initial stack
+	for (uvaddr_t addr = STACK_END_ADDR; addr >= STACK_START_ADDR; addr -= PAGE_SIZE) {
+		map_user_page(addr);
 	}
-	threads[pid-1].tss.esp = 0xBFFFFFFB;
+	
+	// Set up stack pointer
+	threads[pid-1].tss.esp = (uint32_t)((uintptr_t)STACK_END_ADDR - ((uintptr_t)(sizeof(void *) * 2)));
 
 	// Create IPC response buffer
-	threads[pid-1].ipc_responses = alloc_page(1);
-	if (!threads[pid-1].ipc_responses)
-		return 0;
-	memset(threads[pid-1].ipc_responses, 0, 4096);
-	threads[pid-1].ipc_response_produced = 0;
-	threads[pid-1].ipc_response_consumed = 0;
+	// threads[pid-1].ipc_responses = kalloc_pages(1);
+	// if (!threads[pid-1].ipc_responses)
+	// 	return 0;
+	// memset(threads[pid-1].ipc_responses, 0, PAGE_SIZE);
+	// threads[pid-1].ipc_response_produced = 0;
+	// threads[pid-1].ipc_response_consumed = 0;
 
 	// Set instruction pointer to ELF entrypoint
 	last_entrypoint = elf_enter;
@@ -106,12 +107,13 @@ uint32_t init_new_process(void *prgm, size_t size, uint32_t argl_paddr, uint32_t
 	printf("====== pid=%$\n",pid);
 	dprintf("====== pid=%$\n",pid);
 #endif
+
 	return pid;
 }
 
 void create_idle_process(void *prgm, size_t size) {
 	init_new_process(prgm, size, 0, 0);
-	use_kernel_map();
+	use_kernel_tables();
 }
 
 extern void enter_usermode();
@@ -124,16 +126,18 @@ void create_process(void *prgm, size_t size) {
 	current_task->state = TASK_STATE_ACTIVE;
 	enable_tasking();
 	last_stack = (void *)(uintptr_t)current_task->tss.esp;
+
+	kprint("[INIT] Entering usermode.");
 	enter_usermode();
 }
 
 bool is_task_runnable(thread_t *thread) {
-	if (thread->state == TASK_STATE_WAITIPC) {
-		if (transfer_avail(thread->pid, thread->waitval)) {
-			thread->state = TASK_STATE_ACTIVE;
-			return true;
-		}
-	}
+	// if (thread->state == TASK_STATE_WAITIPC) {
+	// 	if (transfer_avail(thread->pid, thread->waitval)) {
+	// 		thread->state = TASK_STATE_ACTIVE;
+	// 		return true;
+	// 	}
+	// }
 	return (thread->state == TASK_STATE_ACTIVE || thread->state == TASK_STATE_IDLE);
 }
 
@@ -155,16 +159,6 @@ uint32_t next_task() {
 	return 0;
 }
 
-inline void set_cr3(uint32_t new_cr3) {
-	asm volatile("mov %0, %%cr3"::"r"(new_cr3));
-}
-
-inline uint32_t get_cr3() {
-	uint32_t retval;
-	asm volatile("mov %%cr3,%0":"=r"(retval));
-	return retval;
-}
-
 volatile uint32_t ready_esp;
 volatile tss_entry_t new_temp_tss;
 volatile char fxsave_region[512];
@@ -184,7 +178,6 @@ void task_switch(tss_entry_t tss) {
 	}
 	current_task = &threads[new_pid - 1];
 	switch_tables(threads[new_pid - 1].tables);
-	set_cr3((current_task->cr3));
 	new_temp_tss = current_task->tss;
 	memcpy((char *)fxsave_region, current_task->savedfloats, 512);
 	enable_tasking();
@@ -193,8 +186,8 @@ void task_switch(tss_entry_t tss) {
 
 void kill_process(uint32_t pid, uint32_t retval) {
 	disable_tasking();
-	deregister_ipc_ports_pid(pid);
-	reclaim_ipc_response_buffer(pid, threads[pid - 1].ipc_responses);
+	// deregister_ipc_ports_pid(pid);
+	// reclaim_ipc_response_buffer(pid, threads[pid - 1].ipc_responses);
 	uint32_t old_pid = current_task->pid;
 	thread_t *parent = threads[pid - 1].parent;
 	if (parent != 0) {
@@ -203,17 +196,12 @@ void kill_process(uint32_t pid, uint32_t retval) {
 			parent->waitval = retval;
 		}
 	}
-	uint32_t current_cr3;
-	current_cr3 = get_cr3();
-	void *current_tables = get_current_tables();
+	page_directory_t *current_tables = get_current_tables();
 	switch_tables(threads[pid-1].tables);
-	set_cr3((threads[pid-1].cr3));
-	free_all_user_pages();
-	use_kernel_map();
-	free_page(threads[pid - 1].tables - 4096, 1025);
+	free_current_page_directory();
+	// kfree_pages(threads[pid - 1].ipc_responses, 1);
 	threads[pid - 1].state = TASK_STATE_NULL;
-	threads[pid - 1].cr3 = 0;
-	threads[pid - 1].tables = 0;
+	threads[pid - 1].tables = NULL;
 	threads[pid - 1].waitval = 0;
 	threads[pid - 1].pid = 0;
 #ifdef TASK_DEBUG
@@ -226,7 +214,6 @@ void kill_process(uint32_t pid, uint32_t retval) {
 		task_switch(current_task->tss);
 	}
 	switch_tables(current_tables);
-	set_cr3(current_cr3);
 	enable_tasking();
 }
 
@@ -241,101 +228,105 @@ void yield() {
 	task_switch(syscall_temp_tss);
 }
 
-FILE prgm;
-uint32_t argl_v;
-uint32_t envl_v;
-
 uint32_t exec_syscall(char *name, char **arguments, char **environment) {
-	uint32_t current_cr3;
-	current_cr3 = get_cr3();
-	void *current_tables = get_current_tables();
+	FILE prgm;
+	
+	page_directory_t *current_tables = get_current_tables();
 
-	prgm = fopen(name,"r");
-	if (prgm.valid&&!prgm.directory) {
+	prgm = fopen(name, "r");
+	if (prgm.valid && !prgm.directory) {
+		paddr_t argl_paddr;
+		paddr_t envl_paddr;
+
 		//Process environment variables
 		uint32_t envc = 0;
-		char **envp = alloc_page(1);
-		memset(envp,0,4096);
+		char **envp = kalloc_pages(1);
+		memset(envp, 0, PAGE_SIZE);
 		void *eptr = envp;
 
 		if (environment) {
 			//Count environment variables untill we reach NULL.
-			while(environment[envc]!=NULL)
+			while(environment[envc] != NULL)
 				envc++;
 		}
 
-		eptr+=sizeof(char *)*(envc+1); //Reserve space for the pointers
+		eptr += sizeof(char *) * (envc + 1); //Reserve space for the pointers
 
 		if (environment) {
 			for (uint32_t i = 0; i < envc; i++) {
-				envp[i] = (char *)(((uint32_t)eptr%0x1000)+0xBFFFF000);
-				strcpy(eptr,environment[i]);
-				eptr+=strlen(environment[i]);
+				envp[i] = (char *)(((uint32_t)eptr % PAGE_SIZE) + ENVL_ADDR);
+				strcpy(eptr, environment[i]);
+				eptr += strlen(environment[i]);
 				eptr++;
 			}
 		}
 
-		envl_v = (uint32_t)get_phys_addr(envp);
+		envl_paddr = get_kphys(envp);
 
 		//Now process arguments
 		uint32_t argc = 0;
-		char **argv = alloc_page(1);
-		memset(argv,0,4096);
+		char **argv = kalloc_pages(1);
+		memset(argv, 0, PAGE_SIZE);
 		void *aptr = argv;
 
 		if (arguments) {
 			//Count arguments until we reach a NULL.
-			while (arguments[argc]!=NULL)
+			while (arguments[argc] != NULL)
 				argc++;
 		}
 
-		aptr+=sizeof(char *)*(argc+2); //Reserve space for the pointers
-		argv[0] = (char *)(((uint32_t)aptr%0x1000)+0xBFFFE000);
-		strcpy(aptr,name);
-		aptr+=strlen(name);
+		aptr += sizeof(char *) * (argc + 2); //Reserve space for the pointers
+		argv[0] = (char *)(((uint32_t)aptr % PAGE_SIZE) + ARGL_ADDR);
+		strcpy(aptr, name);
+		aptr += strlen(name);
 		aptr++;
 		argc++;
 
 		//Make sure arguments are present
 		if (arguments) {
-			for (uint32_t i = 0; i < argc-1; i++) {
-				argv[i+1] = (char *)(((uint32_t)aptr%0x1000)+0xBFFFE000);
-				strcpy(aptr,arguments[i]);
-				aptr+=strlen(arguments[i]);
+			for (uint32_t i = 0; i < argc - 1; i++) {
+				argv[i + 1] = (char *)(((uint32_t)aptr % PAGE_SIZE) + ARGL_ADDR);
+				strcpy(aptr, arguments[i]);
+				aptr += strlen(arguments[i]);
 				aptr++;
 			}
 		}
 
-		argl_v = (uint32_t)get_phys_addr(argv);
-		use_kernel_map();
-		void *buf = alloc_page((prgm.size/4096)+1);
-		memset(buf,0,((prgm.size/4096)+1)*4096);
-		if (!fread(&prgm,buf,0,prgm.size)) {
-			uint32_t pid = init_new_process(buf,prgm.size,argl_v,envl_v);
+		argl_paddr = get_kphys(argv);
+		use_kernel_tables();
+		const size_t num_prgm_pages = (prgm.size + PAGE_SIZE - 1) / PAGE_SIZE;
+		kvaddr_t buf = kalloc_pages(num_prgm_pages);
+		memset(buf, 0, num_prgm_pages * PAGE_SIZE);
+		if (!fread(&prgm, buf, 0, prgm.size)) {
+			uint32_t pid = init_new_process(buf, prgm.size, argl_paddr, envl_paddr);
+
 			if (pid) {
-				threads[pid-1].parent=current_task;
-				threads[pid-1].tss.eax=argc;
-				threads[pid-1].tss.ebx=envc;
-				threads[pid-1].tss.ecx=0xBFFFE000;
-				threads[pid-1].tss.edx=0xBFFFF000;
+				threads[pid - 1].parent = current_task;
+				threads[pid - 1].tss.eax = argc;
+				threads[pid - 1].tss.ebx = envc;
+				threads[pid - 1].tss.ecx = (uintptr_t)ARGL_ADDR;
+				threads[pid - 1].tss.edx = (uintptr_t)ENVL_ADDR;
 			}
-			free_page(buf,(prgm.size/4096)+1);
-			switch_tables((void *)current_tables);
-			set_cr3(current_cr3);
+			
 			if (pid) {
-				trade_vaddr(argv);
-				trade_vaddr(envp);
+				map_user_page_paddr(ARGL_ADDR, argl_paddr);
+				map_user_page_paddr(ENVL_ADDR, envl_paddr);
+				kunmap_page(argv);
+				kunmap_page(envp);
 			} else {
-				free_page(argv,1);
-				free_page(envp,1);
+				kfree_pages(argv, 1);
+				kfree_pages(envp, 1);
 			}
+
+			kfree_pages(buf, num_prgm_pages);
+			switch_tables(current_tables);
+			
 			return pid;
 		} else {
-			free_page(buf,(prgm.size/4096)+1);
-			switch_tables((void *)current_tables);
-			set_cr3(current_cr3);
-			free_page(argv,1);
-			free_page(envp,1);
+			kfree_pages(buf, num_prgm_pages);
+			switch_tables(current_tables);
+			kfree_pages(argv, 1);
+			kfree_pages(envp, 1);
 			return 0;
 		}
 	} else {
@@ -343,36 +334,35 @@ uint32_t exec_syscall(char *name, char **arguments, char **environment) {
 	}
 }
 
-// Fork will simply duplicate the process's memory and thread data and assign a new PID.
+// Fork will duplicate the process's tables and thread data and assign a new stack and PID.
 uint32_t fork_process() {
 	disable_tasking();
-	uint32_t current_cr3;
-	current_cr3 = get_cr3();
-	void *current_tables = get_current_tables();
+
+	page_directory_t *current_tables = get_current_tables();
 
 	uint32_t pid;
 	for (pid = 1; pid < max_threads; pid++) {
-		if (threads[pid-1].pid==0)
+		if (threads[pid - 1].pid == 0)
 			break;
 	}
-	if (pid>=max_threads) {
+	if (pid >= max_threads) {
 		kerror("[KERR] Process tried to start, but no available PID!");
 		return 0;
 	}
 
-	void *new = clone_tables();
-	clone_user_pages();
+	page_directory_t *new_process_tables = clone_tables();
+	switch_tables(new_process_tables);
 
-	memcpy(&threads[pid-1],current_task,sizeof(thread_t));
-	threads[pid-1].cr3 = (uint32_t)(uintptr_t)new;
-	threads[pid-1].pid = pid;
-	threads[pid-1].tables = get_current_tables();
-	threads[pid-1].tss = syscall_temp_tss;
-	threads[pid-1].tss.eax = 0;
-	threads[pid-1].parent = current_task;
+	clone_user_pages(new_process_tables);
+
+	memcpy(&threads[pid-1], current_task, sizeof(thread_t));
+	threads[pid - 1].pid = pid;
+	threads[pid - 1].tables = new_process_tables;
+	threads[pid - 1].tss = syscall_temp_tss;
+	threads[pid - 1].tss.eax = 0;
+	threads[pid - 1].parent = current_task;
 
 	switch_tables(current_tables);
-	set_cr3(current_cr3);
 
 #ifdef TASK_DEBUG
 	kprint("[KDBG] New process forked:");
@@ -397,12 +387,13 @@ void waitpid(uint32_t wait) {
 }
 
 void waitipc(uint32_t port) {
+	(void)port;
 	disable_tasking();
-	if (!verify_ipc_port_ownership(port))
-		yield();
+	// if (!verify_ipc_port_ownership(port))
+	// 	yield();
 
-	current_task->state = TASK_STATE_WAITIPC;
-	current_task->waitval = port;
+	// current_task->state = TASK_STATE_WAITIPC;
+	// current_task->waitval = port;
 	yield();
 }
 
@@ -441,6 +432,8 @@ bool set_ipc_response_status(uint32_t pid, bool consumed, uint16_t value) {
 	return true;
 }
 
-/*uint32_t get_process_state(uint32_t pid) {
-	return (uint32_t)threads[pid-1].state;
-}*/
+page_directory_t *get_task_tables(uint32_t pid) {
+	if (pid == 0 || pid > max_threads || threads[pid - 1].pid != pid)
+		return NULL;
+	return threads[pid - 1].tables;
+}

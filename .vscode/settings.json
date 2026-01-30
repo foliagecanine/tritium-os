@@ -14,6 +14,14 @@
         "cgui": "cpp",
         "ctty": "cpp",
         "cunixfile": "cpp",
+        "mem.h": "c",
+        "stdio.h": "c",
+        "multiboot.h": "c",
+        "pmm.h": "c",
+        "kprint.h": "c",
+        "ksetup.h": "c",
+        "*.bkp": "c",
+        "memconst.h": "c"
     },
     "makefile.configureOnOpen": true
 }

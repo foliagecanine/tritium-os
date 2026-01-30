@@ -9,6 +9,7 @@
 #include <kernel/syscalls.h>
 #include <kernel/tty.h>
 #include <kernel/ipc.h>
+#include <kernel/serial.h>
 #include <stdio.h>
 
 multiboot_memory_map_t *k_mmap;
@@ -34,10 +35,10 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     init_gdt();
     init_idt();
     init_mouse();
-    init_pit(1000);
     k_mbi = (multiboot_info_t *)ebx;
     init_paging(k_mbi);
-    set_current_heap(heap_create(32));
+    store_multiboot(k_mbi);
+    init_pit(1000);
     for (size_t i = 0; i < sizeof(init_functions) / sizeof(init_functions[0]); i++)
     {
         init_functions[i]();
@@ -47,10 +48,10 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     init_syscalls();
     install_tss();
     init_tasking(16);
-    if (!init_ipc())
-    {
-        kerror("[KERR] Could not initialize IPC: Not enough memory");
-    }
+    // if (!init_ipc())
+    // {
+    //     kerror("[IPC] Could not initialize IPC: Not enough memory");
+    // }
     kprint("[KMSG] Kernel initialized successfully");
 
     uint32_t valid_drives     = 0;
@@ -81,37 +82,45 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     if (valid_drives == 0)
     {
         printf("No valid drive found.\n");
-        printf("Press shift key to enter Kernel Debug Console.\n");
-        for (;;)
-        {
-            sleep(1);
-            int k = getkey();
+        printf("Press any key to shutdown...\n");
+        while (getchar() == 0)
+            ;
 
-            if (k == 42 || k == 54 || k == 170 || k == 182)
-            {
-                printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
-                debug_console();
-            }
-        }
+        kprintf("[KMSG] Shutting down.");
+        kernel_exit();
+
+        // printf("Press shift key to enter Kernel Debug Console.\n");
+        // for (;;)
+        // {
+        //     sleep(1);
+        //     int k = getkey();
+        // 
+        //     if (k == 42 || k == 54 || k == 170 || k == 182)
+        //     {
+        //         printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
+        //         debug_console();
+        //     }
+        // }
     }
 
-    printf("Press shift key to enter Kernel Debug Console.\n");
-    for (uint16_t i = 0; i < 1000; i++)
-    {
-        sleep(1);
-        int k = getkey();
-
-        if (k == 42 || k == 54 || k == 170 || k == 182)
-        {
-            printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
-            debug_console();
-        }
-    }
+    // printf("Press shift key to enter Kernel Debug Console.\n");
+    // for (uint16_t i = 0; i < 1000; i++)
+    // {
+    //     sleep(1);
+    //     int k = getkey();
+    // 
+    //     if (k == 42 || k == 54 || k == 170 || k == 182)
+    //     {
+    //         printf("KEY DETECTED - INITIALIZING DEBUG CONSOLE...\n");
+    //         debug_console();
+    //     }
+    // }
 
     FILE prgm = fopen(init_program, "r");
     if (prgm.valid)
     {
-        void *buf = alloc_page((prgm.size / 4096) + 1);
+        size_t init_prgm_pages = (prgm.size + PAGE_SIZE - 1) / PAGE_SIZE;
+        void *buf = kalloc_pages(init_prgm_pages);
         fread(&prgm, buf, 0, prgm.size);
         create_process(buf, prgm.size);
     }

@@ -1,0 +1,1169 @@
+./scripts/ahci-qemu.sh exampledisk.img
+make[1]: Entering directory '/home/userone/Documents/GitHub/tritium-os/libc'
+mkdir -p /home/userone/Documents/GitHub/tritium-os/sysroot/usr/include
+cp -R --preserve=timestamps include/. /home/userone/Documents/GitHub/tritium-os/sysroot/usr/include/.
+make[1]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/libc'
+make[1]: Entering directory '/home/userone/Documents/GitHub/tritium-os/kernel'
+make[1]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/kernel'
+make[1]: Entering directory '/home/userone/Documents/GitHub/tritium-os/libc'
+mkdir -p /home/userone/Documents/GitHub/tritium-os/sysroot/usr/include
+cp -R --preserve=timestamps include/. /home/userone/Documents/GitHub/tritium-os/sysroot/usr/include/.
+mkdir -p /home/userone/Documents/GitHub/tritium-os/sysroot/usr/lib
+cp libk.a /home/userone/Documents/GitHub/tritium-os/sysroot/usr/lib
+make[1]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/libc'
+make[1]: Entering directory '/home/userone/Documents/GitHub/tritium-os/kernel'
+make[1]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/kernel'
+make[1]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms'
+make -C shell/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/shell'
+mcopy -o -i ../../exampledisk.img SHELL.SYS ::bin/SHELL.SYS
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/shell'
+make -C mem/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/mem'
+mcopy -o -i ../../exampledisk.img MEM.PRG ::bin/MEM.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/mem'
+make -C cat/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/cat'
+mcopy -o -i ../../exampledisk.img CAT.PRG ::bin/CAT.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/cat'
+make -C advnture/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/advnture'
+mcopy -o -i ../../exampledisk.img ADVNTURE.PRG ::prgms/ADVNTURE.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/advnture'
+make -C ls/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/ls'
+mcopy -o -i ../../exampledisk.img LS.PRG ::bin/LS.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/ls'
+make -C gui/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/gui'
+mcopy -o -i ../../exampledisk.img GUI.SYS ::bin/GUI.SYS
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/gui'
+make -C edit/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/edit'
+mcopy -o -i ../../exampledisk.img EDIT.PRG ::bin/EDIT.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/edit'
+make -C keyread/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/keyread'
+mcopy -o -i ../../exampledisk.img KEYREAD.PRG ::prgms/KEYREAD.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/keyread'
+make -C fork/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/fork'
+mcopy -o -i ../../exampledisk.img FORK.PRG ::prgms/FORK.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/fork'
+make -C asm/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/asm'
+mcopy -o -i ../../exampledisk.img ASM.PRG ::prgms/ASM.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/asm'
+make -C wm/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/wm'
+mcopy -o -i ../../exampledisk.img WM.SYS ::bin/os/WM.SYS
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/wm'
+make -C hq9comp/ install
+make[2]: Entering directory '/home/userone/Documents/GitHub/tritium-os/prgms/hq9comp'
+mcopy -o -i ../../exampledisk.img HQ9COMP.PRG ::prgms/HQ9COMP.PRG
+make[2]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms/hq9comp'
+mcopy -D o -i ../exampledisk.img ../kernel/myos.kernel ::/boot/; \
+
+make[1]: Leaving directory '/home/userone/Documents/GitHub/tritium-os/prgms'
+Serial initialized.
+[INIT] Mapped memory
+[INIT] GDT Enabled
+[INIT] IDT Enabled
+[PAGING] Initializing paging
+[PAGING] Setting up kernel page directory at 0xC0142000
+[PAGING] Mapping kernel memory starting at 0x100000
+[PMM] Initializing Physical Memory Manager...
+[PMM] 6 memory map entries found
+0: 0x0000000+0x0009FC00 Available
+1: 0x0009FC00+0x00000400 Reserved
+2: 0x000F0000+0x00010000 Reserved
+3: 0x00100000+0x03EDF000 Available
+4: 0x03FDF000+0x00021000 Reserved
+5: 0xFFFC0000+0x00040000 Reserved
+[PMM] Total Memory: 65468 KB (16367 pages)
+[PMM] Free Memory: 63088 KB (15772 pages)
+[MULTIBOOT] Storing multiboot information
+[MULTIBOOT] Copying command line
+[MULTIBOOT] Copying boot loader name
+[MULTIBOOT] Copying memory map
+[MULTIBOOT] Copying VBE info
+[MULTIBOOT] Copying framebuffer palette
+[INIT] Initialized AHCI driver
+[INIT] Initialized USB driver
+[PCI] Scanning PCI bus
+0.0.0: No driver registered for Host Bridge
+0.1.0: No driver registered for ISA Bridge
+0.1.1: No driver registered for IDE Controller
+0.1.3: No driver registered for Other Bridge
+0.2.0: No driver registered for VGA Compatible Controller
+0.3.0: No driver registered for Ethernet Controller
+0.4.0: Launching the driver for Serial ATA Controller
+[PCI] Finished scanning PCI bus
+[INIT] Initialized Syscalls.
+[INIT] Tasking initialized.
+[KMSG] Kernel initialized successfully
+[INIT] Entering usermode.
+[Exception.Fault] Usermode Page Privelage Fault!
+Fault address: (nil)
+Return address: 0x804ad1e
+Current PID: 3
+Error: Not Present Write User     
+Permissions: User Write
+Stack trace:
+Frame at 0xc01e1384
+  at 0xC0102A92
+  at 0xC0101D9B
+  at 0x75FF0CEC (unmapped)
+CR3 register value: 0x00259000
+Page directory at vaddr=0xc0061000, paddr=0x259000:
+  PDE 020: vaddr=0x8000000, paddr=0x269000
+  PDE 2FF: vaddr=0xbfc00000, paddr=0x270000
+  PDE 300: vaddr=0xc0000000, paddr=0x185000
+  PDE 340: vaddr=0xd0000000, paddr=0x145000
+End of page directory dump.
+Page tables:
+  PTE 020.048: vaddr=0x8048000, paddr=0x25b000
+  PTE 020.049: vaddr=0x8049000, paddr=0x25c000
+  PTE 020.04A: vaddr=0x804a000, paddr=0x25d000
+  PTE 020.04B: vaddr=0x804b000, paddr=0x25e000
+  PTE 020.04C: vaddr=0x804c000, paddr=0x25f000
+  PTE 020.04D: vaddr=0x804d000, paddr=0x260000
+  PTE 020.04E: vaddr=0x804e000, paddr=0x261000
+  PTE 2FF.3FA: vaddr=0xbfffa000, paddr=0x262000
+  PTE 2FF.3FB: vaddr=0xbfffb000, paddr=0x263000
+  PTE 2FF.3FC: vaddr=0xbfffc000, paddr=0x264000
+  PTE 2FF.3FD: vaddr=0xbfffd000, paddr=0x265000
+  PTE 2FF.3FE: vaddr=0xbfffe000, paddr=0x266000
+  PTE 2FF.3FF: vaddr=0xbffff000, paddr=0x275000
+  PTE 300.00: vaddr=0xc0000000, paddr=0x1f8000
+  PTE 300.01: vaddr=0xc0001000, paddr=0x1e3000
+  PTE 300.02: vaddr=0xc0002000, paddr=0x1e4000
+  PTE 300.03: vaddr=0xc0003000, paddr=0x1e5000
+  PTE 300.04: vaddr=0xc0004000, paddr=0x1e6000
+  PTE 300.05: vaddr=0xc0005000, paddr=0x1e7000
+  PTE 300.06: vaddr=0xc0006000, paddr=0x1e8000
+  PTE 300.07: vaddr=0xc0007000, paddr=0x1e2000
+  PTE 300.08: vaddr=0xc0008000, paddr=0x1e9000
+  PTE 300.09: vaddr=0xc0009000, paddr=0x1ea000
+  PTE 300.0A: vaddr=0xc000a000, paddr=0x1eb000
+  PTE 300.0B: vaddr=0xc000b000, paddr=0x1ec000
+  PTE 300.0C: vaddr=0xc000c000, paddr=0x1ed000
+  PTE 300.0D: vaddr=0xc000d000, paddr=0x1ee000
+  PTE 300.0E: vaddr=0xc000e000, paddr=0x1ef000
+  PTE 300.0F: vaddr=0xc000f000, paddr=0x1f0000
+  PTE 300.010: vaddr=0xc0010000, paddr=0x1f1000
+  PTE 300.011: vaddr=0xc0011000, paddr=0x1f2000
+  PTE 300.012: vaddr=0xc0012000, paddr=0x1f3000
+  PTE 300.013: vaddr=0xc0013000, paddr=0x1f4000
+  PTE 300.014: vaddr=0xc0014000, paddr=0x1f5000
+  PTE 300.015: vaddr=0xc0015000, paddr=0x1f6000
+  PTE 300.016: vaddr=0xc0016000, paddr=0x1f7000
+  PTE 300.017: vaddr=0xc0017000, paddr=0x1f9000
+  PTE 300.018: vaddr=0xc0018000, paddr=0x1fa000
+  PTE 300.019: vaddr=0xc0019000, paddr=0x1fb000
+  PTE 300.01A: vaddr=0xc001a000, paddr=0x1fc000
+  PTE 300.01B: vaddr=0xc001b000, paddr=0x1fd000
+  PTE 300.01C: vaddr=0xc001c000, paddr=0x1fe000
+  PTE 300.01D: vaddr=0xc001d000, paddr=0x1ff000
+  PTE 300.01E: vaddr=0xc001e000, paddr=0x201000
+  PTE 300.01F: vaddr=0xc001f000, paddr=0x202000
+  PTE 300.020: vaddr=0xc0020000, paddr=0x203000
+  PTE 300.021: vaddr=0xc0021000, paddr=0x204000
+  PTE 300.022: vaddr=0xc0022000, paddr=0x205000
+  PTE 300.023: vaddr=0xc0023000, paddr=0x206000
+  PTE 300.024: vaddr=0xc0024000, paddr=0x207000
+  PTE 300.025: vaddr=0xc0025000, paddr=0x208000
+  PTE 300.026: vaddr=0xc0026000, paddr=0x209000
+  PTE 300.027: vaddr=0xc0027000, paddr=0x20a000
+  PTE 300.028: vaddr=0xc0028000, paddr=0x20b000
+  PTE 300.029: vaddr=0xc0029000, paddr=0x20c000
+  PTE 300.02A: vaddr=0xc002a000, paddr=0x20d000
+  PTE 300.02B: vaddr=0xc002b000, paddr=0x20e000
+  PTE 300.02C: vaddr=0xc002c000, paddr=0x20f000
+  PTE 300.02D: vaddr=0xc002d000, paddr=0x210000
+  PTE 300.02E: vaddr=0xc002e000, paddr=0x211000
+  PTE 300.02F: vaddr=0xc002f000, paddr=0x212000
+  PTE 300.030: vaddr=0xc0030000, paddr=0x213000
+  PTE 300.031: vaddr=0xc0031000, paddr=0x214000
+  PTE 300.032: vaddr=0xc0032000, paddr=0x215000
+  PTE 300.033: vaddr=0xc0033000, paddr=0x216000
+  PTE 300.034: vaddr=0xc0034000, paddr=0x217000
+  PTE 300.035: vaddr=0xc0035000, paddr=0x218000
+  PTE 300.036: vaddr=0xc0036000, paddr=0x219000
+  PTE 300.037: vaddr=0xc0037000, paddr=0x21a000
+  PTE 300.038: vaddr=0xc0038000, paddr=0x21b000
+  PTE 300.039: vaddr=0xc0039000, paddr=0x21c000
+  PTE 300.03A: vaddr=0xc003a000, paddr=0x21d000
+  PTE 300.03B: vaddr=0xc003b000, paddr=0x21e000
+  PTE 300.03C: vaddr=0xc003c000, paddr=0x21f000
+  PTE 300.03D: vaddr=0xc003d000, paddr=0x220000
+  PTE 300.03E: vaddr=0xc003e000, paddr=0x221000
+  PTE 300.03F: vaddr=0xc003f000, paddr=0x222000
+  PTE 300.040: vaddr=0xc0040000, paddr=0x223000
+  PTE 300.041: vaddr=0xc0041000, paddr=0x224000
+  PTE 300.042: vaddr=0xc0042000, paddr=0x225000
+  PTE 300.043: vaddr=0xc0043000, paddr=0x226000
+  PTE 300.044: vaddr=0xc0044000, paddr=0x227000
+  PTE 300.045: vaddr=0xc0045000, paddr=0x228000
+  PTE 300.046: vaddr=0xc0046000, paddr=0x229000
+  PTE 300.047: vaddr=0xc0047000, paddr=0x22a000
+  PTE 300.048: vaddr=0xc0048000, paddr=0x22b000
+  PTE 300.049: vaddr=0xc0049000, paddr=0x22c000
+  PTE 300.04A: vaddr=0xc004a000, paddr=0x22d000
+  PTE 300.04B: vaddr=0xc004b000, paddr=0x22e000
+  PTE 300.04C: vaddr=0xc004c000, paddr=0x22f000
+  PTE 300.04D: vaddr=0xc004d000, paddr=0x230000
+  PTE 300.04E: vaddr=0xc004e000, paddr=0x231000
+  PTE 300.04F: vaddr=0xc004f000, paddr=0x232000
+  PTE 300.050: vaddr=0xc0050000, paddr=0x233000
+  PTE 300.051: vaddr=0xc0051000, paddr=0x234000
+  PTE 300.052: vaddr=0xc0052000, paddr=0x235000
+  PTE 300.053: vaddr=0xc0053000, paddr=0x236000
+  PTE 300.054: vaddr=0xc0054000, paddr=0x237000
+  PTE 300.055: vaddr=0xc0055000, paddr=0x238000
+  PTE 300.056: vaddr=0xc0056000, paddr=0x239000
+  PTE 300.057: vaddr=0xc0057000, paddr=0x23a000
+  PTE 300.058: vaddr=0xc0058000, paddr=0x23b000
+  PTE 300.059: vaddr=0xc0059000, paddr=0x23c000
+  PTE 300.05A: vaddr=0xc005a000, paddr=0x23d000
+  PTE 300.05B: vaddr=0xc005b000, paddr=0x23e000
+  PTE 300.05C: vaddr=0xc005c000, paddr=0x23f000
+  PTE 300.05D: vaddr=0xc005d000, paddr=0x241000
+  PTE 300.05E: vaddr=0xc005e000, paddr=0x242000
+  PTE 300.05F: vaddr=0xc005f000, paddr=0x243000
+  PTE 300.060: vaddr=0xc0060000, paddr=0x24e000
+  PTE 300.061: vaddr=0xc0061000, paddr=0x259000
+  PTE 300.062: vaddr=0xc0062000, paddr=0x25a000
+  PTE 300.072: vaddr=0xc0072000, paddr=0x267000
+  PTE 300.073: vaddr=0xc0073000, paddr=0x268000
+  PTE 300.074: vaddr=0xc0074000, paddr=0x269000
+  PTE 300.075: vaddr=0xc0075000, paddr=0x270000
+  PTE 300.100: vaddr=0xc0100000, paddr=0x100000
+  PTE 300.101: vaddr=0xc0101000, paddr=0x101000
+  PTE 300.102: vaddr=0xc0102000, paddr=0x102000
+  PTE 300.103: vaddr=0xc0103000, paddr=0x103000
+  PTE 300.104: vaddr=0xc0104000, paddr=0x104000
+  PTE 300.105: vaddr=0xc0105000, paddr=0x105000
+  PTE 300.106: vaddr=0xc0106000, paddr=0x106000
+  PTE 300.107: vaddr=0xc0107000, paddr=0x107000
+  PTE 300.108: vaddr=0xc0108000, paddr=0x108000
+  PTE 300.109: vaddr=0xc0109000, paddr=0x109000
+  PTE 300.10A: vaddr=0xc010a000, paddr=0x10a000
+  PTE 300.10B: vaddr=0xc010b000, paddr=0x10b000
+  PTE 300.10C: vaddr=0xc010c000, paddr=0x10c000
+  PTE 300.10D: vaddr=0xc010d000, paddr=0x10d000
+  PTE 300.10E: vaddr=0xc010e000, paddr=0x10e000
+  PTE 300.10F: vaddr=0xc010f000, paddr=0x10f000
+  PTE 300.110: vaddr=0xc0110000, paddr=0x110000
+  PTE 300.111: vaddr=0xc0111000, paddr=0x111000
+  PTE 300.112: vaddr=0xc0112000, paddr=0x112000
+  PTE 300.113: vaddr=0xc0113000, paddr=0x113000
+  PTE 300.114: vaddr=0xc0114000, paddr=0x114000
+  PTE 300.115: vaddr=0xc0115000, paddr=0x115000
+  PTE 300.116: vaddr=0xc0116000, paddr=0x116000
+  PTE 300.117: vaddr=0xc0117000, paddr=0x117000
+  PTE 300.118: vaddr=0xc0118000, paddr=0x118000
+  PTE 300.119: vaddr=0xc0119000, paddr=0x119000
+  PTE 300.11A: vaddr=0xc011a000, paddr=0x11a000
+  PTE 300.11B: vaddr=0xc011b000, paddr=0x11b000
+  PTE 300.11C: vaddr=0xc011c000, paddr=0x11c000
+  PTE 300.11D: vaddr=0xc011d000, paddr=0x11d000
+  PTE 300.11E: vaddr=0xc011e000, paddr=0x11e000
+  PTE 300.11F: vaddr=0xc011f000, paddr=0x11f000
+  PTE 300.120: vaddr=0xc0120000, paddr=0x120000
+  PTE 300.121: vaddr=0xc0121000, paddr=0x121000
+  PTE 300.122: vaddr=0xc0122000, paddr=0x122000
+  PTE 300.123: vaddr=0xc0123000, paddr=0x123000
+  PTE 300.124: vaddr=0xc0124000, paddr=0x124000
+  PTE 300.125: vaddr=0xc0125000, paddr=0x125000
+  PTE 300.126: vaddr=0xc0126000, paddr=0x126000
+  PTE 300.127: vaddr=0xc0127000, paddr=0x127000
+  PTE 300.128: vaddr=0xc0128000, paddr=0x128000
+  PTE 300.129: vaddr=0xc0129000, paddr=0x129000
+  PTE 300.12A: vaddr=0xc012a000, paddr=0x12a000
+  PTE 300.12B: vaddr=0xc012b000, paddr=0x12b000
+  PTE 300.12C: vaddr=0xc012c000, paddr=0x12c000
+  PTE 300.12D: vaddr=0xc012d000, paddr=0x12d000
+  PTE 300.12E: vaddr=0xc012e000, paddr=0x12e000
+  PTE 300.12F: vaddr=0xc012f000, paddr=0x12f000
+  PTE 300.130: vaddr=0xc0130000, paddr=0x130000
+  PTE 300.131: vaddr=0xc0131000, paddr=0x131000
+  PTE 300.132: vaddr=0xc0132000, paddr=0x132000
+  PTE 300.133: vaddr=0xc0133000, paddr=0x133000
+  PTE 300.134: vaddr=0xc0134000, paddr=0x134000
+  PTE 300.135: vaddr=0xc0135000, paddr=0x135000
+  PTE 300.136: vaddr=0xc0136000, paddr=0x136000
+  PTE 300.137: vaddr=0xc0137000, paddr=0x137000
+  PTE 300.138: vaddr=0xc0138000, paddr=0x138000
+  PTE 300.139: vaddr=0xc0139000, paddr=0x139000
+  PTE 300.13A: vaddr=0xc013a000, paddr=0x13a000
+  PTE 300.13B: vaddr=0xc013b000, paddr=0x13b000
+  PTE 300.13C: vaddr=0xc013c000, paddr=0x13c000
+  PTE 300.13D: vaddr=0xc013d000, paddr=0x13d000
+  PTE 300.13E: vaddr=0xc013e000, paddr=0x13e000
+  PTE 300.13F: vaddr=0xc013f000, paddr=0x13f000
+  PTE 300.140: vaddr=0xc0140000, paddr=0xb8000
+  PTE 300.142: vaddr=0xc0142000, paddr=0x142000
+  PTE 300.143: vaddr=0xc0143000, paddr=0x143000
+  PTE 300.144: vaddr=0xc0144000, paddr=0x144000
+  PTE 300.145: vaddr=0xc0145000, paddr=0x145000
+  PTE 300.146: vaddr=0xc0146000, paddr=0x146000
+  PTE 300.147: vaddr=0xc0147000, paddr=0x147000
+  PTE 300.148: vaddr=0xc0148000, paddr=0x148000
+  PTE 300.149: vaddr=0xc0149000, paddr=0x149000
+  PTE 300.14A: vaddr=0xc014a000, paddr=0x14a000
+  PTE 300.14B: vaddr=0xc014b000, paddr=0x14b000
+  PTE 300.14C: vaddr=0xc014c000, paddr=0x14c000
+  PTE 300.14D: vaddr=0xc014d000, paddr=0x14d000
+  PTE 300.14E: vaddr=0xc014e000, paddr=0x14e000
+  PTE 300.14F: vaddr=0xc014f000, paddr=0x14f000
+  PTE 300.150: vaddr=0xc0150000, paddr=0x150000
+  PTE 300.151: vaddr=0xc0151000, paddr=0x151000
+  PTE 300.152: vaddr=0xc0152000, paddr=0x152000
+  PTE 300.153: vaddr=0xc0153000, paddr=0x153000
+  PTE 300.154: vaddr=0xc0154000, paddr=0x154000
+  PTE 300.155: vaddr=0xc0155000, paddr=0x155000
+  PTE 300.156: vaddr=0xc0156000, paddr=0x156000
+  PTE 300.157: vaddr=0xc0157000, paddr=0x157000
+  PTE 300.158: vaddr=0xc0158000, paddr=0x158000
+  PTE 300.159: vaddr=0xc0159000, paddr=0x159000
+  PTE 300.15A: vaddr=0xc015a000, paddr=0x15a000
+  PTE 300.15B: vaddr=0xc015b000, paddr=0x15b000
+  PTE 300.15C: vaddr=0xc015c000, paddr=0x15c000
+  PTE 300.15D: vaddr=0xc015d000, paddr=0x15d000
+  PTE 300.15E: vaddr=0xc015e000, paddr=0x15e000
+  PTE 300.15F: vaddr=0xc015f000, paddr=0x15f000
+  PTE 300.160: vaddr=0xc0160000, paddr=0x160000
+  PTE 300.161: vaddr=0xc0161000, paddr=0x161000
+  PTE 300.162: vaddr=0xc0162000, paddr=0x162000
+  PTE 300.163: vaddr=0xc0163000, paddr=0x163000
+  PTE 300.164: vaddr=0xc0164000, paddr=0x164000
+  PTE 300.165: vaddr=0xc0165000, paddr=0x165000
+  PTE 300.166: vaddr=0xc0166000, paddr=0x166000
+  PTE 300.167: vaddr=0xc0167000, paddr=0x167000
+  PTE 300.168: vaddr=0xc0168000, paddr=0x168000
+  PTE 300.169: vaddr=0xc0169000, paddr=0x169000
+  PTE 300.16A: vaddr=0xc016a000, paddr=0x16a000
+  PTE 300.16B: vaddr=0xc016b000, paddr=0x16b000
+  PTE 300.16C: vaddr=0xc016c000, paddr=0x16c000
+  PTE 300.16D: vaddr=0xc016d000, paddr=0x16d000
+  PTE 300.16E: vaddr=0xc016e000, paddr=0x16e000
+  PTE 300.16F: vaddr=0xc016f000, paddr=0x16f000
+  PTE 300.170: vaddr=0xc0170000, paddr=0x170000
+  PTE 300.171: vaddr=0xc0171000, paddr=0x171000
+  PTE 300.172: vaddr=0xc0172000, paddr=0x172000
+  PTE 300.173: vaddr=0xc0173000, paddr=0x173000
+  PTE 300.174: vaddr=0xc0174000, paddr=0x174000
+  PTE 300.175: vaddr=0xc0175000, paddr=0x175000
+  PTE 300.176: vaddr=0xc0176000, paddr=0x176000
+  PTE 300.177: vaddr=0xc0177000, paddr=0x177000
+  PTE 300.178: vaddr=0xc0178000, paddr=0x178000
+  PTE 300.179: vaddr=0xc0179000, paddr=0x179000
+  PTE 300.17A: vaddr=0xc017a000, paddr=0x17a000
+  PTE 300.17B: vaddr=0xc017b000, paddr=0x17b000
+  PTE 300.17C: vaddr=0xc017c000, paddr=0x17c000
+  PTE 300.17D: vaddr=0xc017d000, paddr=0x17d000
+  PTE 300.17E: vaddr=0xc017e000, paddr=0x17e000
+  PTE 300.17F: vaddr=0xc017f000, paddr=0x17f000
+  PTE 300.180: vaddr=0xc0180000, paddr=0x180000
+  PTE 300.181: vaddr=0xc0181000, paddr=0x181000
+  PTE 300.182: vaddr=0xc0182000, paddr=0x182000
+  PTE 300.183: vaddr=0xc0183000, paddr=0x183000
+  PTE 300.184: vaddr=0xc0184000, paddr=0x184000
+  PTE 300.185: vaddr=0xc0185000, paddr=0x185000
+  PTE 300.186: vaddr=0xc0186000, paddr=0x186000
+  PTE 300.187: vaddr=0xc0187000, paddr=0x187000
+  PTE 300.188: vaddr=0xc0188000, paddr=0x188000
+  PTE 300.189: vaddr=0xc0189000, paddr=0x189000
+  PTE 300.18A: vaddr=0xc018a000, paddr=0x18a000
+  PTE 300.18B: vaddr=0xc018b000, paddr=0x18b000
+  PTE 300.18C: vaddr=0xc018c000, paddr=0x18c000
+  PTE 300.18D: vaddr=0xc018d000, paddr=0x18d000
+  PTE 300.18E: vaddr=0xc018e000, paddr=0x18e000
+  PTE 300.18F: vaddr=0xc018f000, paddr=0x18f000
+  PTE 300.190: vaddr=0xc0190000, paddr=0x190000
+  PTE 300.191: vaddr=0xc0191000, paddr=0x191000
+  PTE 300.192: vaddr=0xc0192000, paddr=0x192000
+  PTE 300.193: vaddr=0xc0193000, paddr=0x193000
+  PTE 300.194: vaddr=0xc0194000, paddr=0x194000
+  PTE 300.195: vaddr=0xc0195000, paddr=0x195000
+  PTE 300.196: vaddr=0xc0196000, paddr=0x196000
+  PTE 300.197: vaddr=0xc0197000, paddr=0x197000
+  PTE 300.198: vaddr=0xc0198000, paddr=0x198000
+  PTE 300.199: vaddr=0xc0199000, paddr=0x199000
+  PTE 300.19A: vaddr=0xc019a000, paddr=0x19a000
+  PTE 300.19B: vaddr=0xc019b000, paddr=0x19b000
+  PTE 300.19C: vaddr=0xc019c000, paddr=0x19c000
+  PTE 300.19D: vaddr=0xc019d000, paddr=0x19d000
+  PTE 300.19E: vaddr=0xc019e000, paddr=0x19e000
+  PTE 300.19F: vaddr=0xc019f000, paddr=0x19f000
+  PTE 300.1A0: vaddr=0xc01a0000, paddr=0x1a0000
+  PTE 300.1A1: vaddr=0xc01a1000, paddr=0x1a1000
+  PTE 300.1A2: vaddr=0xc01a2000, paddr=0x1a2000
+  PTE 300.1A3: vaddr=0xc01a3000, paddr=0x1a3000
+  PTE 300.1A4: vaddr=0xc01a4000, paddr=0x1a4000
+  PTE 300.1A5: vaddr=0xc01a5000, paddr=0x1a5000
+  PTE 300.1A6: vaddr=0xc01a6000, paddr=0x1a6000
+  PTE 300.1A7: vaddr=0xc01a7000, paddr=0x1a7000
+  PTE 300.1A8: vaddr=0xc01a8000, paddr=0x1a8000
+  PTE 300.1A9: vaddr=0xc01a9000, paddr=0x1a9000
+  PTE 300.1AA: vaddr=0xc01aa000, paddr=0x1aa000
+  PTE 300.1AB: vaddr=0xc01ab000, paddr=0x1ab000
+  PTE 300.1AC: vaddr=0xc01ac000, paddr=0x1ac000
+  PTE 300.1AD: vaddr=0xc01ad000, paddr=0x1ad000
+  PTE 300.1AE: vaddr=0xc01ae000, paddr=0x1ae000
+  PTE 300.1AF: vaddr=0xc01af000, paddr=0x1af000
+  PTE 300.1B0: vaddr=0xc01b0000, paddr=0x1b0000
+  PTE 300.1B1: vaddr=0xc01b1000, paddr=0x1b1000
+  PTE 300.1B2: vaddr=0xc01b2000, paddr=0x1b2000
+  PTE 300.1B3: vaddr=0xc01b3000, paddr=0x1b3000
+  PTE 300.1B4: vaddr=0xc01b4000, paddr=0x1b4000
+  PTE 300.1B5: vaddr=0xc01b5000, paddr=0x1b5000
+  PTE 300.1B6: vaddr=0xc01b6000, paddr=0x1b6000
+  PTE 300.1B7: vaddr=0xc01b7000, paddr=0x1b7000
+  PTE 300.1B8: vaddr=0xc01b8000, paddr=0x1b8000
+  PTE 300.1B9: vaddr=0xc01b9000, paddr=0x1b9000
+  PTE 300.1BA: vaddr=0xc01ba000, paddr=0x1ba000
+  PTE 300.1BB: vaddr=0xc01bb000, paddr=0x1bb000
+  PTE 300.1BC: vaddr=0xc01bc000, paddr=0x1bc000
+  PTE 300.1BD: vaddr=0xc01bd000, paddr=0x1bd000
+  PTE 300.1BE: vaddr=0xc01be000, paddr=0x1be000
+  PTE 300.1BF: vaddr=0xc01bf000, paddr=0x1bf000
+  PTE 300.1C0: vaddr=0xc01c0000, paddr=0x1c0000
+  PTE 300.1C1: vaddr=0xc01c1000, paddr=0x1c1000
+  PTE 300.1C2: vaddr=0xc01c2000, paddr=0x1c2000
+  PTE 300.1C3: vaddr=0xc01c3000, paddr=0x1c3000
+  PTE 300.1C4: vaddr=0xc01c4000, paddr=0x1c4000
+  PTE 300.1C5: vaddr=0xc01c5000, paddr=0x1c5000
+  PTE 300.1C6: vaddr=0xc01c6000, paddr=0x1c6000
+  PTE 300.1C7: vaddr=0xc01c7000, paddr=0x1c7000
+  PTE 300.1C8: vaddr=0xc01c8000, paddr=0x1c8000
+  PTE 300.1C9: vaddr=0xc01c9000, paddr=0x1c9000
+  PTE 300.1CA: vaddr=0xc01ca000, paddr=0x1ca000
+  PTE 300.1CB: vaddr=0xc01cb000, paddr=0x1cb000
+  PTE 300.1CC: vaddr=0xc01cc000, paddr=0x1cc000
+  PTE 300.1CD: vaddr=0xc01cd000, paddr=0x1cd000
+  PTE 300.1CE: vaddr=0xc01ce000, paddr=0x1ce000
+  PTE 300.1CF: vaddr=0xc01cf000, paddr=0x1cf000
+  PTE 300.1D0: vaddr=0xc01d0000, paddr=0x1d0000
+  PTE 300.1D1: vaddr=0xc01d1000, paddr=0x1d1000
+  PTE 300.1D2: vaddr=0xc01d2000, paddr=0x1d2000
+  PTE 300.1D3: vaddr=0xc01d3000, paddr=0x1d3000
+  PTE 300.1D4: vaddr=0xc01d4000, paddr=0x1d4000
+  PTE 300.1D5: vaddr=0xc01d5000, paddr=0x1d5000
+  PTE 300.1D6: vaddr=0xc01d6000, paddr=0x1d6000
+  PTE 300.1D7: vaddr=0xc01d7000, paddr=0x1d7000
+  PTE 300.1D8: vaddr=0xc01d8000, paddr=0x1d8000
+  PTE 300.1D9: vaddr=0xc01d9000, paddr=0x1d9000
+  PTE 300.1DA: vaddr=0xc01da000, paddr=0x1da000
+  PTE 300.1DB: vaddr=0xc01db000, paddr=0x1db000
+  PTE 300.1DC: vaddr=0xc01dc000, paddr=0x1dc000
+  PTE 300.1DD: vaddr=0xc01dd000, paddr=0x1dd000
+  PTE 300.1DE: vaddr=0xc01de000, paddr=0x1de000
+  PTE 300.1DF: vaddr=0xc01df000, paddr=0x1df000
+  PTE 300.1E0: vaddr=0xc01e0000, paddr=0x1e0000
+  PTE 300.1E1: vaddr=0xc01e1000, paddr=0x1e1000
+  PTE 340.00: vaddr=0xd0000000, paddr=0xfebf1000
+End of page tables dump.
+[Exception.Fault] Usermode Page Privelage Fault!
+Fault address: 0xfffffff4
+Return address: 0x804826d
+Current PID: 2
+Error: Not Present Read User     
+Permissions: User Write
+Stack trace:
+Frame at 0xc01e1384
+  at 0xC0102A92
+  at 0xC0101D9B
+  next frame at 0x0000000 (unmapped)
+CR3 register value: 0x00267000
+Page directory at vaddr=0xc0072000, paddr=0x267000:
+  PDE 020: vaddr=0x8000000, paddr=0x269000
+  PDE 2FF: vaddr=0xbfc00000, paddr=0x270000
+  PDE 300: vaddr=0xc0000000, paddr=0x185000
+  PDE 340: vaddr=0xd0000000, paddr=0x145000
+End of page directory dump.
+Page tables:
+  PDE 020: Unable to access page table entries
+  PDE 2FF: Unable to access page table entries
+  PTE 300.00: vaddr=0xc0000000, paddr=0x1f8000
+  PTE 300.01: vaddr=0xc0001000, paddr=0x1e3000
+  PTE 300.02: vaddr=0xc0002000, paddr=0x1e4000
+  PTE 300.03: vaddr=0xc0003000, paddr=0x1e5000
+  PTE 300.04: vaddr=0xc0004000, paddr=0x1e6000
+  PTE 300.05: vaddr=0xc0005000, paddr=0x1e7000
+  PTE 300.06: vaddr=0xc0006000, paddr=0x1e8000
+  PTE 300.07: vaddr=0xc0007000, paddr=0x1e2000
+  PTE 300.08: vaddr=0xc0008000, paddr=0x1e9000
+  PTE 300.09: vaddr=0xc0009000, paddr=0x1ea000
+  PTE 300.0A: vaddr=0xc000a000, paddr=0x1eb000
+  PTE 300.0B: vaddr=0xc000b000, paddr=0x1ec000
+  PTE 300.0C: vaddr=0xc000c000, paddr=0x1ed000
+  PTE 300.0D: vaddr=0xc000d000, paddr=0x1ee000
+  PTE 300.0E: vaddr=0xc000e000, paddr=0x1ef000
+  PTE 300.0F: vaddr=0xc000f000, paddr=0x1f0000
+  PTE 300.010: vaddr=0xc0010000, paddr=0x1f1000
+  PTE 300.011: vaddr=0xc0011000, paddr=0x1f2000
+  PTE 300.012: vaddr=0xc0012000, paddr=0x1f3000
+  PTE 300.013: vaddr=0xc0013000, paddr=0x1f4000
+  PTE 300.014: vaddr=0xc0014000, paddr=0x1f5000
+  PTE 300.015: vaddr=0xc0015000, paddr=0x1f6000
+  PTE 300.016: vaddr=0xc0016000, paddr=0x1f7000
+  PTE 300.017: vaddr=0xc0017000, paddr=0x1f9000
+  PTE 300.018: vaddr=0xc0018000, paddr=0x1fa000
+  PTE 300.019: vaddr=0xc0019000, paddr=0x1fb000
+  PTE 300.01A: vaddr=0xc001a000, paddr=0x1fc000
+  PTE 300.01B: vaddr=0xc001b000, paddr=0x1fd000
+  PTE 300.01C: vaddr=0xc001c000, paddr=0x1fe000
+  PTE 300.01D: vaddr=0xc001d000, paddr=0x1ff000
+  PTE 300.01E: vaddr=0xc001e000, paddr=0x201000
+  PTE 300.01F: vaddr=0xc001f000, paddr=0x202000
+  PTE 300.020: vaddr=0xc0020000, paddr=0x203000
+  PTE 300.021: vaddr=0xc0021000, paddr=0x204000
+  PTE 300.022: vaddr=0xc0022000, paddr=0x205000
+  PTE 300.023: vaddr=0xc0023000, paddr=0x206000
+  PTE 300.024: vaddr=0xc0024000, paddr=0x207000
+  PTE 300.025: vaddr=0xc0025000, paddr=0x208000
+  PTE 300.026: vaddr=0xc0026000, paddr=0x209000
+  PTE 300.027: vaddr=0xc0027000, paddr=0x20a000
+  PTE 300.028: vaddr=0xc0028000, paddr=0x20b000
+  PTE 300.029: vaddr=0xc0029000, paddr=0x20c000
+  PTE 300.02A: vaddr=0xc002a000, paddr=0x20d000
+  PTE 300.02B: vaddr=0xc002b000, paddr=0x20e000
+  PTE 300.02C: vaddr=0xc002c000, paddr=0x20f000
+  PTE 300.02D: vaddr=0xc002d000, paddr=0x210000
+  PTE 300.02E: vaddr=0xc002e000, paddr=0x211000
+  PTE 300.02F: vaddr=0xc002f000, paddr=0x212000
+  PTE 300.030: vaddr=0xc0030000, paddr=0x213000
+  PTE 300.031: vaddr=0xc0031000, paddr=0x214000
+  PTE 300.032: vaddr=0xc0032000, paddr=0x215000
+  PTE 300.033: vaddr=0xc0033000, paddr=0x216000
+  PTE 300.034: vaddr=0xc0034000, paddr=0x217000
+  PTE 300.035: vaddr=0xc0035000, paddr=0x218000
+  PTE 300.036: vaddr=0xc0036000, paddr=0x219000
+  PTE 300.037: vaddr=0xc0037000, paddr=0x21a000
+  PTE 300.038: vaddr=0xc0038000, paddr=0x21b000
+  PTE 300.039: vaddr=0xc0039000, paddr=0x21c000
+  PTE 300.03A: vaddr=0xc003a000, paddr=0x21d000
+  PTE 300.03B: vaddr=0xc003b000, paddr=0x21e000
+  PTE 300.03C: vaddr=0xc003c000, paddr=0x21f000
+  PTE 300.03D: vaddr=0xc003d000, paddr=0x220000
+  PTE 300.03E: vaddr=0xc003e000, paddr=0x221000
+  PTE 300.03F: vaddr=0xc003f000, paddr=0x222000
+  PTE 300.040: vaddr=0xc0040000, paddr=0x223000
+  PTE 300.041: vaddr=0xc0041000, paddr=0x224000
+  PTE 300.042: vaddr=0xc0042000, paddr=0x225000
+  PTE 300.043: vaddr=0xc0043000, paddr=0x226000
+  PTE 300.044: vaddr=0xc0044000, paddr=0x227000
+  PTE 300.045: vaddr=0xc0045000, paddr=0x228000
+  PTE 300.046: vaddr=0xc0046000, paddr=0x229000
+  PTE 300.047: vaddr=0xc0047000, paddr=0x22a000
+  PTE 300.048: vaddr=0xc0048000, paddr=0x22b000
+  PTE 300.049: vaddr=0xc0049000, paddr=0x22c000
+  PTE 300.04A: vaddr=0xc004a000, paddr=0x22d000
+  PTE 300.04B: vaddr=0xc004b000, paddr=0x22e000
+  PTE 300.04C: vaddr=0xc004c000, paddr=0x22f000
+  PTE 300.04D: vaddr=0xc004d000, paddr=0x230000
+  PTE 300.04E: vaddr=0xc004e000, paddr=0x231000
+  PTE 300.04F: vaddr=0xc004f000, paddr=0x232000
+  PTE 300.050: vaddr=0xc0050000, paddr=0x233000
+  PTE 300.051: vaddr=0xc0051000, paddr=0x234000
+  PTE 300.052: vaddr=0xc0052000, paddr=0x235000
+  PTE 300.053: vaddr=0xc0053000, paddr=0x236000
+  PTE 300.054: vaddr=0xc0054000, paddr=0x237000
+  PTE 300.055: vaddr=0xc0055000, paddr=0x238000
+  PTE 300.056: vaddr=0xc0056000, paddr=0x239000
+  PTE 300.057: vaddr=0xc0057000, paddr=0x23a000
+  PTE 300.058: vaddr=0xc0058000, paddr=0x23b000
+  PTE 300.059: vaddr=0xc0059000, paddr=0x23c000
+  PTE 300.05A: vaddr=0xc005a000, paddr=0x23d000
+  PTE 300.05B: vaddr=0xc005b000, paddr=0x23e000
+  PTE 300.05C: vaddr=0xc005c000, paddr=0x23f000
+  PTE 300.05D: vaddr=0xc005d000, paddr=0x241000
+  PTE 300.05E: vaddr=0xc005e000, paddr=0x242000
+  PTE 300.05F: vaddr=0xc005f000, paddr=0x243000
+  PTE 300.060: vaddr=0xc0060000, paddr=0x24e000
+  PTE 300.072: vaddr=0xc0072000, paddr=0x267000
+  PTE 300.073: vaddr=0xc0073000, paddr=0x268000
+  PTE 300.100: vaddr=0xc0100000, paddr=0x100000
+  PTE 300.101: vaddr=0xc0101000, paddr=0x101000
+  PTE 300.102: vaddr=0xc0102000, paddr=0x102000
+  PTE 300.103: vaddr=0xc0103000, paddr=0x103000
+  PTE 300.104: vaddr=0xc0104000, paddr=0x104000
+  PTE 300.105: vaddr=0xc0105000, paddr=0x105000
+  PTE 300.106: vaddr=0xc0106000, paddr=0x106000
+  PTE 300.107: vaddr=0xc0107000, paddr=0x107000
+  PTE 300.108: vaddr=0xc0108000, paddr=0x108000
+  PTE 300.109: vaddr=0xc0109000, paddr=0x109000
+  PTE 300.10A: vaddr=0xc010a000, paddr=0x10a000
+  PTE 300.10B: vaddr=0xc010b000, paddr=0x10b000
+  PTE 300.10C: vaddr=0xc010c000, paddr=0x10c000
+  PTE 300.10D: vaddr=0xc010d000, paddr=0x10d000
+  PTE 300.10E: vaddr=0xc010e000, paddr=0x10e000
+  PTE 300.10F: vaddr=0xc010f000, paddr=0x10f000
+  PTE 300.110: vaddr=0xc0110000, paddr=0x110000
+  PTE 300.111: vaddr=0xc0111000, paddr=0x111000
+  PTE 300.112: vaddr=0xc0112000, paddr=0x112000
+  PTE 300.113: vaddr=0xc0113000, paddr=0x113000
+  PTE 300.114: vaddr=0xc0114000, paddr=0x114000
+  PTE 300.115: vaddr=0xc0115000, paddr=0x115000
+  PTE 300.116: vaddr=0xc0116000, paddr=0x116000
+  PTE 300.117: vaddr=0xc0117000, paddr=0x117000
+  PTE 300.118: vaddr=0xc0118000, paddr=0x118000
+  PTE 300.119: vaddr=0xc0119000, paddr=0x119000
+  PTE 300.11A: vaddr=0xc011a000, paddr=0x11a000
+  PTE 300.11B: vaddr=0xc011b000, paddr=0x11b000
+  PTE 300.11C: vaddr=0xc011c000, paddr=0x11c000
+  PTE 300.11D: vaddr=0xc011d000, paddr=0x11d000
+  PTE 300.11E: vaddr=0xc011e000, paddr=0x11e000
+  PTE 300.11F: vaddr=0xc011f000, paddr=0x11f000
+  PTE 300.120: vaddr=0xc0120000, paddr=0x120000
+  PTE 300.121: vaddr=0xc0121000, paddr=0x121000
+  PTE 300.122: vaddr=0xc0122000, paddr=0x122000
+  PTE 300.123: vaddr=0xc0123000, paddr=0x123000
+  PTE 300.124: vaddr=0xc0124000, paddr=0x124000
+  PTE 300.125: vaddr=0xc0125000, paddr=0x125000
+  PTE 300.126: vaddr=0xc0126000, paddr=0x126000
+  PTE 300.127: vaddr=0xc0127000, paddr=0x127000
+  PTE 300.128: vaddr=0xc0128000, paddr=0x128000
+  PTE 300.129: vaddr=0xc0129000, paddr=0x129000
+  PTE 300.12A: vaddr=0xc012a000, paddr=0x12a000
+  PTE 300.12B: vaddr=0xc012b000, paddr=0x12b000
+  PTE 300.12C: vaddr=0xc012c000, paddr=0x12c000
+  PTE 300.12D: vaddr=0xc012d000, paddr=0x12d000
+  PTE 300.12E: vaddr=0xc012e000, paddr=0x12e000
+  PTE 300.12F: vaddr=0xc012f000, paddr=0x12f000
+  PTE 300.130: vaddr=0xc0130000, paddr=0x130000
+  PTE 300.131: vaddr=0xc0131000, paddr=0x131000
+  PTE 300.132: vaddr=0xc0132000, paddr=0x132000
+  PTE 300.133: vaddr=0xc0133000, paddr=0x133000
+  PTE 300.134: vaddr=0xc0134000, paddr=0x134000
+  PTE 300.135: vaddr=0xc0135000, paddr=0x135000
+  PTE 300.136: vaddr=0xc0136000, paddr=0x136000
+  PTE 300.137: vaddr=0xc0137000, paddr=0x137000
+  PTE 300.138: vaddr=0xc0138000, paddr=0x138000
+  PTE 300.139: vaddr=0xc0139000, paddr=0x139000
+  PTE 300.13A: vaddr=0xc013a000, paddr=0x13a000
+  PTE 300.13B: vaddr=0xc013b000, paddr=0x13b000
+  PTE 300.13C: vaddr=0xc013c000, paddr=0x13c000
+  PTE 300.13D: vaddr=0xc013d000, paddr=0x13d000
+  PTE 300.13E: vaddr=0xc013e000, paddr=0x13e000
+  PTE 300.13F: vaddr=0xc013f000, paddr=0x13f000
+  PTE 300.140: vaddr=0xc0140000, paddr=0xb8000
+  PTE 300.142: vaddr=0xc0142000, paddr=0x142000
+  PTE 300.143: vaddr=0xc0143000, paddr=0x143000
+  PTE 300.144: vaddr=0xc0144000, paddr=0x144000
+  PTE 300.145: vaddr=0xc0145000, paddr=0x145000
+  PTE 300.146: vaddr=0xc0146000, paddr=0x146000
+  PTE 300.147: vaddr=0xc0147000, paddr=0x147000
+  PTE 300.148: vaddr=0xc0148000, paddr=0x148000
+  PTE 300.149: vaddr=0xc0149000, paddr=0x149000
+  PTE 300.14A: vaddr=0xc014a000, paddr=0x14a000
+  PTE 300.14B: vaddr=0xc014b000, paddr=0x14b000
+  PTE 300.14C: vaddr=0xc014c000, paddr=0x14c000
+  PTE 300.14D: vaddr=0xc014d000, paddr=0x14d000
+  PTE 300.14E: vaddr=0xc014e000, paddr=0x14e000
+  PTE 300.14F: vaddr=0xc014f000, paddr=0x14f000
+  PTE 300.150: vaddr=0xc0150000, paddr=0x150000
+  PTE 300.151: vaddr=0xc0151000, paddr=0x151000
+  PTE 300.152: vaddr=0xc0152000, paddr=0x152000
+  PTE 300.153: vaddr=0xc0153000, paddr=0x153000
+  PTE 300.154: vaddr=0xc0154000, paddr=0x154000
+  PTE 300.155: vaddr=0xc0155000, paddr=0x155000
+  PTE 300.156: vaddr=0xc0156000, paddr=0x156000
+  PTE 300.157: vaddr=0xc0157000, paddr=0x157000
+  PTE 300.158: vaddr=0xc0158000, paddr=0x158000
+  PTE 300.159: vaddr=0xc0159000, paddr=0x159000
+  PTE 300.15A: vaddr=0xc015a000, paddr=0x15a000
+  PTE 300.15B: vaddr=0xc015b000, paddr=0x15b000
+  PTE 300.15C: vaddr=0xc015c000, paddr=0x15c000
+  PTE 300.15D: vaddr=0xc015d000, paddr=0x15d000
+  PTE 300.15E: vaddr=0xc015e000, paddr=0x15e000
+  PTE 300.15F: vaddr=0xc015f000, paddr=0x15f000
+  PTE 300.160: vaddr=0xc0160000, paddr=0x160000
+  PTE 300.161: vaddr=0xc0161000, paddr=0x161000
+  PTE 300.162: vaddr=0xc0162000, paddr=0x162000
+  PTE 300.163: vaddr=0xc0163000, paddr=0x163000
+  PTE 300.164: vaddr=0xc0164000, paddr=0x164000
+  PTE 300.165: vaddr=0xc0165000, paddr=0x165000
+  PTE 300.166: vaddr=0xc0166000, paddr=0x166000
+  PTE 300.167: vaddr=0xc0167000, paddr=0x167000
+  PTE 300.168: vaddr=0xc0168000, paddr=0x168000
+  PTE 300.169: vaddr=0xc0169000, paddr=0x169000
+  PTE 300.16A: vaddr=0xc016a000, paddr=0x16a000
+  PTE 300.16B: vaddr=0xc016b000, paddr=0x16b000
+  PTE 300.16C: vaddr=0xc016c000, paddr=0x16c000
+  PTE 300.16D: vaddr=0xc016d000, paddr=0x16d000
+  PTE 300.16E: vaddr=0xc016e000, paddr=0x16e000
+  PTE 300.16F: vaddr=0xc016f000, paddr=0x16f000
+  PTE 300.170: vaddr=0xc0170000, paddr=0x170000
+  PTE 300.171: vaddr=0xc0171000, paddr=0x171000
+  PTE 300.172: vaddr=0xc0172000, paddr=0x172000
+  PTE 300.173: vaddr=0xc0173000, paddr=0x173000
+  PTE 300.174: vaddr=0xc0174000, paddr=0x174000
+  PTE 300.175: vaddr=0xc0175000, paddr=0x175000
+  PTE 300.176: vaddr=0xc0176000, paddr=0x176000
+  PTE 300.177: vaddr=0xc0177000, paddr=0x177000
+  PTE 300.178: vaddr=0xc0178000, paddr=0x178000
+  PTE 300.179: vaddr=0xc0179000, paddr=0x179000
+  PTE 300.17A: vaddr=0xc017a000, paddr=0x17a000
+  PTE 300.17B: vaddr=0xc017b000, paddr=0x17b000
+  PTE 300.17C: vaddr=0xc017c000, paddr=0x17c000
+  PTE 300.17D: vaddr=0xc017d000, paddr=0x17d000
+  PTE 300.17E: vaddr=0xc017e000, paddr=0x17e000
+  PTE 300.17F: vaddr=0xc017f000, paddr=0x17f000
+  PTE 300.180: vaddr=0xc0180000, paddr=0x180000
+  PTE 300.181: vaddr=0xc0181000, paddr=0x181000
+  PTE 300.182: vaddr=0xc0182000, paddr=0x182000
+  PTE 300.183: vaddr=0xc0183000, paddr=0x183000
+  PTE 300.184: vaddr=0xc0184000, paddr=0x184000
+  PTE 300.185: vaddr=0xc0185000, paddr=0x185000
+  PTE 300.186: vaddr=0xc0186000, paddr=0x186000
+  PTE 300.187: vaddr=0xc0187000, paddr=0x187000
+  PTE 300.188: vaddr=0xc0188000, paddr=0x188000
+  PTE 300.189: vaddr=0xc0189000, paddr=0x189000
+  PTE 300.18A: vaddr=0xc018a000, paddr=0x18a000
+  PTE 300.18B: vaddr=0xc018b000, paddr=0x18b000
+  PTE 300.18C: vaddr=0xc018c000, paddr=0x18c000
+  PTE 300.18D: vaddr=0xc018d000, paddr=0x18d000
+  PTE 300.18E: vaddr=0xc018e000, paddr=0x18e000
+  PTE 300.18F: vaddr=0xc018f000, paddr=0x18f000
+  PTE 300.190: vaddr=0xc0190000, paddr=0x190000
+  PTE 300.191: vaddr=0xc0191000, paddr=0x191000
+  PTE 300.192: vaddr=0xc0192000, paddr=0x192000
+  PTE 300.193: vaddr=0xc0193000, paddr=0x193000
+  PTE 300.194: vaddr=0xc0194000, paddr=0x194000
+  PTE 300.195: vaddr=0xc0195000, paddr=0x195000
+  PTE 300.196: vaddr=0xc0196000, paddr=0x196000
+  PTE 300.197: vaddr=0xc0197000, paddr=0x197000
+  PTE 300.198: vaddr=0xc0198000, paddr=0x198000
+  PTE 300.199: vaddr=0xc0199000, paddr=0x199000
+  PTE 300.19A: vaddr=0xc019a000, paddr=0x19a000
+  PTE 300.19B: vaddr=0xc019b000, paddr=0x19b000
+  PTE 300.19C: vaddr=0xc019c000, paddr=0x19c000
+  PTE 300.19D: vaddr=0xc019d000, paddr=0x19d000
+  PTE 300.19E: vaddr=0xc019e000, paddr=0x19e000
+  PTE 300.19F: vaddr=0xc019f000, paddr=0x19f000
+  PTE 300.1A0: vaddr=0xc01a0000, paddr=0x1a0000
+  PTE 300.1A1: vaddr=0xc01a1000, paddr=0x1a1000
+  PTE 300.1A2: vaddr=0xc01a2000, paddr=0x1a2000
+  PTE 300.1A3: vaddr=0xc01a3000, paddr=0x1a3000
+  PTE 300.1A4: vaddr=0xc01a4000, paddr=0x1a4000
+  PTE 300.1A5: vaddr=0xc01a5000, paddr=0x1a5000
+  PTE 300.1A6: vaddr=0xc01a6000, paddr=0x1a6000
+  PTE 300.1A7: vaddr=0xc01a7000, paddr=0x1a7000
+  PTE 300.1A8: vaddr=0xc01a8000, paddr=0x1a8000
+  PTE 300.1A9: vaddr=0xc01a9000, paddr=0x1a9000
+  PTE 300.1AA: vaddr=0xc01aa000, paddr=0x1aa000
+  PTE 300.1AB: vaddr=0xc01ab000, paddr=0x1ab000
+  PTE 300.1AC: vaddr=0xc01ac000, paddr=0x1ac000
+  PTE 300.1AD: vaddr=0xc01ad000, paddr=0x1ad000
+  PTE 300.1AE: vaddr=0xc01ae000, paddr=0x1ae000
+  PTE 300.1AF: vaddr=0xc01af000, paddr=0x1af000
+  PTE 300.1B0: vaddr=0xc01b0000, paddr=0x1b0000
+  PTE 300.1B1: vaddr=0xc01b1000, paddr=0x1b1000
+  PTE 300.1B2: vaddr=0xc01b2000, paddr=0x1b2000
+  PTE 300.1B3: vaddr=0xc01b3000, paddr=0x1b3000
+  PTE 300.1B4: vaddr=0xc01b4000, paddr=0x1b4000
+  PTE 300.1B5: vaddr=0xc01b5000, paddr=0x1b5000
+  PTE 300.1B6: vaddr=0xc01b6000, paddr=0x1b6000
+  PTE 300.1B7: vaddr=0xc01b7000, paddr=0x1b7000
+  PTE 300.1B8: vaddr=0xc01b8000, paddr=0x1b8000
+  PTE 300.1B9: vaddr=0xc01b9000, paddr=0x1b9000
+  PTE 300.1BA: vaddr=0xc01ba000, paddr=0x1ba000
+  PTE 300.1BB: vaddr=0xc01bb000, paddr=0x1bb000
+  PTE 300.1BC: vaddr=0xc01bc000, paddr=0x1bc000
+  PTE 300.1BD: vaddr=0xc01bd000, paddr=0x1bd000
+  PTE 300.1BE: vaddr=0xc01be000, paddr=0x1be000
+  PTE 300.1BF: vaddr=0xc01bf000, paddr=0x1bf000
+  PTE 300.1C0: vaddr=0xc01c0000, paddr=0x1c0000
+  PTE 300.1C1: vaddr=0xc01c1000, paddr=0x1c1000
+  PTE 300.1C2: vaddr=0xc01c2000, paddr=0x1c2000
+  PTE 300.1C3: vaddr=0xc01c3000, paddr=0x1c3000
+  PTE 300.1C4: vaddr=0xc01c4000, paddr=0x1c4000
+  PTE 300.1C5: vaddr=0xc01c5000, paddr=0x1c5000
+  PTE 300.1C6: vaddr=0xc01c6000, paddr=0x1c6000
+  PTE 300.1C7: vaddr=0xc01c7000, paddr=0x1c7000
+  PTE 300.1C8: vaddr=0xc01c8000, paddr=0x1c8000
+  PTE 300.1C9: vaddr=0xc01c9000, paddr=0x1c9000
+  PTE 300.1CA: vaddr=0xc01ca000, paddr=0x1ca000
+  PTE 300.1CB: vaddr=0xc01cb000, paddr=0x1cb000
+  PTE 300.1CC: vaddr=0xc01cc000, paddr=0x1cc000
+  PTE 300.1CD: vaddr=0xc01cd000, paddr=0x1cd000
+  PTE 300.1CE: vaddr=0xc01ce000, paddr=0x1ce000
+  PTE 300.1CF: vaddr=0xc01cf000, paddr=0x1cf000
+  PTE 300.1D0: vaddr=0xc01d0000, paddr=0x1d0000
+  PTE 300.1D1: vaddr=0xc01d1000, paddr=0x1d1000
+  PTE 300.1D2: vaddr=0xc01d2000, paddr=0x1d2000
+  PTE 300.1D3: vaddr=0xc01d3000, paddr=0x1d3000
+  PTE 300.1D4: vaddr=0xc01d4000, paddr=0x1d4000
+  PTE 300.1D5: vaddr=0xc01d5000, paddr=0x1d5000
+  PTE 300.1D6: vaddr=0xc01d6000, paddr=0x1d6000
+  PTE 300.1D7: vaddr=0xc01d7000, paddr=0x1d7000
+  PTE 300.1D8: vaddr=0xc01d8000, paddr=0x1d8000
+  PTE 300.1D9: vaddr=0xc01d9000, paddr=0x1d9000
+  PTE 300.1DA: vaddr=0xc01da000, paddr=0x1da000
+  PTE 300.1DB: vaddr=0xc01db000, paddr=0x1db000
+  PTE 300.1DC: vaddr=0xc01dc000, paddr=0x1dc000
+  PTE 300.1DD: vaddr=0xc01dd000, paddr=0x1dd000
+  PTE 300.1DE: vaddr=0xc01de000, paddr=0x1de000
+  PTE 300.1DF: vaddr=0xc01df000, paddr=0x1df000
+  PTE 300.1E0: vaddr=0xc01e0000, paddr=0x1e0000
+  PTE 300.1E1: vaddr=0xc01e1000, paddr=0x1e1000
+  PTE 340.00: vaddr=0xd0000000, paddr=0xfebf1000
+End of page tables dump.
+[Exception.Fault] Kernel Page Fault!
+Fault address: 0xc0074000
+Return address: 0xc0104adc
+Error: Not Present Read Kernel     
+Permissions: Page not present
+
+If you are a user seeing this, your computer has crashed.
+Reboot your computer. If the error happens again...
+just don't do the thing that made it happen.
+
+Stack trace:
+Frame at 0xc01e12a0
+  at 0xC0102CD8
+  at 0xC0101D9B
+  at 0xC010705B
+  at 0xC01070F6
+  at 0xC0102AA3
+  at 0xC0101D9B
+  next frame at 0x0000000 (unmapped)
+CR3 register value: 0x00267000
+Page directory at vaddr=0xc0072000, paddr=0x267000:
+  PDE 020: vaddr=0x8000000, paddr=0x269000
+  PDE 2FF: vaddr=0xbfc00000, paddr=0x270000
+  PDE 300: vaddr=0xc0000000, paddr=0x185000
+  PDE 340: vaddr=0xd0000000, paddr=0x145000
+End of page directory dump.
+Page tables:
+  PDE 020: Unable to access page table entries
+  PDE 2FF: Unable to access page table entries
+  PTE 300.00: vaddr=0xc0000000, paddr=0x1f8000
+  PTE 300.01: vaddr=0xc0001000, paddr=0x1e3000
+  PTE 300.02: vaddr=0xc0002000, paddr=0x1e4000
+  PTE 300.03: vaddr=0xc0003000, paddr=0x1e5000
+  PTE 300.04: vaddr=0xc0004000, paddr=0x1e6000
+  PTE 300.05: vaddr=0xc0005000, paddr=0x1e7000
+  PTE 300.06: vaddr=0xc0006000, paddr=0x1e8000
+  PTE 300.07: vaddr=0xc0007000, paddr=0x1e2000
+  PTE 300.08: vaddr=0xc0008000, paddr=0x1e9000
+  PTE 300.09: vaddr=0xc0009000, paddr=0x1ea000
+  PTE 300.0A: vaddr=0xc000a000, paddr=0x1eb000
+  PTE 300.0B: vaddr=0xc000b000, paddr=0x1ec000
+  PTE 300.0C: vaddr=0xc000c000, paddr=0x1ed000
+  PTE 300.0D: vaddr=0xc000d000, paddr=0x1ee000
+  PTE 300.0E: vaddr=0xc000e000, paddr=0x1ef000
+  PTE 300.0F: vaddr=0xc000f000, paddr=0x1f0000
+  PTE 300.010: vaddr=0xc0010000, paddr=0x1f1000
+  PTE 300.011: vaddr=0xc0011000, paddr=0x1f2000
+  PTE 300.012: vaddr=0xc0012000, paddr=0x1f3000
+  PTE 300.013: vaddr=0xc0013000, paddr=0x1f4000
+  PTE 300.014: vaddr=0xc0014000, paddr=0x1f5000
+  PTE 300.015: vaddr=0xc0015000, paddr=0x1f6000
+  PTE 300.016: vaddr=0xc0016000, paddr=0x1f7000
+  PTE 300.017: vaddr=0xc0017000, paddr=0x1f9000
+  PTE 300.018: vaddr=0xc0018000, paddr=0x1fa000
+  PTE 300.019: vaddr=0xc0019000, paddr=0x1fb000
+  PTE 300.01A: vaddr=0xc001a000, paddr=0x1fc000
+  PTE 300.01B: vaddr=0xc001b000, paddr=0x1fd000
+  PTE 300.01C: vaddr=0xc001c000, paddr=0x1fe000
+  PTE 300.01D: vaddr=0xc001d000, paddr=0x1ff000
+  PTE 300.01E: vaddr=0xc001e000, paddr=0x201000
+  PTE 300.01F: vaddr=0xc001f000, paddr=0x202000
+  PTE 300.020: vaddr=0xc0020000, paddr=0x203000
+  PTE 300.021: vaddr=0xc0021000, paddr=0x204000
+  PTE 300.022: vaddr=0xc0022000, paddr=0x205000
+  PTE 300.023: vaddr=0xc0023000, paddr=0x206000
+  PTE 300.024: vaddr=0xc0024000, paddr=0x207000
+  PTE 300.025: vaddr=0xc0025000, paddr=0x208000
+  PTE 300.026: vaddr=0xc0026000, paddr=0x209000
+  PTE 300.027: vaddr=0xc0027000, paddr=0x20a000
+  PTE 300.028: vaddr=0xc0028000, paddr=0x20b000
+  PTE 300.029: vaddr=0xc0029000, paddr=0x20c000
+  PTE 300.02A: vaddr=0xc002a000, paddr=0x20d000
+  PTE 300.02B: vaddr=0xc002b000, paddr=0x20e000
+  PTE 300.02C: vaddr=0xc002c000, paddr=0x20f000
+  PTE 300.02D: vaddr=0xc002d000, paddr=0x210000
+  PTE 300.02E: vaddr=0xc002e000, paddr=0x211000
+  PTE 300.02F: vaddr=0xc002f000, paddr=0x212000
+  PTE 300.030: vaddr=0xc0030000, paddr=0x213000
+  PTE 300.031: vaddr=0xc0031000, paddr=0x214000
+  PTE 300.032: vaddr=0xc0032000, paddr=0x215000
+  PTE 300.033: vaddr=0xc0033000, paddr=0x216000
+  PTE 300.034: vaddr=0xc0034000, paddr=0x217000
+  PTE 300.035: vaddr=0xc0035000, paddr=0x218000
+  PTE 300.036: vaddr=0xc0036000, paddr=0x219000
+  PTE 300.037: vaddr=0xc0037000, paddr=0x21a000
+  PTE 300.038: vaddr=0xc0038000, paddr=0x21b000
+  PTE 300.039: vaddr=0xc0039000, paddr=0x21c000
+  PTE 300.03A: vaddr=0xc003a000, paddr=0x21d000
+  PTE 300.03B: vaddr=0xc003b000, paddr=0x21e000
+  PTE 300.03C: vaddr=0xc003c000, paddr=0x21f000
+  PTE 300.03D: vaddr=0xc003d000, paddr=0x220000
+  PTE 300.03E: vaddr=0xc003e000, paddr=0x221000
+  PTE 300.03F: vaddr=0xc003f000, paddr=0x222000
+  PTE 300.040: vaddr=0xc0040000, paddr=0x223000
+  PTE 300.041: vaddr=0xc0041000, paddr=0x224000
+  PTE 300.042: vaddr=0xc0042000, paddr=0x225000
+  PTE 300.043: vaddr=0xc0043000, paddr=0x226000
+  PTE 300.044: vaddr=0xc0044000, paddr=0x227000
+  PTE 300.045: vaddr=0xc0045000, paddr=0x228000
+  PTE 300.046: vaddr=0xc0046000, paddr=0x229000
+  PTE 300.047: vaddr=0xc0047000, paddr=0x22a000
+  PTE 300.048: vaddr=0xc0048000, paddr=0x22b000
+  PTE 300.049: vaddr=0xc0049000, paddr=0x22c000
+  PTE 300.04A: vaddr=0xc004a000, paddr=0x22d000
+  PTE 300.04B: vaddr=0xc004b000, paddr=0x22e000
+  PTE 300.04C: vaddr=0xc004c000, paddr=0x22f000
+  PTE 300.04D: vaddr=0xc004d000, paddr=0x230000
+  PTE 300.04E: vaddr=0xc004e000, paddr=0x231000
+  PTE 300.04F: vaddr=0xc004f000, paddr=0x232000
+  PTE 300.050: vaddr=0xc0050000, paddr=0x233000
+  PTE 300.051: vaddr=0xc0051000, paddr=0x234000
+  PTE 300.052: vaddr=0xc0052000, paddr=0x235000
+  PTE 300.053: vaddr=0xc0053000, paddr=0x236000
+  PTE 300.054: vaddr=0xc0054000, paddr=0x237000
+  PTE 300.055: vaddr=0xc0055000, paddr=0x238000
+  PTE 300.056: vaddr=0xc0056000, paddr=0x239000
+  PTE 300.057: vaddr=0xc0057000, paddr=0x23a000
+  PTE 300.058: vaddr=0xc0058000, paddr=0x23b000
+  PTE 300.059: vaddr=0xc0059000, paddr=0x23c000
+  PTE 300.05A: vaddr=0xc005a000, paddr=0x23d000
+  PTE 300.05B: vaddr=0xc005b000, paddr=0x23e000
+  PTE 300.05C: vaddr=0xc005c000, paddr=0x23f000
+  PTE 300.05D: vaddr=0xc005d000, paddr=0x241000
+  PTE 300.05E: vaddr=0xc005e000, paddr=0x242000
+  PTE 300.05F: vaddr=0xc005f000, paddr=0x243000
+  PTE 300.060: vaddr=0xc0060000, paddr=0x24e000
+  PTE 300.072: vaddr=0xc0072000, paddr=0x267000
+  PTE 300.073: vaddr=0xc0073000, paddr=0x268000
+  PTE 300.100: vaddr=0xc0100000, paddr=0x100000
+  PTE 300.101: vaddr=0xc0101000, paddr=0x101000
+  PTE 300.102: vaddr=0xc0102000, paddr=0x102000
+  PTE 300.103: vaddr=0xc0103000, paddr=0x103000
+  PTE 300.104: vaddr=0xc0104000, paddr=0x104000
+  PTE 300.105: vaddr=0xc0105000, paddr=0x105000
+  PTE 300.106: vaddr=0xc0106000, paddr=0x106000
+  PTE 300.107: vaddr=0xc0107000, paddr=0x107000
+  PTE 300.108: vaddr=0xc0108000, paddr=0x108000
+  PTE 300.109: vaddr=0xc0109000, paddr=0x109000
+  PTE 300.10A: vaddr=0xc010a000, paddr=0x10a000
+  PTE 300.10B: vaddr=0xc010b000, paddr=0x10b000
+  PTE 300.10C: vaddr=0xc010c000, paddr=0x10c000
+  PTE 300.10D: vaddr=0xc010d000, paddr=0x10d000
+  PTE 300.10E: vaddr=0xc010e000, paddr=0x10e000
+  PTE 300.10F: vaddr=0xc010f000, paddr=0x10f000
+  PTE 300.110: vaddr=0xc0110000, paddr=0x110000
+  PTE 300.111: vaddr=0xc0111000, paddr=0x111000
+  PTE 300.112: vaddr=0xc0112000, paddr=0x112000
+  PTE 300.113: vaddr=0xc0113000, paddr=0x113000
+  PTE 300.114: vaddr=0xc0114000, paddr=0x114000
+  PTE 300.115: vaddr=0xc0115000, paddr=0x115000
+  PTE 300.116: vaddr=0xc0116000, paddr=0x116000
+  PTE 300.117: vaddr=0xc0117000, paddr=0x117000
+  PTE 300.118: vaddr=0xc0118000, paddr=0x118000
+  PTE 300.119: vaddr=0xc0119000, paddr=0x119000
+  PTE 300.11A: vaddr=0xc011a000, paddr=0x11a000
+  PTE 300.11B: vaddr=0xc011b000, paddr=0x11b000
+  PTE 300.11C: vaddr=0xc011c000, paddr=0x11c000
+  PTE 300.11D: vaddr=0xc011d000, paddr=0x11d000
+  PTE 300.11E: vaddr=0xc011e000, paddr=0x11e000
+  PTE 300.11F: vaddr=0xc011f000, paddr=0x11f000
+  PTE 300.120: vaddr=0xc0120000, paddr=0x120000
+  PTE 300.121: vaddr=0xc0121000, paddr=0x121000
+  PTE 300.122: vaddr=0xc0122000, paddr=0x122000
+  PTE 300.123: vaddr=0xc0123000, paddr=0x123000
+  PTE 300.124: vaddr=0xc0124000, paddr=0x124000
+  PTE 300.125: vaddr=0xc0125000, paddr=0x125000
+  PTE 300.126: vaddr=0xc0126000, paddr=0x126000
+  PTE 300.127: vaddr=0xc0127000, paddr=0x127000
+  PTE 300.128: vaddr=0xc0128000, paddr=0x128000
+  PTE 300.129: vaddr=0xc0129000, paddr=0x129000
+  PTE 300.12A: vaddr=0xc012a000, paddr=0x12a000
+  PTE 300.12B: vaddr=0xc012b000, paddr=0x12b000
+  PTE 300.12C: vaddr=0xc012c000, paddr=0x12c000
+  PTE 300.12D: vaddr=0xc012d000, paddr=0x12d000
+  PTE 300.12E: vaddr=0xc012e000, paddr=0x12e000
+  PTE 300.12F: vaddr=0xc012f000, paddr=0x12f000
+  PTE 300.130: vaddr=0xc0130000, paddr=0x130000
+  PTE 300.131: vaddr=0xc0131000, paddr=0x131000
+  PTE 300.132: vaddr=0xc0132000, paddr=0x132000
+  PTE 300.133: vaddr=0xc0133000, paddr=0x133000
+  PTE 300.134: vaddr=0xc0134000, paddr=0x134000
+  PTE 300.135: vaddr=0xc0135000, paddr=0x135000
+  PTE 300.136: vaddr=0xc0136000, paddr=0x136000
+  PTE 300.137: vaddr=0xc0137000, paddr=0x137000
+  PTE 300.138: vaddr=0xc0138000, paddr=0x138000
+  PTE 300.139: vaddr=0xc0139000, paddr=0x139000
+  PTE 300.13A: vaddr=0xc013a000, paddr=0x13a000
+  PTE 300.13B: vaddr=0xc013b000, paddr=0x13b000
+  PTE 300.13C: vaddr=0xc013c000, paddr=0x13c000
+  PTE 300.13D: vaddr=0xc013d000, paddr=0x13d000
+  PTE 300.13E: vaddr=0xc013e000, paddr=0x13e000
+  PTE 300.13F: vaddr=0xc013f000, paddr=0x13f000
+  PTE 300.140: vaddr=0xc0140000, paddr=0xb8000
+  PTE 300.142: vaddr=0xc0142000, paddr=0x142000
+  PTE 300.143: vaddr=0xc0143000, paddr=0x143000
+  PTE 300.144: vaddr=0xc0144000, paddr=0x144000
+  PTE 300.145: vaddr=0xc0145000, paddr=0x145000
+  PTE 300.146: vaddr=0xc0146000, paddr=0x146000
+  PTE 300.147: vaddr=0xc0147000, paddr=0x147000
+  PTE 300.148: vaddr=0xc0148000, paddr=0x148000
+  PTE 300.149: vaddr=0xc0149000, paddr=0x149000
+  PTE 300.14A: vaddr=0xc014a000, paddr=0x14a000
+  PTE 300.14B: vaddr=0xc014b000, paddr=0x14b000
+  PTE 300.14C: vaddr=0xc014c000, paddr=0x14c000
+  PTE 300.14D: vaddr=0xc014d000, paddr=0x14d000
+  PTE 300.14E: vaddr=0xc014e000, paddr=0x14e000
+  PTE 300.14F: vaddr=0xc014f000, paddr=0x14f000
+  PTE 300.150: vaddr=0xc0150000, paddr=0x150000
+  PTE 300.151: vaddr=0xc0151000, paddr=0x151000
+  PTE 300.152: vaddr=0xc0152000, paddr=0x152000
+  PTE 300.153: vaddr=0xc0153000, paddr=0x153000
+  PTE 300.154: vaddr=0xc0154000, paddr=0x154000
+  PTE 300.155: vaddr=0xc0155000, paddr=0x155000
+  PTE 300.156: vaddr=0xc0156000, paddr=0x156000
+  PTE 300.157: vaddr=0xc0157000, paddr=0x157000
+  PTE 300.158: vaddr=0xc0158000, paddr=0x158000
+  PTE 300.159: vaddr=0xc0159000, paddr=0x159000
+  PTE 300.15A: vaddr=0xc015a000, paddr=0x15a000
+  PTE 300.15B: vaddr=0xc015b000, paddr=0x15b000
+  PTE 300.15C: vaddr=0xc015c000, paddr=0x15c000
+  PTE 300.15D: vaddr=0xc015d000, paddr=0x15d000
+  PTE 300.15E: vaddr=0xc015e000, paddr=0x15e000
+  PTE 300.15F: vaddr=0xc015f000, paddr=0x15f000
+  PTE 300.160: vaddr=0xc0160000, paddr=0x160000
+  PTE 300.161: vaddr=0xc0161000, paddr=0x161000
+  PTE 300.162: vaddr=0xc0162000, paddr=0x162000
+  PTE 300.163: vaddr=0xc0163000, paddr=0x163000
+  PTE 300.164: vaddr=0xc0164000, paddr=0x164000
+  PTE 300.165: vaddr=0xc0165000, paddr=0x165000
+  PTE 300.166: vaddr=0xc0166000, paddr=0x166000
+  PTE 300.167: vaddr=0xc0167000, paddr=0x167000
+  PTE 300.168: vaddr=0xc0168000, paddr=0x168000
+  PTE 300.169: vaddr=0xc0169000, paddr=0x169000
+  PTE 300.16A: vaddr=0xc016a000, paddr=0x16a000
+  PTE 300.16B: vaddr=0xc016b000, paddr=0x16b000
+  PTE 300.16C: vaddr=0xc016c000, paddr=0x16c000
+  PTE 300.16D: vaddr=0xc016d000, paddr=0x16d000
+  PTE 300.16E: vaddr=0xc016e000, paddr=0x16e000
+  PTE 300.16F: vaddr=0xc016f000, paddr=0x16f000
+  PTE 300.170: vaddr=0xc0170000, paddr=0x170000
+  PTE 300.171: vaddr=0xc0171000, paddr=0x171000
+  PTE 300.172: vaddr=0xc0172000, paddr=0x172000
+  PTE 300.173: vaddr=0xc0173000, paddr=0x173000
+  PTE 300.174: vaddr=0xc0174000, paddr=0x174000
+  PTE 300.175: vaddr=0xc0175000, paddr=0x175000
+  PTE 300.176: vaddr=0xc0176000, paddr=0x176000
+  PTE 300.177: vaddr=0xc0177000, paddr=0x177000
+  PTE 300.178: vaddr=0xc0178000, paddr=0x178000
+  PTE 300.179: vaddr=0xc0179000, paddr=0x179000
+  PTE 300.17A: vaddr=0xc017a000, paddr=0x17a000
+  PTE 300.17B: vaddr=0xc017b000, paddr=0x17b000
+  PTE 300.17C: vaddr=0xc017c000, paddr=0x17c000
+  PTE 300.17D: vaddr=0xc017d000, paddr=0x17d000
+  PTE 300.17E: vaddr=0xc017e000, paddr=0x17e000
+  PTE 300.17F: vaddr=0xc017f000, paddr=0x17f000
+  PTE 300.180: vaddr=0xc0180000, paddr=0x180000
+  PTE 300.181: vaddr=0xc0181000, paddr=0x181000
+  PTE 300.182: vaddr=0xc0182000, paddr=0x182000
+  PTE 300.183: vaddr=0xc0183000, paddr=0x183000
+  PTE 300.184: vaddr=0xc0184000, paddr=0x184000
+  PTE 300.185: vaddr=0xc0185000, paddr=0x185000
+  PTE 300.186: vaddr=0xc0186000, paddr=0x186000
+  PTE 300.187: vaddr=0xc0187000, paddr=0x187000
+  PTE 300.188: vaddr=0xc0188000, paddr=0x188000
+  PTE 300.189: vaddr=0xc0189000, paddr=0x189000
+  PTE 300.18A: vaddr=0xc018a000, paddr=0x18a000
+  PTE 300.18B: vaddr=0xc018b000, paddr=0x18b000
+  PTE 300.18C: vaddr=0xc018c000, paddr=0x18c000
+  PTE 300.18D: vaddr=0xc018d000, paddr=0x18d000
+  PTE 300.18E: vaddr=0xc018e000, paddr=0x18e000
+  PTE 300.18F: vaddr=0xc018f000, paddr=0x18f000
+  PTE 300.190: vaddr=0xc0190000, paddr=0x190000
+  PTE 300.191: vaddr=0xc0191000, paddr=0x191000
+  PTE 300.192: vaddr=0xc0192000, paddr=0x192000
+  PTE 300.193: vaddr=0xc0193000, paddr=0x193000
+  PTE 300.194: vaddr=0xc0194000, paddr=0x194000
+  PTE 300.195: vaddr=0xc0195000, paddr=0x195000
+  PTE 300.196: vaddr=0xc0196000, paddr=0x196000
+  PTE 300.197: vaddr=0xc0197000, paddr=0x197000
+  PTE 300.198: vaddr=0xc0198000, paddr=0x198000
+  PTE 300.199: vaddr=0xc0199000, paddr=0x199000
+  PTE 300.19A: vaddr=0xc019a000, paddr=0x19a000
+  PTE 300.19B: vaddr=0xc019b000, paddr=0x19b000
+  PTE 300.19C: vaddr=0xc019c000, paddr=0x19c000
+  PTE 300.19D: vaddr=0xc019d000, paddr=0x19d000
+  PTE 300.19E: vaddr=0xc019e000, paddr=0x19e000
+  PTE 300.19F: vaddr=0xc019f000, paddr=0x19f000
+  PTE 300.1A0: vaddr=0xc01a0000, paddr=0x1a0000
+  PTE 300.1A1: vaddr=0xc01a1000, paddr=0x1a1000
+  PTE 300.1A2: vaddr=0xc01a2000, paddr=0x1a2000
+  PTE 300.1A3: vaddr=0xc01a3000, paddr=0x1a3000
+  PTE 300.1A4: vaddr=0xc01a4000, paddr=0x1a4000
+  PTE 300.1A5: vaddr=0xc01a5000, paddr=0x1a5000
+  PTE 300.1A6: vaddr=0xc01a6000, paddr=0x1a6000
+  PTE 300.1A7: vaddr=0xc01a7000, paddr=0x1a7000
+  PTE 300.1A8: vaddr=0xc01a8000, paddr=0x1a8000
+  PTE 300.1A9: vaddr=0xc01a9000, paddr=0x1a9000
+  PTE 300.1AA: vaddr=0xc01aa000, paddr=0x1aa000
+  PTE 300.1AB: vaddr=0xc01ab000, paddr=0x1ab000
+  PTE 300.1AC: vaddr=0xc01ac000, paddr=0x1ac000
+  PTE 300.1AD: vaddr=0xc01ad000, paddr=0x1ad000
+  PTE 300.1AE: vaddr=0xc01ae000, paddr=0x1ae000
+  PTE 300.1AF: vaddr=0xc01af000, paddr=0x1af000
+  PTE 300.1B0: vaddr=0xc01b0000, paddr=0x1b0000
+  PTE 300.1B1: vaddr=0xc01b1000, paddr=0x1b1000
+  PTE 300.1B2: vaddr=0xc01b2000, paddr=0x1b2000
+  PTE 300.1B3: vaddr=0xc01b3000, paddr=0x1b3000
+  PTE 300.1B4: vaddr=0xc01b4000, paddr=0x1b4000
+  PTE 300.1B5: vaddr=0xc01b5000, paddr=0x1b5000
+  PTE 300.1B6: vaddr=0xc01b6000, paddr=0x1b6000
+  PTE 300.1B7: vaddr=0xc01b7000, paddr=0x1b7000
+  PTE 300.1B8: vaddr=0xc01b8000, paddr=0x1b8000
+  PTE 300.1B9: vaddr=0xc01b9000, paddr=0x1b9000
+  PTE 300.1BA: vaddr=0xc01ba000, paddr=0x1ba000
+  PTE 300.1BB: vaddr=0xc01bb000, paddr=0x1bb000
+  PTE 300.1BC: vaddr=0xc01bc000, paddr=0x1bc000
+  PTE 300.1BD: vaddr=0xc01bd000, paddr=0x1bd000
+  PTE 300.1BE: vaddr=0xc01be000, paddr=0x1be000
+  PTE 300.1BF: vaddr=0xc01bf000, paddr=0x1bf000
+  PTE 300.1C0: vaddr=0xc01c0000, paddr=0x1c0000
+  PTE 300.1C1: vaddr=0xc01c1000, paddr=0x1c1000
+  PTE 300.1C2: vaddr=0xc01c2000, paddr=0x1c2000
+  PTE 300.1C3: vaddr=0xc01c3000, paddr=0x1c3000
+  PTE 300.1C4: vaddr=0xc01c4000, paddr=0x1c4000
+  PTE 300.1C5: vaddr=0xc01c5000, paddr=0x1c5000
+  PTE 300.1C6: vaddr=0xc01c6000, paddr=0x1c6000
+  PTE 300.1C7: vaddr=0xc01c7000, paddr=0x1c7000
+  PTE 300.1C8: vaddr=0xc01c8000, paddr=0x1c8000
+  PTE 300.1C9: vaddr=0xc01c9000, paddr=0x1c9000
+  PTE 300.1CA: vaddr=0xc01ca000, paddr=0x1ca000
+  PTE 300.1CB: vaddr=0xc01cb000, paddr=0x1cb000
+  PTE 300.1CC: vaddr=0xc01cc000, paddr=0x1cc000
+  PTE 300.1CD: vaddr=0xc01cd000, paddr=0x1cd000
+  PTE 300.1CE: vaddr=0xc01ce000, paddr=0x1ce000
+  PTE 300.1CF: vaddr=0xc01cf000, paddr=0x1cf000
+  PTE 300.1D0: vaddr=0xc01d0000, paddr=0x1d0000
+  PTE 300.1D1: vaddr=0xc01d1000, paddr=0x1d1000
+  PTE 300.1D2: vaddr=0xc01d2000, paddr=0x1d2000
+  PTE 300.1D3: vaddr=0xc01d3000, paddr=0x1d3000
+  PTE 300.1D4: vaddr=0xc01d4000, paddr=0x1d4000
+  PTE 300.1D5: vaddr=0xc01d5000, paddr=0x1d5000
+  PTE 300.1D6: vaddr=0xc01d6000, paddr=0x1d6000
+  PTE 300.1D7: vaddr=0xc01d7000, paddr=0x1d7000
+  PTE 300.1D8: vaddr=0xc01d8000, paddr=0x1d8000
+  PTE 300.1D9: vaddr=0xc01d9000, paddr=0x1d9000
+  PTE 300.1DA: vaddr=0xc01da000, paddr=0x1da000
+  PTE 300.1DB: vaddr=0xc01db000, paddr=0x1db000
+  PTE 300.1DC: vaddr=0xc01dc000, paddr=0x1dc000
+  PTE 300.1DD: vaddr=0xc01dd000, paddr=0x1dd000
+  PTE 300.1DE: vaddr=0xc01de000, paddr=0x1de000
+  PTE 300.1DF: vaddr=0xc01df000, paddr=0x1df000
+  PTE 300.1E0: vaddr=0xc01e0000, paddr=0x1e0000
+  PTE 300.1E1: vaddr=0xc01e1000, paddr=0x1e1000
+  PTE 340.00: vaddr=0xd0000000, paddr=0xfebf1000
+End of page tables dump.

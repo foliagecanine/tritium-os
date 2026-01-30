@@ -1,24 +1,35 @@
 #include <kernel/syscalls.h>
+#include <kernel/pmm.h>
+#include <kernel/task.h>
+#include <kernel/tty.h>
+#include <kernel/kbd.h>
+#include <kernel/ipc.h>
+#include <kernel/graphics.h>
+#include <fs/fs.h>
 
 #define NUM_SYSCALLS	39
 
-uint32_t get_input_data(uint8_t input);
+bool safe_dereg_ipc_port(uint16_t port);
+size_t safe_receive_ipc_size(uint16_t port);
+uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size);
+uint8_t safe_receive_ipc(uint16_t port, void *data);
+
 void fopen_usermode(FILE *f, const char* filename, const char* mode);
 uint8_t fread_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 uint8_t fwrite_usermode(FILE *f, char *buf, uint32_t starth, uint32_t startl, uint32_t lenl);
 void readdir_usermode(FILE *f, FILE *o, char *buf, uint32_t n);
 void fcreate_usermode(char *filename, FILE *o);
 uint8_t fdelete_usermode(char *filename);
-uint8_t ferase_usermode(char *filename);
-void debug_break();
+uint8_t fmove_usermode(char *src_filename, char *dest_filename);
+
+uint32_t get_input_data(uint8_t input);
+
 void *map_mem(void *address);
+
 uint32_t graphics_function(uint8_t function, uint32_t param1, uint32_t param2, uint32_t param3);
+
 void null_function();
-bool safe_dereg_ipc_port(uint16_t port);
-size_t safe_receive_ipc_size(uint16_t port);
-uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size);
-uint8_t safe_receive_ipc(uint16_t port, void *data);
-void serial_putchar(char c);
+void debug_break();
 
 static void *syscalls[NUM_SYSCALLS] = {
 	&terminal_writestring, 	// 0
@@ -38,7 +49,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&fwrite_usermode,		// 14
 	&fcreate_usermode,		// 15
 	&fdelete_usermode,		// 16
-	&ferase_usermode,		// 17
+	&fmove_usermode,		// 17
 	&readdir_usermode,		// 18
 	&null_function,			// 19 (reserved for future file-related functions)
 	&null_function,			// 20 (reserved for future file-related functions)
@@ -49,7 +60,7 @@ static void *syscalls[NUM_SYSCALLS] = {
 	&fork_process,			// 25
 	&map_mem,				// 26
 	&graphics_function,		// 27
-	&register_ipc_port,		// 28
+	&null_function, //register_ipc_port,		// 28
 	&safe_dereg_ipc_port, 	// 29
 	&safe_receive_ipc_size,	// 30
 	&safe_transfer_ipc,		// 31
@@ -128,8 +139,8 @@ void init_syscalls() {
 
 // Make sure the program is not writing to kernel memory.
 bool check_range(void *addr, uint32_t size) {
-	for (void *i = addr; i < addr+size; i+=4096) {
-		if (!check_user(i)) {
+	for (void *i = addr; i < addr + size; i += PAGE_SIZE) {
+		if (!(get_page_permissions(i) & PAGE_PERM_USER)) {
 			dprintf("%p is not within range\n",i);
 			return false;
 		}
@@ -203,9 +214,9 @@ uint8_t fdelete_usermode(char *filename) {
 	return UNKNOWN_ERROR;
 }
 
-uint8_t ferase_usermode(char *filename) {
-	if (check_range(filename,strlen(filename))) {
-		return ferase(filename);
+uint8_t fmove_usermode(char *filename, char *dest) {
+	if (check_range(filename,strlen(filename)) && (check_range(dest, strlen(dest))) || dest==NULL) {
+		return fmove(filename, dest);
 	}
 	return UNKNOWN_ERROR;
 }
@@ -215,12 +226,14 @@ void debug_break() {
 }
 
 void *map_mem(void *address) {
-	address = (void *)((uint32_t)address & ~0xFFF); // Align to 4KiB page
-	if (address && address < (void *)0xC0000000) { // Don't map nullptrs or kernel memory.
-		void *retval = map_page_to(address);
-		memset(retval,0,4096);
-		mark_user(retval,true);
-		return retval;
+	address = (void *)((uint32_t)address & ~(PAGE_SIZE - 1)); // Align to 4KiB page
+	if (address >= USER_MEM_START && address < USER_MEM_END) { // Don't map nullptrs or kernel memory.
+		if (!map_user_page(address)) {
+			return NULL;
+		}
+
+		memset(address, 0, PAGE_SIZE);
+		return address;
 	}
 	return 0;
 }
@@ -244,25 +257,32 @@ uint32_t graphics_function(uint8_t function, uint32_t param1, uint32_t param2, u
 }
 
 bool safe_dereg_ipc_port(uint16_t port) {
-	return deregister_ipc_port(port, false);
+	(void)port;
+	return false; //deregister_ipc_port(port, false);
 }
 
 size_t safe_receive_ipc_size(uint16_t port) {
-	return receive_ipc_size(port, false);
+	(void)port;
+	return 0; //receive_ipc_size(port, false);
 }
 
 uint8_t safe_transfer_ipc(uint16_t port, void *data, size_t size) {
-	if (!check_range(data, size))
-		return 4; // BAD_INPUT
-	return transfer_ipc(port, data, size);
+	(void)port;
+	(void)data;
+	(void)size;
+	// if (!check_range(data, size))
+	// 	return 4; // BAD_INPUT
+	return 4; // transfer_ipc(port, data, size);
 }
 
 uint8_t safe_receive_ipc(uint16_t port, void *data) {
-	if (!check_range(data, receive_ipc_size(port, true)))
-		return 4; // BAD_INPUT
-	return receive_ipc(port, data);
+	(void)port;
+	(void)data;
+	// if (!check_range(data, receive_ipc_size(port, true)))
+	// 	return 4; // BAD_INPUT
+	return 4; // receive_ipc(port, data);
 }
 
 void null_function() {
-
+	asm volatile("nop");
 }

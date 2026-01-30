@@ -44,7 +44,7 @@ typedef struct
 
 void print_fat12_values(uint32_t drive_num)
 {
-    if (!drive_exists(drive_num)) return;
+    if (!disk_drive_exists(drive_num)) return;
 
     uint8_t read[512] = {0};
     disk_read_sectors(drive_num, 0, 1, read);
@@ -139,7 +139,7 @@ FSMOUNT MountFAT12(uint32_t drive_num)
     fat12fs.drive   = drive_num;
 
     // Set the mount part of FSMOUNT to our FAT12_MOUNT
-    FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)alloc_page(1);
+    FAT12_MOUNT *fat12mount = (FAT12_MOUNT *)kalloc_pages(1);
 
     fat12mount->MntSig                  = 0xAABBCCDD;
     fat12mount->NumTotalSectors         = bpb.NumTotalSectors;
@@ -186,14 +186,15 @@ uint16_t getClusterValue(uint8_t *FAT, uint32_t cluster)
 
 void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_num)
 {
-    uint8_t *read = alloc_sequential(((numEntries * 32) / 4096) + 1);
-    memset(read, 0, numEntries * 32);
+    size_t num_pages = ((numEntries * 32) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *read = kalloc_pages(num_pages);
+    memset(read, 0, num_pages * PAGE_SIZE);
 
     uint8_t derr = disk_read_sectors(drive_num, location / 512, 1, read);
     if (derr)
     {
         printf("Drive error: %u!", derr);
-        free_page(read, ((numEntries * 32) / 4096) + 1);
+        kfree_pages(read, num_pages);
         return;
     }
 
@@ -227,7 +228,7 @@ void FAT12_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_n
         reading += 32;
     }
     printf("--End of directory----------------------\n");
-    free_page(read, ((numEntries * 32) / 4096) + 1);
+    kfree_pages(read, num_pages);
 }
 
 /*
@@ -267,9 +268,9 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
         retFile.directory = true;
         return retFile;
     }
-    uint32_t num_pages = ((numEntries * 32) / 4096) + 1;
-    uint8_t *read      = alloc_sequential(num_pages); // See free below
-    memset(read, 0, num_pages * 4096);
+    uint32_t num_pages = ((numEntries * 32) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *read      = kalloc_pages(num_pages);
+    memset(read, 0, num_pages * PAGE_SIZE);
 
     uint8_t derr = disk_read_sectors(drive_num, (location / 512), (numEntries * 32) / 512, read);
     if (derr)
@@ -310,8 +311,7 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
         if (searchpath && reading[11] & 0x10)
         {
             uint16_t nextCluster = (reading[27] << 8) | reading[26];
-            free_page(read, ((numEntries * 32) / 4096) +
-                                1); // This way we don't use so much space. We aren't going to use this data any more.
+            kfree_pages(read, num_pages); // This way we don't use so much space. We aren't going to use this data any more.
             return FAT12_fopen((fm.SystemAreaSize + ((nextCluster - 2) * fm.SectorsPerCluster)) * 512 + 1, 16,
                                searchpath, drive_num, fm, mode);
         }
@@ -339,13 +339,13 @@ FILE FAT12_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
             {
                 retFile.directory = false;
             }
-            free_page(read, ((numEntries * 32) / 4096) + 1);
+            kfree_pages(read, num_pages);
             return retFile;
         }
     }
     else
     {
-        free_page(read, ((numEntries * 32) / 4096) + 1);
+        kfree_pages(read, num_pages);
         retFile.valid = false;
         return retFile;
     }
@@ -355,7 +355,8 @@ uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint32_
 {
     if (!file) return 1;
     FAT12_MOUNT fm  = *(FAT12_MOUNT *)get_disk_mount(file->mountNumber).mount;
-    uint8_t *   FAT = (uint8_t *)alloc_page(((fm.FATSize * 512) / 4096) + 1);
+    size_t fat_pages = ((fm.FATSize * 512) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *   FAT = (uint8_t *)kalloc_pages(fat_pages);
     for (uint8_t i = 0; i < fm.FATSize; i++) disk_read_sectors(drive_num, i + 1, 1, &FAT[i * 512]);
     uint16_t rCluster   = file->clusterNumber;
     uint32_t curLen     = len;
@@ -379,7 +380,7 @@ uint8_t FAT12_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint32_
             break;
         }
     }
-    free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+    kfree_pages(FAT, fat_pages);
     return 0;
 }
 

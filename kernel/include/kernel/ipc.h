@@ -5,12 +5,6 @@
 
 #define IPC_MAX_RESPONSES (4096 / (sizeof(void*) + sizeof(uint16_t) + sizeof(size_t) + sizeof(bool)))
 
-typedef struct ipc_response {
-	uint16_t port;
-	size_t 	 size;
-	void 	 *phys_data;
-} __attribute__((packed)) ipc_response;
-
 #include <kernel/task.h>
 
 bool init_ipc(void);

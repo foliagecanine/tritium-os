@@ -101,6 +101,15 @@ public:
         }
     }
 
+    ~ToolbarMenu() {
+        ToolbarMenuItem* item = first_item;
+        while (item != nullptr) {
+            ToolbarMenuItem* next_item = item->get_next();
+            delete item;
+            item = next_item;
+        }
+    }
+
     unsigned int get_width() {
         return name.length() - 1;
     }

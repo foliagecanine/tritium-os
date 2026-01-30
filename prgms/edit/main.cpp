@@ -109,6 +109,20 @@ public:
         }
     }
 
+    ~Editor() {
+        if (lines != nullptr) {
+            delete[] lines;
+            lines = nullptr;
+        }
+
+        ToolbarMenu *menu = first_toolbar_menu;
+        while (menu != nullptr) {
+            ToolbarMenu *next_menu = menu->get_next();
+            delete menu;
+            menu = next_menu;
+        }
+    }
+
     void draw_toolbar(bool hidden = true) {
         graphics.set_buffer(true);
         graphics.draw_rect(0, 0, screen_width, 1, toolbar_color, toolbar_color);

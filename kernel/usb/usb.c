@@ -1,4 +1,7 @@
 #include <usb/usb.h>
+#include <kernel/pmm.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 char name[5];
 
@@ -58,7 +61,7 @@ void check_pci(pci_t pci, uint8_t i, uint8_t j, uint8_t k)
         else if (!strcmp(name, "xHCI"))
         {
             ctype = USB_CTRLR_XHCI;
-            rval  = init_xhci_ctrlr((void *)(pci.BAR0 & ~15), pci.irq);
+            rval  = init_xhci_ctrlr((paddr_t)(pci.BAR0 & ~15), pci.irq);
             if (rval)
             {
                 printf("[USB ] Initialized xHCI controller ID %u with %u ports IRQ %u.\n", (uint8_t)rval - 1,

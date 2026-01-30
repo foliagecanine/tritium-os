@@ -33,12 +33,16 @@ void load_elf_ph_section(elfph32 *ph, void *elf_file)
 {
     if (ph->type != ELF_PH_TYPE_LOAD)
         return;
-    for (uint32_t i = 0; i < (ph->memsize + 4095) / 4096; i++) map_page_to((void *)(ph->vaddr + (i * 4096)));
+
+    size_t ph_pages = (ph->memsize + PAGE_SIZE - 1) / PAGE_SIZE;
+    for (uint32_t i = 0; i < ph_pages; i++) {
+        map_user_page((void *)(ph->vaddr + (i * PAGE_SIZE)));
+    }
+
     memcpy((void *)ph->vaddr, elf_file + ph->offset, ph->filesize);
-    for (uint32_t i = 0; i < (ph->memsize + 4095) / 4096; i++)
-    {
-        mark_user((void *)(ph->vaddr + (i * 4096)), true);
-        mark_write((void *)(ph->vaddr + (i * 4096)), ph->flags & 2);
+
+    for (uint32_t i = 0; i < ph_pages; i++) {
+        mark_write((void *)(ph->vaddr + (i * PAGE_SIZE)), ph->flags & ELF_PH_FLAG_WRITE);
     }
 }
 

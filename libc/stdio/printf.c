@@ -23,9 +23,9 @@ typedef enum __printf_flags
  *
  * @returns a printf flag that matches a PRINTF_FLAG_[*] constant
  */
-static __printf_flags PrintfGetFlags(const char **format)
+static int PrintfGetFlags(const char **format)
 {
-    __printf_flags flags = PRINTF_FLAG_NONE;
+    int flags = PRINTF_FLAG_NONE;
 
     if (**format == '-')
     {
@@ -71,7 +71,7 @@ typedef enum __printf_width
  *
  * @returns the width specified, or PRINTF_WIDTH_NONE if none specified
  */
-static __printf_width PrintfGetWidth(const char **format)
+static int PrintfGetWidth(const char **format)
 {
     if (!isdigit(**format))
     {
@@ -81,7 +81,7 @@ static __printf_width PrintfGetWidth(const char **format)
     char *   endptr;
     long int num = strtol(*format, &endptr, 10);
     *format      = endptr;
-    return (__printf_width)(num);
+    return num;
 }
 
 typedef enum __printf_precision
@@ -96,10 +96,8 @@ typedef enum __printf_precision
  *
  * @returns the precision specified, or PRINTF_PRECISION_NONE if none specified
  */
-static __printf_precision PrintfGetPrecision(const char **format)
+static int PrintfGetPrecision(const char **format)
 {
-    char *start = (char *)*format;
-
     if (**format != '.')
     {
         return PRINTF_PRECISION_NONE;
@@ -107,21 +105,15 @@ static __printf_precision PrintfGetPrecision(const char **format)
 
     (*format)++;
 
-    if (!isdigit(**format))
-    {
-        *format = start;
-        return PRINTF_PRECISION_NONE;
-    }
-
     char *   endptr;
     long int num = strtol(*format, &endptr, 10);
     if (endptr != *format)
     {
         *format = endptr;
-        return (__printf_precision)(num);
+        return num;
     }
 
-    return (__printf_precision)(0);
+    return 0;
 }
 
 typedef enum __printf_length
@@ -244,8 +236,8 @@ static __printf_format PrintfGetFormat(const char **format)
     return PRINTF_FORMAT_ERROR;
 }
 
-const char __print_charset[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-const char __print_charset_upper[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+static const char _printf_hex_lower_chars[] = "0123456789abcdef";
+static const char _printf_hex_upper_chars[] = "0123456789ABCDEF";
 
 /**
  * Prints a formatted string using printfn as the function
@@ -269,11 +261,11 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
 
         format++;
 
-        __printf_flags     printFlags     = PrintfGetFlags(&format);
-        __printf_width     printWidth     = PrintfGetWidth(&format);
-        __printf_precision printPrecision = PrintfGetPrecision(&format);
-        __printf_length    printLength    = PrintfGetLength(&format);
-        __printf_format    printFormat    = PrintfGetFormat(&format);
+        int     printFlags     = PrintfGetFlags(&format);
+        int     printWidth     = PrintfGetWidth(&format);
+        int     printPrecision = PrintfGetPrecision(&format);
+        int     printLength    = PrintfGetLength(&format);
+        int     printFormat    = PrintfGetFormat(&format);
 
         if (printFormat == PRINTF_FORMAT_ERROR)
         {
@@ -291,7 +283,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
         {
             if (printLength & PRINTF_LENGTH_LONG)
             {
-                wchar_t *printReadInChar = va_arg(parameters, void *);
+                wchar_t *printReadInChar = va_arg(parameters, wchar_t *);
                 written += printfn((char *)printReadInChar, 1);
             }
             else
@@ -465,7 +457,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             }
 
             int   base = 10;
-            const char *characterSet = __print_charset;
+            const char *characterSet = _printf_hex_lower_chars;
 
             size_t numDigits = 1;
 
@@ -480,7 +472,7 @@ int __print_formatted(int (*printfn)(const char *, size_t), const char *format, 
             else if (printFormat == PRINTF_FORMAT_UHEXUP)
             {
                 base         = 16;
-                characterSet = __print_charset_upper;
+                characterSet = _printf_hex_upper_chars;
             }
             else if (printFormat == PRINTF_FORMAT_POINTER)
             {

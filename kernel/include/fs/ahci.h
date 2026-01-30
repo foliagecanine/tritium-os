@@ -282,9 +282,9 @@ typedef struct {
 } __attribute__((packed)) sata_identify_packet;
 
 void    init_ahci();
+bool	ahci_drive_exists(uint16_t drive_num);
 uint8_t ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
 uint8_t ahci_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
-bool   drive_exists(uint16_t drive_num);
 void    print_sector(uint8_t *read);
 
 #endif

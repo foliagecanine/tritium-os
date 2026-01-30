@@ -4,10 +4,13 @@
 #include <kernel/stdio.h>
 #include <kernel/tty.h>
 
-#define PANIC(x) terminal_setcolor(0x0c); printf("\nKERNEL PANIC: %s: %s:%d\n",x,__FILE__,(unsigned int)__LINE__); abort();
+#define PANIC(x) kpanic(x, __FILE__, __LINE__);
 
+void kpanic(const char* str, const char* file, int line);
 void kerror(const char* str);
 void kprint(const char* str);
 void kwarn(const char* str);
+int kprintf(const char* format, ...);
+const char* get_symbol_name(uint32_t addr);
 
 #endif

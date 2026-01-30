@@ -318,8 +318,8 @@ void main(uint32_t argc, char **argv)
         for (uint8_t i = 0; i < 16; i++)
         {
             memset(buf, 0, 31);
-            r = finddir(currdir, buf, i);
-            if (r->valid && buf[0] && strcmp(buf, "./"))
+            FILE* dir_file = finddir(currdir, buf, i);
+            if (dir_file->valid && buf[0] && strcmp(buf, "./"))
             {
                 memset(name[count], ' ', 30);
                 memcpy(name[count], buf, strlen(buf));
@@ -329,6 +329,7 @@ void main(uint32_t argc, char **argv)
                 }
                 count++;
             }
+            closefile(dir_file);
         }
         gui();
     }

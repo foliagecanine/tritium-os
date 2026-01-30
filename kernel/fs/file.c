@@ -16,8 +16,8 @@ uint32_t num_active_mounts = 0;
 
 void init_file()
 {
-    mounts = alloc_page(1);
-    memset(mounts, 0, 4096);
+    mounts = (FSMOUNT *)kalloc_pages(1);
+    memset(mounts, 0, PAGE_SIZE);
 }
 
 uint8_t unmount_drive(uint32_t mount)
@@ -25,7 +25,7 @@ uint8_t unmount_drive(uint32_t mount)
     if (mounts[mount].mountEnabled)
     {
         num_active_mounts--;
-        free_page(mounts[mount].mount, 1);
+        kfree_pages(mounts[mount].mount, 1);
     }
     FSMOUNT newMount;
     memset(&newMount, 0, sizeof(FSMOUNT));
@@ -36,6 +36,8 @@ uint8_t unmount_drive(uint32_t mount)
 
 uint8_t mount_drive(uint32_t drive_num)
 {
+    if (!disk_drive_exists(drive_num))
+        return 1; // Not found
     if (detect_fat12(drive_num))
     {
         dprintf("FAT12\n");
@@ -235,7 +237,7 @@ uint8_t fdelete(char *filename)
     return UNKNOWN_ERROR;
 }
 
-uint8_t ferase(char *filename)
+uint8_t fmove(char *filename, char *dest)
 {
     FILE f = fopen(filename, "w");
     if (!f.valid)
@@ -246,32 +248,37 @@ uint8_t ferase(char *filename)
     {
         return IS_DIRECTORY;
     }
-    if (filename)
+    if (!filename)
     {
-        uint8_t device;
-        // Validate and convert to drive number
-        if (filename[1] == ':' && filename[2] == '/')
+        return UNKNOWN_ERROR;
+    }
+
+    uint8_t device;
+    // Validate and convert to drive number
+    if (filename[1] == ':' && filename[2] == '/')
+    {
+        device = tolower(filename[0]) - 'a';
+        // Filename without drive prefix
+        char *flongname = (char *)filename + 2;
+        if (flongname && device < 9)
         {
-            device = tolower(filename[0]) - 'a';
-            // Filename without drive prefix
-            char *flongname = (char *)filename + 2;
-            if (flongname && device < 9)
+            if (mounts[device].mountEnabled)
             {
-                if (mounts[device].mountEnabled)
+                if (!strcmp(mounts[device].type, "FAT12") && detect_fat12(mounts[device].drive))
                 {
-                    if (!strcmp(mounts[device].type, "FAT12") && detect_fat12(mounts[device].drive))
-                    {
-                        // Notimplemented
-                    }
-                    else if (!strcmp(mounts[device].type, "FAT16") && detect_fat16(mounts[device].drive))
-                    {
+                    // Notimplemented
+                }
+                else if (!strcmp(mounts[device].type, "FAT16") && detect_fat16(mounts[device].drive))
+                {
+                    if (dest) {
+                        return FAT16_fmove(filename, dest, *((FAT16_MOUNT *)mounts[device].mount), mounts[device].drive);
+                    } else {
                         return FAT16_ferase(filename, *((FAT16_MOUNT *)mounts[device].mount), mounts[device].drive);
                     }
                 }
             }
         }
     }
-    return UNKNOWN_ERROR;
 }
 
 FSMOUNT get_disk_mount(uint32_t drive)

@@ -51,7 +51,7 @@ typedef struct
 
 void print_fat16_values(uint32_t drive_num)
 {
-    if (!drive_exists(drive_num)) return;
+    if (!disk_drive_exists(drive_num)) return;
 
     uint8_t read[512];
     disk_read_sectors(drive_num, 0, 1, read);
@@ -156,7 +156,7 @@ FSMOUNT MountFAT16(uint32_t drive_num)
     fat16fs.drive   = drive_num;
 
     // Set the mount part of FSMOUNT to our FAT16_MOUNT
-    FAT16_MOUNT *fat16mount = (FAT16_MOUNT *)alloc_page(1);
+    FAT16_MOUNT *fat16mount = (FAT16_MOUNT *)kalloc_pages(1);
 
     fat16mount->MntSig                  = 0xAABBCCDD;
     fat16mount->NumTotalSectors         = bpb.NumTotalSectors;
@@ -219,14 +219,15 @@ uint8_t f16_wipecluster(uint32_t clusterNum, FAT16_MOUNT fm, uint32_t drive_num)
 
 void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_num)
 {
-    uint8_t *read = alloc_sequential(((numEntries * 32) / 4096) + 1);
-    memset(read, 0, numEntries * 32);
+    size_t num_pages = ((numEntries * 32) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *read = kalloc_pages(num_pages);
+    memset(read, 0, num_pages * PAGE_SIZE);
 
     uint8_t derr = disk_read_sectors(drive_num, location / 512, 1, read);
     if (derr)
     {
         printf("Drive error: %u!", derr);
-        free_page(read, ((numEntries * 32) / 4096) + 1);
+        kfree_pages(read, num_pages);
         return;
     }
 
@@ -265,7 +266,7 @@ void FAT16_print_folder(uint32_t location, uint32_t numEntries, uint32_t drive_n
         reading += 32;
     }
     printf("--End of directory----------------------\n");
-    free_page(read, ((numEntries * 32) / 4096) + 1);
+    kfree_pages(read, num_pages);
 }
 
 /*
@@ -307,9 +308,10 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
         retFile.directory = true;
         return retFile;
     }
-    uint32_t num_pages = ((numEntries * 32) / 4096) + 1;
-    uint8_t *read      = alloc_sequential(num_pages); // See free below
-    memset(read, 0, num_pages * 4096);
+
+    uint32_t num_pages = ((numEntries * 32) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *read      = kalloc_pages(num_pages); // See free below
+    memset(read, 0, num_pages * PAGE_SIZE);
 
     uint8_t derr = disk_read_sectors(drive_num, (location / 512), (numEntries * 32) / 512, read);
     if (derr)
@@ -351,8 +353,7 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
         if (searchpath && reading[11] & 0x10)
         {
             uint16_t nextCluster = (reading[27] << 8) | reading[26];
-            free_page(read, ((numEntries * 32) / 4096) + 1); // This way we don't use so much space. We aren't
-                                                             // going to use this data any more.
+            kfree_pages(read, num_pages);
             return FAT16_fopen((fm.SystemAreaSize + ((nextCluster - 2) * fm.SectorsPerCluster)) * 512 + 1, 16,
                                searchpath, drive_num, fm, mode);
         }
@@ -380,13 +381,13 @@ FILE FAT16_fopen(uint32_t location, uint32_t numEntries, char *filename, uint32_
             {
                 retFile.directory = false;
             }
-            free_page(read, ((numEntries * 32) / 4096) + 1);
+            kfree_pages(read, num_pages);
             return retFile;
         }
     }
     else
     {
-        free_page(read, ((numEntries * 32) / 4096) + 1);
+        kfree_pages(read, num_pages);
         retFile.valid = false;
         return retFile;
     }
@@ -396,7 +397,8 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint32_
 {
     if (!file) return FILE_NOT_FOUND;
     FAT16_MOUNT fm  = *(FAT16_MOUNT *)get_disk_mount(file->mountNumber).mount;
-    uint8_t *   FAT = (uint8_t *)alloc_page(((fm.FATSize * 512) / 4096) + 1);
+    size_t fat_pages = ((fm.FATSize * 512) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *   FAT = (uint8_t *)kalloc_pages(fat_pages);
     for (uint8_t i = 0; i < fm.FATSize; i++) disk_read_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
     uint16_t rCluster   = file->clusterNumber;
     uint32_t curLen     = len;
@@ -425,7 +427,7 @@ uint8_t FAT16_fread(FILE *file, char *buf, uint32_t start, uint32_t len, uint32_
             break;
         }
     }
-    free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+    kfree_pages(FAT, fat_pages);
     return SUCCESS;
 }
 
@@ -499,12 +501,13 @@ uint8_t FAT16_fdelete(char *name, uint32_t drive_num)
 
 uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num)
 {
-    uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize * 512) / 4096) + 1);
+    size_t fat_pages = ((fm.FATSize * 512) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *FAT = (uint8_t *)kalloc_pages(fat_pages);
     for (uint8_t i = 0; i < fm.FATSize; i++) disk_read_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
     char *s = (strrchr(name, '/'));
     if (!s)
     {
-        free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+        kfree_pages(FAT, fat_pages);
         return UNKNOWN_ERROR;
     }
     char c = s[1];
@@ -539,7 +542,7 @@ uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num)
                         f16_setClusterValue(FAT, fat_entry_location, 0);
                         if (!fatentry)
                         {
-                            free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+                            kfree_pages(FAT, fat_pages);
                             return UNKNOWN_ERROR;
                         }
                     }
@@ -547,7 +550,7 @@ uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num)
                 uint8_t dr = disk_write_sectors(drive_num, d.location / 512, 1, (uint8_t *)read);
                 if (dr != 0)
                 {
-                    free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+                    kfree_pages(FAT, fat_pages);
                     return dr + 8;
                 }
                 for (uint8_t i = 0; i < fm.FATSize; i++)
@@ -555,16 +558,38 @@ uint8_t FAT16_ferase(char *name, FAT16_MOUNT fm, uint32_t drive_num)
                     dr = disk_write_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
                     if (dr != 0)
                     {
-                        free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+                        kfree_pages(FAT, fat_pages);
                         return dr + 8;
                     }
                 }
-                free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+                kfree_pages(FAT, fat_pages);
                 return SUCCESS;
             }
         }
     }
     return UNKNOWN_ERROR;
+}
+
+// Create the dest file, absorb the FAT mapping from the source file, then delete the src file
+uint8_t FAT16_fmove(char *src_name, char *dest_name, FAT16_MOUNT fm, uint32_t drive_num)
+{
+    FILE src_file = FAT16_fopen(fm.RootDirectoryOffset * 512, fm.NumRootDirectoryEntries, src_name, drive_num, fm, 1);
+    if (!src_file.valid) return FILE_NOT_FOUND;
+    FILE dest_file = FAT16_fcreate(dest_name, fm, drive_num);
+    if (!dest_file.valid) return UNKNOWN_ERROR;
+    dest_file.clusterNumber = src_file.clusterNumber;
+    dest_file.location      = src_file.location;
+    dest_file.size          = src_file.size;
+    char read[512];
+    disk_read_sectors(drive_num, dest_file.dir_entry / 512, 1, (uint8_t *)read);
+    PFAT16DIR fde             = (PFAT16DIR)(read + (dest_file.dir_entry % 512) - 1);
+    fde->FirstClusterLocation = (uint16_t)dest_file.clusterNumber;
+    fde->FileSize             = (uint32_t)dest_file.size;
+    uint8_t dr = disk_write_sectors(drive_num, dest_file.dir_entry / 512, 1, (uint8_t *)read);
+    if (dr != 0) return dr + 8;
+    uint8_t ferr = FAT16_fdelete(src_name, drive_num);
+    if (ferr != SUCCESS) return ferr;
+    return SUCCESS;
 }
 
 FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint32_t drive_num)
@@ -581,7 +606,8 @@ FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint32_t drive_num)
     s[1]         = 0;
     FILE d       = fopen(name, "w");
     s[1]         = c;
-    uint8_t *FAT = (uint8_t *)alloc_page(((fm.FATSize * 512) / 4096) + 1);
+    size_t fat_pages = ((fm.FATSize * 512) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *FAT = (uint8_t *)kalloc_pages(fat_pages);
     for (uint8_t i = 0; i < fm.FATSize; i++) disk_read_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
     char read[512];
     disk_read_sectors(drive_num, d.location / 512, 1, (uint8_t *)read);
@@ -606,7 +632,7 @@ FILE FAT16_fcreate(char *name, FAT16_MOUNT fm, uint32_t drive_num)
             break;
         }
     }
-    free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+    kfree_pages(FAT, fat_pages);
     return retfile;
 }
 
@@ -615,13 +641,13 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
 {
     if (!len) return SUCCESS;
     FAT16_MOUNT fm  = *(FAT16_MOUNT *)get_disk_mount(file->mountNumber).mount;
-    uint8_t *   FAT = (uint8_t *)alloc_page(((fm.FATSize * 512) / 4096) + 1);
+    size_t fat_pages = ((fm.FATSize * 512) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint8_t *FAT = (uint8_t *)kalloc_pages(fat_pages);
     for (uint8_t i = 0; i < fm.FATSize; i++) disk_read_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
 
     char read[512];
     // Check if it has any clusters. If not, give it a cluster.
-    if (!file->location || !file->clusterNumber)
-    {
+    if (!file->location || !file->clusterNumber) {
         uint16_t tCluster = (uint16_t)f16_getNextFreeCluster(FAT);
         f16_setClusterValue(FAT, tCluster, 0xFFFF);
         f16_wipecluster(tCluster, fm, drive_num);
@@ -632,8 +658,7 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
         fde->FirstClusterLocation = tCluster;
         // printf("Cluster code: %#\n", fde->FirstClusterLocation);
         disk_write_sectors(drive_num, file->dir_entry / 512, 1, (uint8_t *)read);
-        for (uint8_t i = 0; i < fm.FATSize; i++)
-        {
+        for (uint8_t i = 0; i < fm.FATSize; i++) {
             disk_write_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
         }
     }
@@ -641,17 +666,14 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
     uint32_t curLoc     = start;
     uint32_t curDiskLoc = 0;
     uint32_t rCluster   = file->clusterNumber;
-    while (curLen)
-    {
+    while (curLen) {
         if (curDiskLoc > start + len) break;
         curDiskLoc += fm.SectorsPerCluster * 512;
         // printf("Currently scanning %$ to %$. Start is %$. Len is %$. Total is
         // %$\n",curDiskLoc-512,curDiskLoc,start,len,start+len);
-        if (curDiskLoc >= start)
-        {
+        if (curDiskLoc >= start) {
             uint32_t tLocation = f16_getLocationFromCluster(rCluster, fm);
-            for (uint8_t i = 0; i < fm.SectorsPerCluster; i++)
-            {
+            for (uint8_t i = 0; i < fm.SectorsPerCluster; i++) {
                 disk_read_sectors(drive_num, tLocation / 512, 1, (uint8_t *)read);
                 uint32_t amt = curLen > 512 ? 512 : curLen % 512;
                 memcpy(read + (curLoc % 512), buf + (len - curLen), amt);
@@ -663,8 +685,8 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
             }
             if (curDiskLoc > start + len) break;
         }
-        if (f16_getClusterValue(FAT, rCluster) >= 0xFFF8)
-        {
+
+        if (f16_getClusterValue(FAT, rCluster) >= 0xFFF8) {
             uint32_t tCluster = f16_getNextFreeCluster(FAT);
             // printf("RC %#\n",(uint64_t)rCluster);
             f16_setClusterValue(FAT, rCluster, (uint16_t)tCluster);
@@ -673,14 +695,12 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
             rCluster = tCluster;
             memset(read, 0, 512);
             disk_write_sectors(drive_num, f16_getLocationFromCluster(rCluster, fm), 1, (uint8_t *)read);
-        }
-        else if (rCluster >= 0xFFF0)
-        {
-            free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+        } else if (rCluster >= 0xFFF0) {
+            kfree_pages(FAT, fat_pages);
             return UNKNOWN_ERROR;
-        }
-        else
+        } else {
             rCluster = f16_getClusterValue(FAT, rCluster);
+        }
         // printf("Next cluster is %#, or
         // %#\n",(uint64_t)rCluster,(uint64_t)f16_getLocationFromCluster(rCluster,fm));
     }
@@ -696,7 +716,7 @@ uint8_t FAT16_fwrite(FILE *file, char *buf, uint32_t start, uint32_t len, uint32
     {
         disk_write_sectors(drive_num, i + fm.FATOffset, 1, &FAT[i * 512]);
     }
-    free_page(FAT, ((fm.FATSize * 512) / 4096) + 1);
+    kfree_pages(FAT, fat_pages);
     return SUCCESS;
 }
 

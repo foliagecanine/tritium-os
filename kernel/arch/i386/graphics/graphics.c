@@ -34,8 +34,7 @@ uint32_t set_resolution(uint32_t width, uint32_t height, uint8_t bits) {
 		return 1;
 	if (bits != 16 && bits != 24 && bits != 32) // Disallow 15 bit mode so the calculations work
 		return 2;
-	identity_map((void *)0x7000);
-	identity_map((void *)0x8000);
+	identity_map_pages((paddr_t)0x7000, 2);
 	framebuffer_width = width;
 	framebuffer_height = height;
 	framebuffer_bpp = bits;
@@ -50,12 +49,12 @@ uint32_t set_resolution(uint32_t width, uint32_t height, uint8_t bits) {
 		mov %%ebx,framebuffer_paddr;\
 		popa;\
 	":::"eax","ebx","ecx");
-	free_page((void *)0x7000,2);
+	identity_free_pages((void *)0x7000, 2);
 	init_pit(1000);
 	if (error)
 		return error;
 	framebuffer_pitch = framebuffer_width * framebuffer_bpp / 8;
-	framebuffer_addr = map_paddr(framebuffer_paddr, ((framebuffer_height * framebuffer_pitch) / 4096) + 1);
+	framebuffer_addr = ioalloc_pages(framebuffer_paddr, ((framebuffer_height * framebuffer_pitch) + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (!framebuffer_addr)
 		return 5;
 	uint32_t retval = bits;
