@@ -107,6 +107,8 @@ kvaddr_t kalloc_sequential(size_t count);
  * 
  * @param paddr Physical address to map.
  * @param count Number of pages to allocate.
+ * 
+ * @returns Virtual address of the mapped I/O memory (note: if paddr is not page aligned, the offset within the page is preserved).
  */
 iovaddr_t ioalloc_pages(paddr_t paddr, size_t count);
 

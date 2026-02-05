@@ -71,6 +71,8 @@ void exception_stack_segment_fault() {
 
 void exception_general_protection_fault() {
 	kerror("[Exception.Fault] General Protection Fault!");
+
+	dump_stacktrace();
 	for (;;);
 }
 

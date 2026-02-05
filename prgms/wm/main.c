@@ -104,5 +104,12 @@ int main(int argv, char *argc[]) {
 			num_frames = 0;
 			last_ticks = get_ticks();
 		}
+
+		int key = getkey();
+		if (key == KBDIN_KEY_ESCAPE) {
+			break;
+		}
 	}
+
+	return 0;
 }

@@ -158,7 +158,7 @@ static pte_t *get_io_pte(iovaddr_t vaddr) {
 
     void *relative_vaddr = (void *)((uintptr_t)vaddr - (uintptr_t)IO_MEM_START);
     size_t full_map_index = (GET_ADDR_PDE(relative_vaddr) * PAGE_TABLE_ENTRY_COUNT) + GET_ADDR_PTE(relative_vaddr);
-    return &kernel_page_tables[full_map_index];
+    return &io_page_tables[full_map_index];
 }
 
 /**
@@ -219,6 +219,12 @@ void iomap_page(iovaddr_t vaddr, paddr_t paddr) {
     invalidate_page(vaddr);
 }
 
+void iomap_pages(iovaddr_t vaddr, paddr_t paddr, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        iomap_page(vaddr + (i * PAGE_SIZE), paddr + (i * PAGE_SIZE));
+    }
+}
+
 void iounmap_page(iovaddr_t vaddr) {
     if (vaddr < IO_MEM_START || vaddr >= IO_MEM_END) {
         dprintf("Failed to unmap I/O page at vaddr=%p\n", vaddr);
@@ -232,6 +238,12 @@ void iounmap_page(iovaddr_t vaddr) {
     io_page_tables[full_map_index].present = 0;
     
     invalidate_page(vaddr);
+}
+
+void iounmap_pages(iovaddr_t vaddr, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        iounmap_page(vaddr + (i * PAGE_SIZE));
+    }
 }
 
 void init_paging(multiboot_info_t *mbi) {
@@ -392,7 +404,10 @@ iovaddr_t ioalloc_pages(paddr_t paddr, size_t count) {
         PANIC("Out of I/O virtual memory while allocating I/O page");
     }
 
-    iomap_page(vaddr, paddr);
+    for (size_t i = 0; i < count; i++) {
+        iomap_page(vaddr + (i * PAGE_SIZE), paddr + (i * PAGE_SIZE));
+    }
+
     return vaddr + ((uintptr_t)paddr & 0xFFF);
 }
 
@@ -932,6 +947,18 @@ void identity_unmap_page(paddr_t vaddr) {
 void identity_free_pages(paddr_t vaddr, size_t count) {
     for (size_t i = 0; i < count; i++) {
         identity_unmap_page(vaddr + (i * PAGE_SIZE));
+    }
+}
+
+void try_identity_free_pages(paddr_t vaddr, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        paddr_t current_vaddr = vaddr + (i * PAGE_SIZE);
+
+        if (get_page_permissions((void *)current_vaddr) == PAGE_ERROR_NOT_PRESENT) {
+            continue;
+        }
+
+        identity_unmap_page(current_vaddr);
     }
 }
 

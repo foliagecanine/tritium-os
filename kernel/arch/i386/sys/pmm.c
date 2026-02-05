@@ -67,7 +67,7 @@ void pmm_init(volatile multiboot_info_t *mbi, void *mbi_base_addr) {
     multiboot_memory_map_t *mmap = (multiboot_memory_map_t *)(mbi_base_addr + (mbi->mmap_addr & 0xFFF));
 
     // Scan the memory map for areas that we can use for general purposes
-    kprintf("[PMM] %u memory map entries found", mbi->mmap_length / sizeof(multiboot_memory_map_t));
+    kprintf("[PMM] %u memory map entries found\n", mbi->mmap_length / sizeof(multiboot_memory_map_t));
     for (uint8_t i = 0; i < mbi->mmap_length / sizeof(multiboot_memory_map_t); i++) {
         uint32_t type = mmap[i].type;
         if (type > 5) {
@@ -89,7 +89,7 @@ void pmm_init(volatile multiboot_info_t *mbi, void *mbi_base_addr) {
 
         pmm_total_pages += mmap[i].len / PAGE_SIZE;
 
-        kprintf("%hhu: 0x%08llX+0x%08llX %s", i, mmap[i].addr, mmap[i].len, mem_types[type]);
+        kprintf("%hhu: 0x%08llX+0x%08llX %s\n", i, mmap[i].addr, mmap[i].len, mem_types[type]);
     }
 
     // Mark kernel pages as used

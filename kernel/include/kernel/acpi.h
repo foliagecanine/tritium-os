@@ -43,6 +43,10 @@ typedef struct {
 	uint8_t reserved[3];
 } __attribute__((packed)) ACPI_RSDPDescriptorV2;
 
+typedef union ACPI_RSDP {
+	ACPI_RSDPDescriptor rsdp;
+	ACPI_RSDPDescriptorV2 xsdp;
+} ACPI_RSDP;
 
 typedef struct {
 	ACPI_SDTHeader header;
@@ -98,8 +102,11 @@ typedef struct {
 	uint8_t x_GPE1_blk[12];
 } __attribute__((packed)) ACPI_FADT;
 
-uint32_t acpi_find_rsdp();
-uint32_t acpi_find_fadt();
+#define ACPI_BOOTARCHFLAG_PS2 (1 << 1)
+
+bool acpi_detect_ps2();
+ACPI_RSDP acpi_find_rsdp();
+ACPI_FADT acpi_find_fadt();
 void acpi_list_tables();
 bool acpi_shutdown();
 

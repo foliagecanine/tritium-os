@@ -202,14 +202,14 @@ void add_irq_function(uint8_t irq, void (*function)()) {
 bool ts_enabled = false;
 tss_entry_t temp_tss;
 
-void irq0_handler(void) {
+void irq0_handler(int user_mode) {
 	if (ts_enabled)
 		asm("nop"); //Debug breakpoint
 	pit_tick();
 	usb_keyboard_repeat();
 	execute_irq(0);
 	outb(0x20, 0x20); //EOI early since task switching returns on its own
-	if (ts_enabled && !(get_ticks_k() % 10))
+	if (user_mode && ts_enabled && !(get_ticks_k() % 10))
 		task_switch(temp_tss);
 }
 

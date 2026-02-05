@@ -1,5 +1,5 @@
 GCC=i686-tritium-gcc
-CFLAGS:=-O3 -ftree-vectorize -fopt-info
+CFLAGS:=-O3 -g
 OUTPRG=WM.SYS
 OUTFLDR=bin/os
 

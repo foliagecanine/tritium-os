@@ -24,22 +24,22 @@ void dump_stacktrace() {
 	dprintf("Frame at %p\n", frame);
 	uint8_t perms = get_page_permissions((void*)frame);
 	if (perms == PAGE_ERROR_NOT_PRESENT) {
-		kprintf("  (Unavailable)");
+		kprintf("  (Unavailable)\n");
 		return;
 	}
 
 	while (frame) {
 		perms = get_page_permissions((void*)frame->eip);
 		if (perms == PAGE_ERROR_NOT_PRESENT) {
-			kprintf("  at 0x%08X (unmapped)", frame->eip);
+			kprintf("  at 0x%08X (unmapped)\n", frame->eip);
 			break;
 		}
 
-		kprintf("  at 0x%08X", frame->eip);
+		kprintf("  at 0x%08X\n", frame->eip);
 
 		perms = get_page_permissions((void*)frame->ebp);
 		if (perms == PAGE_ERROR_NOT_PRESENT) {
-			kprintf("  next frame at 0x%08X (unmapped)", (uint32_t)(uintptr_t)frame->ebp);
+			kprintf("  next frame at 0x%08X (unmapped)\n", (uint32_t)(uintptr_t)frame->ebp);
 			break;
 		}
 
@@ -101,9 +101,8 @@ int kprintf(const char* format, ...) {
 	if (length > 0) {
 		uint8_t prev_trm_color = terminal_getcolor();
 		terminal_setcolor((prev_trm_color|0xe)&0xfe);
-		puts(buffer);
+		print(buffer, length);
 		serial_write(buffer);
-		serial_putchar('\n');
 		terminal_setcolor(prev_trm_color);
 	}
 

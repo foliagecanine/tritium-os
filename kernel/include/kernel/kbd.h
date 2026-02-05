@@ -12,6 +12,7 @@ void print_keys();
 char scancode_to_char(unsigned int scancode);
 void kbd_handler();
 void insert_scancode(uint8_t scancode);
+void init_kbd();
 void mouse_handler();
 void init_mouse();
 void mouse_add_delta(int x, int y);

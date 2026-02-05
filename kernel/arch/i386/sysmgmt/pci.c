@@ -165,12 +165,12 @@ bool register_pci_driver(void (*pci_function)(pci_t, uint8_t, uint8_t, uint8_t),
 void launch_driver(pci_t pci, uint8_t bus, uint8_t device, uint8_t function) {
 	for (uint16_t i = 0; i < 255; i++) {
 		if (pci_drivers[i].used && pci_drivers[i].class == pci.class && pci_drivers[i].subclass == pci.subclass) {
-			kprintf("%X.%X.%u: Launching the driver for %s", bus, device, function, pci_find_name(pci.class, pci.subclass));
+			kprintf("%X.%X.%u: Launching the driver for %s\n", bus, device, function, pci_find_name(pci.class, pci.subclass));
 			pci_drivers[i].pci_function(pci, bus, device, function);
 			return;
 		}
 	}
-	kprintf("%X.%X.%u: No driver registered for %s", bus, device, function, pci_find_name(pci.class, pci.subclass));
+	kprintf("%X.%X.%u: No driver registered for %s\n", bus, device, function, pci_find_name(pci.class, pci.subclass));
 }
 
 void pci_scan() {

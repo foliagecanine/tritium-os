@@ -176,6 +176,8 @@ run_syscall_asm:
   iret
 
 irq0:
+  test dword [esp+4], 3
+  jz .kernel_irq0
   mov dword [ready_esp],esp
   mov dword [temp_tss+40],eax
   mov dword [temp_tss+52],ebx
@@ -197,7 +199,16 @@ irq0:
   mov dword [temp_tss+56],eax ;esp
   mov eax, dword [temp_tss+40]
   pusha
+  push 1
   call irq0_handler
+  add esp, 4
+  popa
+  iret
+.kernel_irq0:
+  pusha
+  push 0
+  call irq0_handler
+  add esp, 4
   popa
   iret
 
@@ -514,6 +525,8 @@ _intr16:
 	mov al,[sv_func]
 	cmp al,1
 	je .getmode
+	cmp al,2
+	je .textmode
 	cmp al,0
 	jne .error2
 
@@ -626,6 +639,13 @@ _intr16:
 	mov [FIXADDR(storevars.bpp)],al
 
 	mov ax,0
+	jmp .returnpm
+
+.textmode:
+	mov ax,0x0003
+	int 0x10
+	mov ax,0
+	mov ebx,0
 
 ; Return to protected mode!
 .returnpm:
@@ -809,8 +829,6 @@ vbe_info:
 	.reserved 	times 222 db 0
 	.oemdata	times 256 db 0
 
-_int32_end:
-
 store32:
 	.ecx dd 0
 	.edx dd 0
@@ -819,3 +837,5 @@ store32:
 	.esp dd 0
 	.ebp dd 0
 	.cr3 dd 0
+
+_int32_end:

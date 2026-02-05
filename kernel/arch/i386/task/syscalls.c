@@ -243,13 +243,15 @@ uint32_t graphics_function(uint8_t function, uint32_t param1, uint32_t param2, u
 		case 0:
 			return request_graphics_lock();
 		case 1:
-			return request_graphics_unlock();
+			return release_graphics_lock();
 		case 2:
-			return set_resolution(param1, param2, param3);
+			return set_resolution(param1, param2, param3).raw;
 		case 3:
 			if (!check_range((void *)param1, get_framebuffer_size()))
 				return 99;
 			return copy_framebuffer((void *)param1);
+		case 4:
+			return set_text_mode();
 		default:
 			return 0;
 	}

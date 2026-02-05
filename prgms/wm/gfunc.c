@@ -5,6 +5,7 @@
 #define GRAPHICS_FUNCTION_UNLOCK 1
 #define GRAPHICS_FUNCTION_SETRES 2
 #define GRAPHICS_FUNCTION_COPY 3
+#define GRAPHICS_FUNCTION_SETTEXT 4
 
 uint16_t framebuffer_width = 0;
 uint16_t framebuffer_height = 0;
@@ -19,9 +20,11 @@ int release_graphics() { return _syscall1(GRAPHICS_FUNCTION, GRAPHICS_FUNCTION_U
 
 int set_resolution(uint16_t width, uint16_t height, uint8_t bpp) {
 	uint32_t retval = _syscall4(GRAPHICS_FUNCTION, GRAPHICS_FUNCTION_SETRES, width, height, bpp);
-	framebuffer_bpp = retval & 0xFF;
-	framebuffer_height = (retval >> 8) & 0xFFF;
-	framebuffer_width = (retval >> 20) & 0xFFF;
+	graphics_mode graphics;
+	graphics.raw = retval;
+	framebuffer_bpp = graphics.bpp;
+	framebuffer_height = graphics.height;
+	framebuffer_width = graphics.width;
 	framebuffer_pitch = framebuffer_width * framebuffer_bpp / 8;
 	if (framebuffer_width == 0)
 		return framebuffer_bpp;
@@ -32,6 +35,20 @@ int set_resolution(uint16_t width, uint16_t height, uint8_t bpp) {
 	// Align to 16b for best performance
 	framebuffer = (framebuffer_alloc + 16) - ((size_t)framebuffer_alloc % 16);
 	return 0;
+}
+
+int set_text_mode() {
+	if (framebuffer_alloc) {
+		free(framebuffer_alloc);
+		framebuffer_alloc = 0;
+		framebuffer = 0;
+	}
+	framebuffer_width = 0;
+	framebuffer_height = 0;
+	framebuffer_bpp = 0;
+	framebuffer_pitch = 0;
+
+	return _syscall1(GRAPHICS_FUNCTION, GRAPHICS_FUNCTION_SETTEXT);
 }
 
 graphics_mode_t get_graphics_mode() {

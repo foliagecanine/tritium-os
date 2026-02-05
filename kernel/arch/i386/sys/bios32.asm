@@ -254,9 +254,9 @@ storevars:
 	.func 		dw 0
 	.error		dw 0
 	
-_int32_end:
 
 store32:
 	.esp dd 0
 	.ebp dd 0
 	.cr3 dd 0
+_int32_end:

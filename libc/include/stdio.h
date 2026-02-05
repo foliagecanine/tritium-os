@@ -11,6 +11,7 @@
 
 int __print_formatted(int (*)(const char *, size_t), const char *, va_list);
 int vprintf(const char *format, va_list arg);
+int print(const char *str, size_t len);
 int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
 int sprintf(char *str, const char *format, ...) __attribute__((format(printf, 2, 3)));
 int snprintf(char *str, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));

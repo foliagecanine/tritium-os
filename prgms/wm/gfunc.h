@@ -4,6 +4,20 @@
 #include <stdio.h>
 #include <sys.h>
 
+#define GRAPHICS_ERR_NO_LOCK        1
+#define GRAPHICS_ERR_INVALID_BPP    2
+#define GRAPHICS_ERR_NO_FRAMEBUFFER 3
+#define GRAPHICS_ERR_MODE_SET_FAIL  4
+
+typedef union graphics_mode {
+	struct {
+		uint16_t width:12;
+		uint16_t height:12;
+		uint8_t bpp:8;
+	} __attribute__((packed));
+	uint32_t raw;
+} graphics_mode;
+
 extern uint16_t framebuffer_width;
 extern uint16_t framebuffer_height;
 extern uint32_t framebuffer_pitch;
@@ -38,6 +52,7 @@ typedef struct {
 int claim_graphics(void);
 int release_graphics(void);
 int set_resolution(uint16_t width, uint16_t height, uint8_t bpp);
+int set_text_mode(void);
 int drawframe(void);
 color_t getpixel(uint32_t x, uint32_t y);
 void setpixel(uint32_t x, uint32_t y, color_t c);

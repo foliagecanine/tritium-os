@@ -3,8 +3,50 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define PS2_OUT_PORT 0x60
-#define PS2_IN_PORT 0x60
+#define PS2_DATA_OUT_PORT 0x60
+#define PS2_DATA_IN_PORT 0x60
+#define PS2_STATUS_IN_PORT 0x64
+#define PS2_CMD_OUT_PORT 0x64
+
+#define PS2_STATUS_OUTPUT_BUFFER (1 << 0)
+#define PS2_STATUS_INPUT_BUFFER (1 << 1)
+#define PS2_STATUS_SYSTEM_FLAG (1 << 2)
+#define PS2_STATUS_COMMAND_DATA (1 << 3)
+#define PS2_STATUS_TIMEOUT_ERROR (1 << 6)
+#define PS2_STATUS_PARITY_ERROR (1 << 7)
+
+#define PS2_CMD_READ_CONFIG(n) (0x20 + n)
+#define PS2_CMD_WRITE_CONFIG(n) (0x60 + n)
+#define PS2_CMD_DISABLE_PORT2 0xA7
+#define PS2_CMD_ENABLE_PORT2 0xA8
+#define PS2_CMD_TEST_PORT2 0xA9
+#define PS2_CMD_SELF_TEST 0xAA
+#define PS2_CMD_TEST_PORT1 0xAB
+#define PS2_CMD_DISABLE_PORT1 0xAD
+#define PS2_CMD_ENABLE_PORT1 0xAE
+#define PS2_CMD_READ_OUTPUT_PORT 0xD0
+#define PS2_CMD_WRITE_OUTPUT_PORT 0xD1
+#define PS2_CMD_WRITE_OUTPUT_PORT1 0xD2
+#define PS2_CMD_WRITE_OUTPUT_PORT2 0xD3
+#define PS2_CMD_WRITE_INPUT_PORT2 0xD4
+
+// Commands for PS2_CMD_READ_CONFIG(0) and PS2_CMD_WRITE_CONFIG(0)
+#define PS2_CTRLR_CONFIG_PORT1_INTERRUPT (1 << 0)
+#define PS2_CTRLR_CONFIG_PORT2_INTERRUPT (1 << 1)
+#define PS2_CTRLR_CONFIG_SYSTEM_FLAG (1 << 2)
+#define PS2_CTRLR_CONFIG_PORT1_CLOCK (1 << 4)
+#define PS2_CTRLR_CONFIG_PORT2_CLOCK (1 << 5)
+#define PS2_CTRLR_CONFIG_PORT1_TRANSLATION (1 << 6)
+
+// Commands for PS2_CMD_WRITE_OUTPUT_PORT*
+#define PS2_CTRLR_OUTPUT_PORT_RESET (1 << 0)
+#define PS2_CTRLR_OUTPUT_PORT_A20 (1 << 1)
+#define PS2_CTRLR_OUTPUT_PORT2_CLOCK (1 << 2)
+#define PS2_CTRLR_OUTPUT_PORT2_DATA (1 << 3)
+#define PS2_CTRLR_OUTPUT_PORT1_FULL (1 << 4)
+#define PS2_CTRLR_OUTPUT_PORT2_FULL (1 << 5)
+#define PS2_CTRLR_OUTPUT_PORT1_CLOCK (1 << 6)
+#define PS2_CTRLR_OUTPUT_PORT1_DATA (1 << 7)
 
 #define PS2_KEY_PRESSED 0
 #define PS2_KEY_RELEASED 128
@@ -49,6 +91,7 @@ char kbdus_caps[] = {
 	'-', '4', '5', '6', '+', '1', '2', '3', '0', '.'
 };
 
+static bool ps2_enabled;
 uint8_t last_scancode;
 char lastkey_char;
 bool key_read;
@@ -123,14 +166,18 @@ void print_keys() {
  }
 
 void kbd_ack(void){
-  while(!(inb(PS2_IN_PORT) == PS2_ACK));
+  while(!(inb(PS2_DATA_IN_PORT) == PS2_ACK));
 }
 
 char kbdstatus = 0;
 
 void update_leds(char leds) {
-   outb(PS2_OUT_PORT, PS2_LED_UPDATE);
-   outb(PS2_OUT_PORT, leds & (PS2_LED_SCROLL | PS2_LED_NUM | PS2_LED_CAPS));
+	if (!ps2_enabled)
+		return;
+
+	outb(PS2_DATA_OUT_PORT, PS2_LED_UPDATE);
+	outb(PS2_DATA_OUT_PORT, leds & (PS2_LED_SCROLL | PS2_LED_NUM | PS2_LED_CAPS));
+	kbd_ack();
 }
 
 void toggle_numlck()
@@ -193,7 +240,10 @@ void decode_scancode() {
 }
 
 void kbd_handler() {
-	last_scancode = inb(PS2_IN_PORT);
+	if (!ps2_enabled)
+		return;
+
+	last_scancode = inb(PS2_DATA_IN_PORT);
 	decode_scancode();
 }
 
@@ -201,4 +251,34 @@ void insert_scancode(uint8_t scancode) {
 	last_scancode = scancode;
 	dprintf("Scancode: %X\n",(uint64_t)scancode);
 	decode_scancode();
+}
+
+void init_kbd() {
+	if (acpi_detect_ps2()) {
+		ps2_enabled = true;
+		kprint("[KBD] Initializing PS/2 keyboard");
+	} else {
+		ps2_enabled = false;
+		return;
+	}
+
+	// Wait for PS/2 controller to be ready
+	uint32_t timeout = 10000;
+	while ((inb(PS2_STATUS_IN_PORT) & PS2_STATUS_INPUT_BUFFER) && timeout--)
+		asm volatile("nop");
+	
+	// Enable first PS/2 port
+	outb(PS2_CMD_OUT_PORT, PS2_CMD_ENABLE_PORT1);
+	
+	// Wait for PS/2 controller to be ready
+	timeout = 10000;
+	while ((inb(PS2_STATUS_IN_PORT) & PS2_STATUS_INPUT_BUFFER) && timeout--)
+		asm volatile("nop");
+	
+	// Enable scanning
+	outb(PS2_DATA_OUT_PORT, 0xF4);
+	
+	// Drain the output buffer
+	while (inb(PS2_STATUS_IN_PORT) & PS2_STATUS_OUTPUT_BUFFER)
+		inb(PS2_DATA_IN_PORT);
 }

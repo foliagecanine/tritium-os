@@ -15,7 +15,7 @@
 multiboot_memory_map_t *k_mmap;
 multiboot_info_t *      k_mbi;
 
-void (*init_functions[])(void) = {init_ahci, init_ide, init_usb};
+void (*init_functions[])(void) = {init_kbd, init_mouse, init_ahci, init_ide, init_usb};
 
 const char *init_program = "A:/BIN/GUI.SYS";
 
@@ -34,7 +34,6 @@ void kernel_main(uint32_t magic, uint32_t ebx)
     kprint("[INIT] Mapped memory");
     init_gdt();
     init_idt();
-    init_mouse();
     k_mbi = (multiboot_info_t *)ebx;
     init_paging(k_mbi);
     store_multiboot(k_mbi);
@@ -86,7 +85,7 @@ void kernel_main(uint32_t magic, uint32_t ebx)
         while (getchar() == 0)
             ;
 
-        kprintf("[KMSG] Shutting down.");
+        kprintf("[KMSG] Shutting down.\n");
         kernel_exit();
 
         // printf("Press shift key to enter Kernel Debug Console.\n");

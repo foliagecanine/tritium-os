@@ -5,6 +5,7 @@
 #include <kernel/memconst.h>
 #include <kernel/pmm.h>
 #include <kernel/kprint.h>
+#include <kernel/graphics.h>
 
 //#define TASK_DEBUG
 
@@ -196,6 +197,14 @@ void kill_process(uint32_t pid, uint32_t retval) {
 			parent->waitval = retval;
 		}
 	}
+
+	if (has_graphics_lock(pid)) {
+		current_task->pid = pid;
+		set_text_mode();
+		release_graphics_lock();
+		current_task->pid = old_pid;
+	}
+
 	page_directory_t *current_tables = get_current_tables();
 	switch_tables(threads[pid-1].tables);
 	free_current_page_directory();
