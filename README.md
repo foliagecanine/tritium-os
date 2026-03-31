@@ -1,9 +1,6 @@
 # TritiumOS
 Simple 32 bit Hobby OS
 
-## Introduction
-TritiumOS is an open-source hobby operating system
-
 Demo:  
 ![Demo GIF of TritiumOS](https://github.com/foliagecanine/tritium-os/blob/master/kernel/docs/TritiumOS.gif)  
 Demo made on 07/06/20 with commit b406b609857eab945c813f9d93f506bcf30133fe
