@@ -9,8 +9,15 @@ For assembly programs
  - i686-tritium-ld (or equivelant, untested)
 
 For C programs
- - i686-tritium-gcc compiler (May work with other compilers such as clang, but untested)
+ - [i686-tritium-gcc](https://github.com/foliagecanine/tritium-compiler) compiler (May work with other compilers such as clang, but untested)
  - i686-tritium-ld (or equivelant, untested)
+ - [libc-tritium](https://github.com/foliagecanine/libc-tritium)
+ - GNU Make (recommended)
+
+For C++ programs
+ - [i686-tritium-g++](https://github.com/foliagecanine/tritium-compiler) (May work with other compilers such as clang++, but untested)
+ - i686-tritium-ld (or equivelant, untested)
+ - [libc-tritium](https://github.com/foliagecanine/libc-tritium) (provides tritium-libstdc++)
  - GNU Make (recommended)
 
 ### Compiling Assembly
@@ -44,7 +51,7 @@ ebx: Number of environment variables, used by env.c in libc
 ecx: Pointer to char\*\* of arguments (argv)  
 edx: Pointer to char\*\* of environment variables  
 
-### Software Interrupts
+### Software Interrupts (syscalls)
 
 There are several software interrupt functions available to the user process.  
 They can be called by putting the function number in eax and calling `int 0x80` (or "int $0x80" in GAS)
